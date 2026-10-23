@@ -84,6 +84,24 @@ body {
   }
 }
 
+/* Recording chip in the closed notch: the red dot blinks, the time stays steady. */
+.rec-blink {
+  animation: rec-blink 1.05s ease-in-out infinite;
+}
+@keyframes rec-blink {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 0 var(--color-red);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(0.8);
+    box-shadow: 0 0 5px 1px var(--color-red);
+  }
+}
+
 /* Hardware history: the line glides left by one step over one second. */
 .trend-scroll {
   animation: trend-scroll 1s linear forwards;
@@ -99,6 +117,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .privacy-dot[data-pulse],
+  .rec-blink,
   .trend-scroll {
     animation: none;
   }

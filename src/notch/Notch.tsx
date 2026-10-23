@@ -1,5 +1,5 @@
 ﻿import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
-import { AnimatePresence, motion, type Transition } from "motion/react";
+import { AnimatePresence, animate, motion, useMotionValue, type Transition } from "motion/react";
 import { GearSix, PushPin, Selection } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
 import { useNowPlaying } from "../platform/media";
@@ -11,6 +11,8 @@ import { LiveSlot, useLiveActivity } from "./live";
 import { DOCK_HEIGHT, HEADER_HEIGHT, geometry, openGeometry, type NotchGeometry } from "./geometry";
 import { HeaderButton, headerSlot } from "./header";
 import { ClockTime } from "./ClockTime";
+import { LiveRightInset } from "./liveEdges";
+import { RECORDING_EXTRA, RECORDING_INSET, RecordingBadge, useRecording } from "./recording";
 import { sizeOverride } from "./size";
 import { NotchShape } from "./NotchShape";
 import { drop } from "../platform/drop";
@@ -87,6 +89,14 @@ export function Notch() {
   const clockWeather = appearance.clockWeather;
   const pillLive = floating ? (clockWeather ? null : shownLive) : shownLive;
   const clockPill = clockWeather && !pillLive;
+  // Screen recording gets its own chip at the right end of the closed pill.
+  const { recording, since } = useRecording();
+  const showRecording = recording && !line && !idleLine && status !== "open";
+  const rightInset = useMotionValue(0);
+  useEffect(() => {
+    const control = animate(rightInset, showRecording ? RECORDING_INSET : 0, springs.snappy);
+    return () => control.stop();
+  }, [showRecording, rightInset]);
   // The idle line never passes through the small notch: line â†’ slightly bigger line on
   // hover â†’ open, and straight back to the line on close.
   const lineIdle = idleLine && !alert;
@@ -114,7 +124,8 @@ export function Notch() {
     : shape;
   const topPad = floating && !tightHit ? 8 : 0;
   const sticky = useStickyHitZone(status, size.h);
-  const transition = useTransitionFor(status, finalShape);
+  const displayShape = showRecording ? { ...finalShape, w: finalShape.w + RECORDING_EXTRA } : finalShape;
+  const transition = useTransitionFor(status, displayShape);
 
   // Click outside closes (in the browser the fake desktop, in Tauri the window blur).
   const hitRef = useRef<HTMLDivElement>(null);
@@ -243,14 +254,21 @@ export function Notch() {
           style={{ transformOrigin: "50% 0%" }}
         >
         <NotchShape
-          geometry={finalShape}
+          geometry={displayShape}
           transition={transition}
           elevated={status === "open"}
           floating={floating}
         >
-          <LiveSlot id={status === "open" ? null : pillLive} />
+          <LiveRightInset.Provider value={rightInset}>
+            <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} />
+          </LiveRightInset.Provider>
           {clockWeather && !line && !idleLine && status !== "open" && !pillLive && <ClosedClock />}
-          {!line && !idleLine && <PrivacyDots />}
+          {!line && !idleLine && <PrivacyDots hideScreen={showRecording} />}
+          <AnimatePresence>
+            {showRecording && (
+              <RecordingBadge key="recording" since={since} className="absolute top-1/2 right-2 -translate-y-1/2" />
+            )}
+          </AnimatePresence>
 
           <AnimatePresence>
             {status === "open" && (

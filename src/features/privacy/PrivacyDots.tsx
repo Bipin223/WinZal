@@ -10,7 +10,7 @@ import { privacy } from "./store";
  * (call, Discord), red = screen is being recorded or streamed.
  * While you talk in a Discord call, the green dot glows.
  */
-export function PrivacyDots() {
+export function PrivacyDots({ hideScreen = false }: { hideScreen?: boolean }) {
   const enabled = settings.use().privacyDots;
   const p = privacy.use();
   const call = discordState.use().call;
@@ -18,7 +18,9 @@ export function PrivacyDots() {
   const talk = p.mic || p.camera || (!!call && !call.mute);
   // The red recording dot is a privacy indicator: always show it while the screen
   // is captured, even if the optional green mic/camera dots are switched off.
-  const dots = [p.screen && "red", enabled && talk && "green"].filter((d): d is string => !!d);
+  // When the closed pill has its own recording chip at the right end, hide the
+  // duplicate dot at the camera.
+  const dots = [p.screen && !hideScreen && "red", enabled && talk && "green"].filter((d): d is string => !!d);
 
   return (
     // A bit right of the imagined camera in the middle, clear both closed and open.

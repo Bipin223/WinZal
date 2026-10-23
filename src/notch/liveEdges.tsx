@@ -7,6 +7,9 @@ export const ShapeWidth = createContext<MotionValue<number>>(motionValue(0));
 /** How far each edge of the shape currently sits outside the live box (px, LiveSlot). */
 export const LiveSpread = createContext<MotionValue<number>>(motionValue(0));
 
+/** Extra space reserved at the right edge for the recording badge. */
+export const LiveRightInset = createContext<MotionValue<number>>(motionValue(0));
+
 /**
  * One side of a live activity. It follows the shape's edge by transform, not layout:
  * layout rounds to whole pixels, so the end of every spring crept in visible steps;
@@ -14,9 +17,13 @@ export const LiveSpread = createContext<MotionValue<number>>(motionValue(0));
  */
 export function LiveEdge({ side, className = "flex items-center", children }: { side: "left" | "right"; className?: string; children: ReactNode }) {
   const spread = useContext(LiveSpread);
+  const inset = useContext(LiveRightInset);
   const x = useTransform(spread, (s) => (side === "left" ? -s : s));
   return (
-    <motion.div className={className} style={{ x, willChange: "transform" }}>
+    <motion.div
+      className={className}
+      style={{ x, marginRight: side === "right" ? inset : undefined, willChange: "transform, margin-right" }}
+    >
       {children}
     </motion.div>
   );
