@@ -1,0 +1,559 @@
+﻿import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { AnimatePresence, motion, type Transition } from "motion/react";
+import { GearSix, PushPin, Selection } from "@phosphor-icons/react";
+import { content, springs } from "../design/motion";
+import { useNowPlaying } from "../platform/media";
+import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onTrayOpen, setHitRect, setMemoryLow } from "../platform/native";
+import { PrivacyDots } from "../features/privacy/PrivacyDots";
+import { FOCUS_CLICKS, focusMode, setFocusMode } from "./focus";
+import { useDragToMove } from "./drag";
+import { LiveSlot, useLiveActivity } from "./live";
+import { DOCK_HEIGHT, HEADER_HEIGHT, geometry, openGeometry, type NotchGeometry } from "./geometry";
+import { HeaderButton, headerSlot } from "./header";
+import { sizeOverride } from "./size";
+import { NotchShape } from "./NotchShape";
+import { drop } from "../platform/drop";
+import { settings } from "../settings/store";
+import { useUnseen } from "../lib/changelog";
+import { nav, navigate } from "./nav";
+import { update } from "../lib/update";
+import { findTab, settingsTab, tabs, type NotchTab } from "./tabs";
+import { holdOpen, pinned, togglePin, useNotchState, type NotchStatus } from "./useNotchState";
+import { t } from "../i18n";
+import { formatTemp, formatTimeParts } from "../lib/format";
+import { describe, useForecast } from "../features/weather/store";
+import { timer } from "../features/timer/store";
+
+/** `#rrggbb` + alpha â†’ `rgba(...)`; anything else is passed through untouched. */
+function fillWithAlpha(hex: string, alpha: number): string {
+  if (alpha >= 1) return hex;
+  const match = /^#?([0-9a-f]{6})$/i.exec(hex);
+  if (!match) return hex;
+  const n = parseInt(match[1], 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+/** If the notch was closed at most this long, it reopens on the last used tool. */
+const RESUME_MS = 60_000;
+/** Closed this long â†’ lower WebView2's memory target. */
+const MEMORY_LOW_AFTER_MS = 20_000;
+
+export function Notch() {
+  const { status, open, close, dismiss, toggle, onPointerEnter, onPointerLeave } = useNotchState();
+  const focus = focusMode.use();
+  const { tools: toolSettings, display: displaySettings, appearance } = settings.use();
+  const floating = appearance.style === "windows";
+  // Focus mode as a line: no live activity, no dots, only the thin strip at the edge.
+  const line = focus && displaySettings.focusStyle === "line";
+  // Line as the normal closed look: hover and click work as usual, but nothing shows
+  // while closed. Only a finished timer opens it into the notch, until dismissed.
+  const timerDone = timer.use().finished;
+  const idleLine = !focus && displaySettings.idleStyle === "line";
+  const alert = idleLine && timerDone;
+  const visible = toolSettings.filter((t) => t.enabled).map((t) => findTab(t.id)).filter((t): t is NotchTab => !!t);
+  const { tabId } = nav.use();
+  // Hidden tool active (e.g. just disabled) â†’ first visible one.
+  const tab = tabId === settingsTab.id ? settingsTab : (visible.find((t) => t.id === tabId) ?? visible[0] ?? tabs[0]);
+  const np = useNowPlaying();
+  const live = useLiveActivity();
+
+  // Like the Dynamic Island: opening jumps to the running activity's tool,
+  // but only after a pause. Closed briefly (copying a key, grabbing a file) â†’ you
+  // land where you were, e.g. in the settings.
+  // Layout effect runs before paint â†’ no frame with the old tab size.
+  const prevStatus = useRef(status);
+  const closedAt = useRef(0);
+  // A target tool from the tray (settings entry) takes priority over the live activity.
+  const trayTab = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    if (status === "open" && prevStatus.current !== "open") {
+      const resumed = Date.now() - closedAt.current < RESUME_MS;
+      if (trayTab.current) navigate(trayTab.current);
+      else if (!resumed && live.id && visible.some((t) => t.id === live.id)) navigate(live.id);
+      trayTab.current = null;
+    }
+    if (status !== "open" && prevStatus.current === "open") closedAt.current = Date.now();
+    prevStatus.current = status;
+  });
+
+  useQuickDrop(status, open, dismiss);
+
+  const override = sizeOverride.use();
+  const size = override?.tabId === tab.id ? override : tab.size;
+  // Live activity shown in the closed notch (the idle line only lets the timer alarm through).
+  const shownLive = line ? null : idleLine ? (alert ? "timer" : null) : live.id;
+  // The closed clock is optional; Windows island prefers it over the live media slot.
+  const clockWeather = appearance.clockWeather;
+  const pillLive = floating ? (clockWeather ? null : shownLive) : shownLive;
+  const clockPill = clockWeather && !pillLive;
+  // The idle line never passes through the small notch: line â†’ slightly bigger line on
+  // hover â†’ open, and straight back to the line on close.
+  const lineIdle = idleLine && !alert;
+  const baseShape =
+    line || (lineIdle && status === "closed")
+      ? geometry.line
+      : lineIdle && status === "peek"
+        ? geometry.linePeek
+        : shapeFor(status, pillLive, size);
+  const shape =
+    appearance.corners === "squared" && baseShape.r > 5
+      ? { ...baseShape, r: Math.min(baseShape.r, 8), ear: Math.min(baseShape.ear, 3) }
+      : baseShape;
+  const tightHit = baseShape === geometry.line || baseShape === geometry.linePeek;
+  const finalShape = floating
+    ? {
+        ...shape,
+        ear: 0,
+        // Keep the resting island tight: just the clock and the weather.
+        w:
+          floating && clockPill && status !== "open" && !tightHit
+            ? Math.min(shape.w, status === "peek" ? 174 : 164)
+            : shape.w,
+      }
+    : shape;
+  const topPad = floating && !tightHit ? 8 : 0;
+  const sticky = useStickyHitZone(status, size.h);
+  const transition = useTransitionFor(status, finalShape);
+
+  // Click outside closes (in the browser the fake desktop, in Tauri the window blur).
+  const hitRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      if (!hitRef.current?.contains(e.target as Node)) dismiss();
+    };
+    window.addEventListener("pointerdown", onDown);
+    const offBlur = onNativeBlur(dismiss);
+    return () => {
+      window.removeEventListener("pointerdown", onDown);
+      offBlur();
+    };
+  }, [dismiss]);
+
+  useNativeBridge(hitRef, onPointerEnter, onPointerLeave);
+  const drag = useDragToMove(status);
+
+  // Focus mode on â†’ notch closes, no more hover.
+  useEffect(() => {
+    if (focus) close();
+  }, [focus, close]);
+
+  // Three quick clicks toggle focus mode (in the browser also off; natively Rust counts).
+  const onClick = (e: React.MouseEvent) => {
+    if (drag.moved()) return;
+    if (e.detail >= FOCUS_CLICKS && !isInteractive(e.target)) return setFocusMode(!focus);
+    if (!focus && status !== "open") open();
+  };
+
+  // Shortcut: opening takes focus (Esc, typing), closing gives it back.
+  useEffect(() => onShortcut(() => toggle() === "open" && keyboardFocus(true)), [toggle]);
+  useEffect(
+    () =>
+      onTrayOpen((tab) => {
+        // Only remember it while opening, otherwise it would stick for the next open.
+        trayTab.current = status === "open" ? null : tab;
+        if (tab) navigate(tab);
+        open();
+        keyboardFocus(true);
+      }),
+    [open, status],
+  );
+  useEffect(() => {
+    if (status === "closed") keyboardFocus(false);
+  }, [status]);
+
+  // Closed for a while â†’ WebView2 may trim memory; back to normal on the first touch
+  // (peek), so the hover delay covers paging it back in before the notch opens.
+  useEffect(() => {
+    if (status !== "closed") {
+      setMemoryLow(false);
+      return;
+    }
+    let interval: number | undefined;
+    const id = window.setTimeout(() => {
+      setMemoryLow(true);
+      interval = window.setInterval(() => setMemoryLow(true), 30_000);
+    }, MEMORY_LOW_AFTER_MS);
+    return () => {
+      window.clearTimeout(id);
+      if (interval !== undefined) window.clearInterval(interval);
+      setMemoryLow(false);
+    };
+  }, [status]);
+
+  // 1â€“9 switches tools while open and not typing.
+  useEffect(() => {
+    if (status !== "open") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (isTextField(e.target) || e.ctrlKey || e.altKey || e.metaKey) return;
+      const tab = visible[Number(e.key) - 1];
+      if (tab) navigate(tab.id);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [status, visible]);
+
+  return (
+    <div
+      className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center transition-opacity duration-200"
+      // In the browser the notch moves inside the window; natively the whole window moves (display.rs).
+      style={{
+        ["--accent" as string]: appearance.accent === "auto" ? np?.accent : appearance.accent,
+        ["--color-notch" as string]:
+          fillWithAlpha(
+            status === "open" ? appearance.expanded : appearance.resting,
+            appearance.material === "glass" ? 0.62 : appearance.material === "dark" ? 0.82 : 1,
+          ),
+        ["--subtext-opacity" as string]: appearance.subtextBrightness / 100,
+        opacity: focus && !line ? 0.5 : 1,
+        transform: isNative ? undefined : `translateX(${drag.offset}px)`,
+      }}
+    >
+      {/* Hit zone: bigger than the visible shape (Fitts) and flush with the top edge. */}
+      <div
+        ref={hitRef}
+        data-notch-hit
+        // The line is meant to stay out of the way: only a hair of extra hit zone, so
+        // the cursor has to be on it (the normal notch gets the generous Fitts margin).
+        className={`pointer-events-auto ${tightHit ? "px-1 pb-1" : "px-4 pb-3"}`}
+        style={{ minHeight: sticky.minHeight, paddingTop: topPad, cursor: drag.dragging ? "grabbing" : undefined }}
+        onPointerMove={sticky.onPointerMove}
+        onPointerDown={focus ? undefined : drag.onPointerDown}
+        // In Tauri, hover comes from the Rust poll (useNativeBridge), not the DOM.
+        onPointerEnter={isNative || focus ? undefined : onPointerEnter}
+        onPointerLeave={isNative || focus ? undefined : onPointerLeave}
+        onClick={onClick}
+      >
+        <motion.div
+          animate={{
+            x: appearance.dragAnimation ? drag.lag : 0,
+            scaleX: appearance.dragAnimation ? 1 + Math.abs(drag.lag) / 500 : 1,
+            scaleY: appearance.dragAnimation ? 1 - Math.abs(drag.lag) / 1600 : 1,
+          }}
+          transition={springs.peek}
+          style={{ transformOrigin: "50% 0%" }}
+        >
+        <NotchShape
+          geometry={finalShape}
+          transition={transition}
+          elevated={status === "open"}
+          floating={floating}
+        >
+          <LiveSlot id={status === "open" ? null : pillLive} />
+          {clockWeather && !line && !idleLine && status !== "open" && !pillLive && <ClosedClock />}
+          {!line && !idleLine && <PrivacyDots />}
+
+          <AnimatePresence>
+            {status === "open" && (
+              <motion.div
+                key="open"
+                className="absolute top-0 left-1/2 flex flex-col"
+                style={{ width: size.w, height: size.h, marginLeft: -size.w / 2 }}
+                // No scale here: scaling re-rasterizes the small dock icons at shifting subpixels every frame, which reads as jitter (issue #3).
+                initial={{ opacity: 0, transform: "translateY(-6px)" }}
+                animate={{ opacity: 1, transform: "translateY(0px)", transition: content.enter }}
+                exit={{ opacity: 0, transform: "translateY(-4px)", transition: content.exit }}
+              >
+                <Header title={t(tab.label)} onDragStart={drag.onPointerDown} />
+                <div className="relative min-h-0 flex-1 overflow-clip">
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    <motion.div
+                      key={tab.id}
+                      className="absolute inset-0"
+                      initial={{ opacity: 0, transform: "translateY(3px)" }}
+                      animate={{ opacity: 1, transform: "translateY(0px)", transition: content.enter }}
+                      exit={{ opacity: 0, transform: "translateY(-3px)", transition: content.exit }}
+                    >
+                      <tab.View />
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+                <Dock tabs={visible} activeId={tab.id} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </NotchShape>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+/** Windows-island style: a clock in the floating closed pill. */
+function ClosedClock() {
+  const [now, setNow] = useState(() => new Date());
+  const forecast = useForecast();
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  const { time, period } = formatTimeParts(now);
+  const wx = forecast && forecast !== "error" ? describe(forecast.current.code, forecast.current.day) : null;
+  const temp = forecast && forecast !== "error" ? formatTemp(forecast.current.temp) : null;
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      <div className="flex items-center gap-1">
+        <span className="tabular text-[12px] font-semibold text-label">{time}</span>
+        {period && <span className="text-[9px] font-semibold text-label-3">{period}</span>}
+      </div>
+      {wx && (
+        <>
+          <span
+            aria-hidden
+            className="mx-3 h-3.5 w-[2px] shrink-0 rounded-full"
+            style={{ background: "#ffffff", boxShadow: "0 0 6px rgb(255 255 255 / 0.35)" }}
+          />
+          <div className="flex items-center gap-1.5">
+            <wx.icon size={12} weight="fill" className="text-label-2" />
+            <span className="tabular text-[11px] font-semibold text-label-2">{temp}</span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Header: tool title on the left, actions + pin on the right. The middle (camera) stays free. */
+function Header({ title, onDragStart }: { title: string; onDragStart: (e: React.PointerEvent) => void }) {
+  const isPinned = pinned.use();
+  return (
+    // Empty header space = drag handle.
+    <div data-drag-handle onPointerDown={onDragStart} className="flex shrink-0 items-center justify-between gap-3 pr-3 pl-5" style={{ height: HEADER_HEIGHT + 4 }}>
+      <div className="relative min-w-0 flex-1">
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.h2
+            key={title}
+            className="truncate text-title font-semibold"
+            initial={{ opacity: 0, filter: "blur(4px)" }}
+            animate={{ opacity: 1, filter: "blur(0px)", transition: content.enter }}
+            exit={{ opacity: 0, filter: "blur(4px)", transition: content.exit }}
+          >
+            {title}
+          </motion.h2>
+        </AnimatePresence>
+      </div>
+      <div className="flex items-center gap-1">
+        {/* Tools render here via <HeaderActions> (src/notch/header.tsx). The grid stacks old and new during a switch. */}
+        <div ref={(el) => headerSlot.set(el)} className="grid" />
+        <HeaderButton label={t("Fokus-Modus (3Ã— klicken zum Beenden)")} onClick={() => setFocusMode(true)}>
+          <Selection size={14} weight="bold" />
+        </HeaderButton>
+        <HeaderButton label={isPinned ? t("LÃ¶sen") : t("Offen halten")} active={isPinned} onClick={togglePin}>
+          <PushPin size={14} weight={isPinned ? "fill" : "bold"} />
+        </HeaderButton>
+      </div>
+    </div>
+  );
+}
+
+/** Tool bar at the bottom (like OmniNotch). The gear at the end toggles between settings and the last tool. */
+function Dock({ tabs, activeId }: { tabs: NotchTab[]; activeId: string }) {
+  const lastTool = useRef(tabs[0]?.id);
+  if (activeId !== settingsTab.id) lastTool.current = activeId;
+  const inSettings = activeId === settingsTab.id;
+  const brightness = settings.use().appearance.dockIconBrightness;
+  const updateReady = update.use().phase === "available";
+  // Dot on the gear = update ready or unseen changes â†’ jump straight to that section.
+  const unseen = useUnseen().length > 0;
+  const badge = updateReady || unseen;
+
+  return (
+    <div className="flex shrink-0 items-start justify-center gap-0.5 px-4 pt-1" style={{ height: DOCK_HEIGHT }}>
+      {tabs.map((tab) => (
+        <DockButton key={tab.id} label={t(tab.label)} icon={tab.icon} active={tab.id === activeId} brightness={brightness} onClick={() => navigate(tab.id)} />
+      ))}
+      <span aria-hidden className="mx-1.5 mt-2 h-4 w-px bg-separator" />
+      <DockButton
+        label={t(settingsTab.label)}
+        icon={GearSix}
+        active={inSettings}
+        brightness={brightness}
+        badge={badge}
+        onClick={() => (inSettings ? navigate(lastTool.current ?? tabs[0].id) : navigate(settingsTab.id, badge ? "updates" : null))}
+      />
+    </div>
+  );
+}
+
+function DockButton(props: { label: string; icon: NotchTab["icon"]; active: boolean; brightness: number; onClick: () => void; badge?: boolean }) {
+  const I = props.icon;
+  return (
+    <button
+      aria-label={props.label}
+      title={props.label}
+      onClick={props.onClick}
+      className={`pressable relative flex h-8 w-8 items-center justify-center rounded-[10px] ${
+        props.active ? "text-label" : "text-label-3 hover:text-label-2"
+      }`}
+    >
+      {props.active && <motion.span layoutId="dock-pill" className="absolute inset-0 rounded-[10px] bg-fill-2" transition={springs.snappy} />}
+      <I
+        size={16}
+        weight={props.active ? "fill" : "bold"}
+        className="relative"
+        style={{ opacity: props.active ? 1 : props.brightness / 100 }}
+      />
+      {/* Badge dot (e.g. update available) at the icon's top right. */}
+      <AnimatePresence>
+        {props.badge && (
+          <motion.span
+            className="absolute top-1 right-1 size-[7px] rounded-full bg-link ring-2 ring-notch"
+            initial={{ opacity: 0, transform: "scale(0.9)" }}
+            animate={{ opacity: 1, transform: "scale(1)" }}
+            exit={{ opacity: 0, transform: "scale(0.9)" }}
+            transition={springs.snappy}
+          />
+        )}
+      </AnimatePresence>
+    </button>
+  );
+}
+
+/**
+ * With the dock at the bottom, a shorter tool moves it up, so the cursor would
+ * suddenly be outside and the notch would close. So the hit zone only shrinks
+ * once the cursor is back over the shape (or the notch closes).
+ * Applies natively too: Rust gets this zone's rectangle.
+ */
+function useStickyHitZone(status: NotchStatus, height: number) {
+  const [minHeight, setMinHeight] = useState<number | undefined>(undefined);
+  const prev = useRef(height);
+  useLayoutEffect(() => {
+    if (status !== "open") setMinHeight(undefined);
+    else if (height < prev.current) {
+      const from = prev.current + HIT_PAD_BOTTOM;
+      setMinHeight((m) => Math.max(m ?? 0, from));
+    }
+    prev.current = height;
+  }, [status, height]);
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (minHeight === undefined) return;
+    const shapeBottom = e.currentTarget.getBoundingClientRect().top + height;
+    if (e.clientY < shapeBottom) setMinHeight(undefined);
+  };
+  return { minHeight, onPointerMove };
+}
+
+/** pb-3 of the hit zone. */
+const HIT_PAD_BOTTOM = 12;
+
+function shapeFor(status: NotchStatus, live: string | null, size: { w: number; h: number }): NotchGeometry {
+  if (status === "open") return openGeometry(size.w, size.h);
+  const base = live === "system" ? geometry.gaming : live ? geometry.live : geometry.closed;
+  if (status === "peek") {
+    // Hover nudge relative to the current width so it also fits the live state.
+    const bump = geometry.peek.w - geometry.closed.w;
+    return { ...geometry.peek, w: base.w + bump };
+  }
+  return base;
+}
+
+/** Picks the spring for the transition (open â‰  close â‰  morph). */
+function useTransitionFor(status: NotchStatus, shape: NotchGeometry): Transition {
+  const prev = useRef(status);
+  const key = `${shape.w}x${shape.h}`;
+  const prevKey = useRef(key);
+
+  let t: Transition;
+  if (status === "open") t = prev.current === "open" ? springs.morph : springs.open;
+  else if (status === "peek") t = springs.peek;
+  else t = prev.current === "open" ? springs.close : springs.morph;
+
+  // Only switch when the shape actually changes, otherwise the running spring continues.
+  const stable = useRef(t);
+  if (prevKey.current !== key) stable.current = t;
+
+  useEffect(() => {
+    prev.current = status;
+    prevKey.current = key;
+  });
+
+  return stable.current;
+}
+
+/**
+ * Quick drop: drag files over the notch and it opens Shelf.
+ * A cancelled drag closes it again if it only opened for that.
+ */
+function useQuickDrop(status: NotchStatus, open: () => void, dismiss: () => void) {
+  const openedByDrag = useRef(false);
+  const holding = useRef(false);
+  const statusRef = useRef(status);
+  statusRef.current = status;
+
+  useEffect(
+    () =>
+      drop.subscribe(() => {
+        const { dragging, dropped } = drop.get();
+        if (dragging && !holding.current) {
+          holding.current = true;
+          holdOpen(true);
+          if (statusRef.current !== "open") {
+            openedByDrag.current = true;
+            open();
+          }
+          const current = nav.get().tabId;
+          if (current !== "shelf") navigate("shelf");
+        } else if (!dragging && holding.current) {
+          // Drag over: dropped â†’ stay open, cancelled â†’ close again.
+          holding.current = false;
+          holdOpen(false);
+          if (!dropped && openedByDrag.current) dismiss();
+          openedByDrag.current = false;
+        }
+      }),
+    [open, dismiss],
+  );
+}
+
+/**
+ * Link to the native shell: reports the hit zone to Rust (click-through), receives
+ * hover from the Rust poll and keeps the window clickable while typing.
+ */
+function useNativeBridge(
+  hitRef: RefObject<HTMLDivElement | null>,
+  onEnter: () => void,
+  onLeave: () => void,
+) {
+  useEffect(() => {
+    const el = hitRef.current;
+    if (!isNative || !el) return;
+
+    // The shape's size is animated by a spring â†’ ResizeObserver fires every frame.
+    const report = () => {
+      const r = el.getBoundingClientRect();
+      setHitRect({ x: r.x, y: r.y, w: r.width, h: r.height });
+    };
+    const ro = new ResizeObserver(report);
+    ro.observe(el);
+    report();
+
+    const offHover = onNativeHover((inside) => (inside ? onEnter() : onLeave()));
+    // Text field focused â†’ hold (clickable, no collapse) until focus leaves.
+    let typing = false;
+    const onFocusIn = (e: FocusEvent) => {
+      if (isTextField(e.target) && !typing) holdOpen((typing = true));
+    };
+    const onFocusOut = (e: FocusEvent) => {
+      if (typing && !isTextField(e.relatedTarget)) holdOpen((typing = false));
+    };
+    el.addEventListener("focusin", onFocusIn);
+    el.addEventListener("focusout", onFocusOut);
+
+    return () => {
+      ro.disconnect();
+      offHover();
+      el.removeEventListener("focusin", onFocusIn);
+      el.removeEventListener("focusout", onFocusOut);
+      if (typing) holdOpen(false);
+    };
+  }, [hitRef, onEnter, onLeave]);
+}
+
+function isInteractive(el: EventTarget | null): boolean {
+  return el instanceof Element && !!el.closest("button, input, textarea, a, [role=slider]");
+}
+
+function isTextField(el: EventTarget | null): boolean {
+  return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
+}

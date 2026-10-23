@@ -1,0 +1,54 @@
+export interface NowPlaying {
+  title: string;
+  artist: string;
+  /** Cover image URL (in the app: data URL from the GSMTC thumbnail). */
+  artwork: string | null;
+  /** Accent color from the cover, drives the equalizer & progress bar. */
+  accent: string;
+  isPlaying: boolean;
+  /** Position in seconds at `updatedAt` (ms, performance.now()). */
+  position: number;
+  /** Seconds; 0 = unknown (live stream, some browser players). */
+  duration: number;
+  /** Does the source allow seeking? */
+  canSeek: boolean;
+  /** Windows app user model ID of the playing app. */
+  appId: string;
+  updatedAt: number;
+}
+
+export interface MediaSession {
+  appId: string;
+  title: string;
+  artist: string;
+  isPlaying: boolean;
+}
+
+/**
+ * Bridge to the media source. A mock in the browser, in Tauri the
+ * Windows API GlobalSystemMediaTransportControls.
+ */
+export interface MediaSource {
+  get(): NowPlaying | null;
+  subscribe(listener: () => void): () => void;
+  toggle(): void;
+  next(): void;
+  previous(): void;
+  /** Seeks to `position` seconds. */
+  seek(position: number): void;
+  /** All apps exposing a media session, for the audio-session dropdown. */
+  sessions(): Promise<MediaSession[]>;
+  /** Makes the selected app the one shown in the notch. */
+  select(appId: string | null): void;
+  /** Toggles play/pause for one app without changing the shown app. */
+  toggleSession(appId: string): void;
+  /** Brings the playing app (Spotify, the browser …) to the front. false = not found. */
+  openSource(): Promise<boolean>;
+}
+
+/** Current playback position, extrapolated from the last state. */
+export function livePosition(np: NowPlaying, now = performance.now()): number {
+  if (!np.isPlaying) return np.position;
+  const pos = np.position + (now - np.updatedAt) / 1000;
+  return np.duration > 0 ? Math.min(np.duration, pos) : pos;
+}
