@@ -71,13 +71,18 @@ fn set_radio(kind: RadioKind, on: bool) -> Result<bool, String> {
     }
 
     // The request is queued, so the state can trail the returned access status.
-    for _ in 0..12 {
+    // Bluetooth radios in particular can take several seconds to come back.
+    for _ in 0..60 {
         if radio.State().ok() == Some(target) {
             return Ok(true);
         }
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
-    Err("The radio did not change state".into())
+    match radio.State() {
+        Ok(state) if state == target => Ok(true),
+        Ok(state) => Err(format!("The radio did not change state ({state:?})")),
+        Err(e) => Err(format!("Could not read the radio state: {e}")),
+    }
 }
 
 /// Wi-Fi status through `netsh`: no COM/WinRT, no admin, no extra memory.
@@ -119,8 +124,9 @@ pub async fn network_get() -> Result<Network, String> {
 pub async fn wifi_set(on: bool) -> Result<Network, String> {
     tauri::async_runtime::spawn_blocking(move || {
         set_radio(RadioKind::WiFi, on)?;
+        // Read the real state instead of echoing the request: Windows can take a
+        // moment, and the UI polls in the background.
         let mut status = network_status();
-        status.enabled = on;
         if !on {
             status.connected = false;
             status.wifi = false;
@@ -150,11 +156,16 @@ fn wifi_profiles() -> Vec<String> {
     if let Ok(out) = out {
         let text = String::from_utf8_lossy(&out.stdout);
         for line in text.lines() {
-            if let Some((_, value)) = line.split_once(':') {
-                let value = value.trim();
-                if line.contains("All User Profile") && !value.is_empty() {
-                    profiles.push(value.to_string());
-                }
+            // Profile rows are indented and look like "    All User Profile : Name"
+            // in every Windows language. Reading the value after the first colon
+            // avoids depending on the localized label.
+            if !(line.starts_with(' ') || line.starts_with('\t')) {
+                continue;
+            }
+            let Some((_, value)) = line.split_once(':') else { continue };
+            let value = value.trim();
+            if !value.is_empty() && value != "<None>" {
+                profiles.push(value.to_string());
             }
         }
     }
@@ -201,8 +212,12 @@ pub async fn wifi_networks() -> Result<Vec<WifiNetwork>, String> {
                     let value = value.trim();
                     if line.starts_with("Authentication") {
                         secured = !value.eq_ignore_ascii_case("open");
-                    } else if line.starts_with("Signal") && signal == 0 {
-                        signal = value.trim_end_matches('%').trim().parse().unwrap_or(0);
+                    } else if signal == 0 {
+                        // The signal row is "Signal : 86%" in English and has the
+                        // same "%" value in localized builds.
+                        if let Some(percent) = value.strip_suffix('%') {
+                            signal = percent.trim().parse().unwrap_or(0);
+                        }
                     }
                 }
             }
@@ -283,7 +298,10 @@ pub async fn bluetooth_get() -> Result<Bluetooth, String> {
 pub async fn bluetooth_set(on: bool) -> Result<Bluetooth, String> {
     tauri::async_runtime::spawn_blocking(move || {
         set_radio(RadioKind::Bluetooth, on)?;
-        Ok(Bluetooth { available: true, on })
+        match radio_state(RadioKind::Bluetooth) {
+            Some(state) => Ok(Bluetooth { available: true, on: state == RadioState::On }),
+            None => Err("Bluetooth radio disappeared while switching".into()),
+        }
     })
     .await
     .map_err(|e| e.to_string())?

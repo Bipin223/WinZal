@@ -12,6 +12,7 @@ import { t } from "../../i18n";
 type Appearance = Settings["appearance"];
 
 const ACCENTS = ["auto", "#0a84ff", "#30d158", "#ffd60a", "#ff9f0a", "#ff453a", "#bf5af2", "#ffffff"];
+const CLOCK_ACCENTS = ["#ff453a", "#ff9f0a", "#ffd60a", "#30d158", "#0a84ff", "#bf5af2", "#ffffff"];
 const NOTCH_COLORS = ["#000000", "#0b0b0f", "#111827", "#0f1a14", "#1a0f1a", "#1a0f0f", "#101418", "#1c1c1e"];
 
 const DEFAULTS: Appearance = {
@@ -25,6 +26,7 @@ const DEFAULTS: Appearance = {
   dockIconBrightness: 100,
   subtextBrightness: 100,
   clockWeather: true,
+  clockAccent: "#ff453a",
   gpuAcceleration: false,
 };
 
@@ -83,6 +85,9 @@ export function AppearanceView() {
       </Section>
       <Section label={t("Akzent")} hint={t("Aus dem Cover oder fest")}>
         <Swatches value={a.accent} colors={ACCENTS} onChange={(accent) => set({ accent })} />
+      </Section>
+      <Section label={t("Uhr-Akzent")} hint={t("Färbt die erste Ziffer der Uhrzeit")}>
+        <Swatches value={a.clockAccent} colors={CLOCK_ACCENTS} onChange={(clockAccent) => set({ clockAccent })} />
       </Section>
       <Section label={t("Ruhende Notch")} hint={t("Geschlossen")}>
         <Swatches value={a.resting} colors={NOTCH_COLORS} onChange={(resting) => set({ resting })} />

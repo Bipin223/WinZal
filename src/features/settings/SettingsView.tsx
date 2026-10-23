@@ -23,7 +23,7 @@ import { content, fade, springs } from "../../design/motion";
 import { alarmSounds, playAlarm, stopAlarm, type AlarmDuration } from "../../lib/sound";
 import { nav } from "../../notch/nav";
 import { tabs } from "../../notch/tabs";
-import { autostart, display, secrets, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName, type UsageId } from "../../platform/services";
+import { autostart, display, fetchFps, secrets, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName, type UsageId } from "../../platform/services";
 import { settings, updateAsk, updateSettings, type AskProvider } from "../../settings/store";
 import { BrandLogo, brandName } from "../../ui/brands";
 import { Button, Group, Row, Segmented, Select, Slider, Switch, TextField } from "../../ui/controls";
@@ -495,6 +495,20 @@ function Display() {
   useEffect(() => {
     void display.monitors().then(setMonitors);
   }, []);
+  // Show the FPS row in Settings even when gaming mode has not drawn a value yet.
+  // A direct ETW attempt fails asynchronously, so poll briefly until the state is known.
+  useEffect(() => {
+    let alive = true;
+    const load = () => void fetchFps().then((r) => alive && fps.set({ value: r.fps, error: r.error }));
+    load();
+    const id = window.setInterval(load, 1500);
+    const stop = window.setTimeout(() => window.clearInterval(id), 6000);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+      window.clearTimeout(stop);
+    };
+  }, []);
   const label = (m: MonitorInfo, i: number) => `${m.primary ? t("Hauptbildschirm") : t("Bildschirm {n}", { n: i + 1 })} · ${m.width}×${m.height}`;
 
   return (
@@ -589,7 +603,7 @@ function Display() {
           <SignOut size={18} weight="bold" className="text-orange" />
         </Row>
       )}
-      <Row label={t("Aufnahme-Punkte")} hint={t("Grün: Mikrofon/Kamera aktiv · Rot: Bildschirm wird aufgenommen")}>
+      <Row label={t("Aufnahme-Punkte")} hint={t("Rot: Bildschirm wird aufgenommen (immer sichtbar) · Grün: Mikrofon/Kamera aktiv")}>
         <Switch label={t("Aufnahme-Punkte")} checked={s.privacyDots} onChange={(privacyDots) => updateSettings({ privacyDots })} />
       </Row>
     </Group>
@@ -759,16 +773,16 @@ function UsageProviders() {
   );
 }
 
-/** FPS without admin: unlock once instead of running the notch as administrator every time. */
+/** FPS without admin: a tiny elevated helper owns the ETW session. */
 function FpsUnlockRow() {
   const [state, setState] = useState<"idle" | "busy" | "ok" | "relogin" | "cancelled" | "failed">("idle");
   const hint = {
-    idle: t("Einmalige Windows-Abfrage, danach nie wieder Administratorrechte"),
+    idle: t("Einmalige Windows-Abfrage – die FPS laufen sofort, kein Abmelden"),
     busy: t("Bitte die Windows-Abfrage bestätigen …"),
     ok: t("Freigeschaltet – die FPS laufen"),
     relogin: t("Fertig – einmal ab- und wieder anmelden, dann laufen die FPS"),
     cancelled: t("Abgebrochen"),
-    failed: t("Hat nicht geklappt – L4-Notchbar einmal als Administrator starten"),
+    failed: t("Hat nicht geklappt – noch einmal versuchen oder WinZal als Administrator starten"),
   }[state];
   return (
     <Row label={t("FPS freischalten")} hint={hint}>
@@ -779,7 +793,10 @@ function FpsUnlockRow() {
           disabled={state === "busy"}
           onClick={() => {
             setState("busy");
-            void unlockFps().then(setState);
+            void unlockFps().then((result) => {
+              setState(result);
+              if (result === "ok") void fetchFps().then((r) => fps.set({ value: r.fps, error: r.error }));
+            });
           }}
         >
           {t("Freischalten")}

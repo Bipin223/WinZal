@@ -1,0 +1,119 @@
+//! File helpers for Shelf and Ask: probe, preview, open, reveal, copy, read text.
+//!
+//! The former quick-drop converter was removed from the app (tabs, Tools and the
+//! drop flow). Only the metadata helpers live here now; no conversion code.
+
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+use serde::Serialize;
+
+const IMAGE_IN: &[&str] = &["png", "jpg", "jpeg", "webp", "bmp", "gif", "ico", "tif", "tiff", "dds", "tga"];
+const AUDIO_IN: &[&str] = &["mp3", "wav", "flac", "m4a", "aac", "ogg", "opus", "wma"];
+const VIDEO_IN: &[&str] = &["mp4", "mov", "mkv", "avi", "webm", "wmv", "m4v"];
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileInfo {
+    path: String,
+    name: String,
+    /// "image" | "audio" | "video" | "document" | "table" | "other"
+    kind: &'static str,
+    ext: String,
+    size: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Probe {
+    files: Vec<FileInfo>,
+}
+
+#[tauri::command]
+pub fn file_probe(paths: Vec<String>) -> Probe {
+    let files = paths
+        .into_iter()
+        .filter_map(|p| {
+            let path = PathBuf::from(&p);
+            let meta = std::fs::metadata(&path).ok().filter(|m| m.is_file())?;
+            let ext = extension(&path);
+            Some(FileInfo {
+                name: path.file_name()?.to_string_lossy().into_owned(),
+                kind: kind_of(&ext),
+                ext,
+                size: meta.len(),
+                path: p,
+            })
+        })
+        .collect();
+    Probe { files }
+}
+
+#[tauri::command]
+pub fn file_text(path: String) -> Result<String, String> {
+    crate::documents::read_text(&path)
+}
+
+#[tauri::command]
+pub fn open_path(path: String) -> Result<(), String> {
+    if !Path::new(&path).exists() {
+        return Err("Datei nicht mehr vorhanden".into());
+    }
+    // `explorer <file>` opens it with the associated app, without a console window.
+    Command::new("explorer").arg(&path).spawn().map(|_| ()).map_err(|e| e.to_string())
+}
+
+/// Puts files on the clipboard (Ctrl+V in Explorer pastes them).
+#[tauri::command]
+pub fn copy_files(paths: Vec<String>) -> Result<(), String> {
+    let files: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).filter(|p| p.exists()).collect();
+    if files.is_empty() {
+        return Err("Dateien nicht mehr vorhanden".into());
+    }
+    arboard::Clipboard::new().and_then(|mut c| c.set().file_list(&files)).map_err(|e| e.to_string())
+}
+
+/// Preview for image files (PNG data URL), otherwise None.
+#[tauri::command]
+pub async fn file_preview(path: String) -> Option<String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let p = Path::new(&path);
+        crate::clipboard::is_image_file(p).then(|| crate::clipboard::file_thumbnail(p)).flatten()
+    })
+    .await
+    .ok()
+    .flatten()
+}
+
+/// Shows the file selected in Explorer.
+#[tauri::command]
+pub fn reveal_file(path: String) -> Result<(), String> {
+    Command::new("explorer").arg(format!("/select,{path}")).spawn().map(|_| ()).map_err(|e| e.to_string())
+}
+
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+pub(crate) fn hide_console(cmd: &mut Command) {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(CREATE_NO_WINDOW);
+}
+
+fn extension(path: &Path) -> String {
+    path.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default()
+}
+
+fn kind_of(ext: &str) -> &'static str {
+    if IMAGE_IN.contains(&ext) {
+        "image"
+    } else if AUDIO_IN.contains(&ext) {
+        "audio"
+    } else if VIDEO_IN.contains(&ext) {
+        "video"
+    } else if crate::documents::DOC_IN.contains(&ext) {
+        "document"
+    } else if crate::documents::TABLE_IN.contains(&ext) {
+        "table"
+    } else {
+        "other"
+    }
+}

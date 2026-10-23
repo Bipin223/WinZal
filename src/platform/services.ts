@@ -121,7 +121,7 @@ export function fetchSystem(full: boolean): Promise<SystemStats> {
   });
 }
 
-// ---------- Converter ----------
+// ---------- File helpers (Shelf / Ask) ----------
 
 export type FileKind = "image" | "audio" | "video" | "document" | "table" | "other";
 
@@ -133,14 +133,8 @@ export interface DroppedFile {
   size: number;
 }
 
-export interface ConvertResult {
-  input: string;
-  output: string | null;
-  error: string | null;
-}
-
-export function probeFiles(paths: string[]): Promise<{ files: DroppedFile[]; ffmpeg: boolean }> {
-  if (isNative) return invoke("convert_probe", { paths });
+export function probeFiles(paths: string[]): Promise<{ files: DroppedFile[] }> {
+  if (isNative) return invoke("file_probe", { paths });
   // Browser: paths are made-up names from the drop event.
   const files = paths.map((p) => {
     const name = p.split(/[\\/]/).pop() ?? p;
@@ -158,24 +152,7 @@ export function probeFiles(paths: string[]): Promise<{ files: DroppedFile[]; ffm
               : "other";
     return { path: p, name, kind, ext, size: (showcase && showcaseFileSizes[name]) || 1_400_000 + name.length * 91_000 };
   });
-  return Promise.resolve({ files, ffmpeg: false });
-}
-
-export function convertFiles(paths: string[], target: string, quality: number, maxSize: number | null): Promise<ConvertResult[]> {
-  if (isNative) return invoke("convert_files", { paths, target, quality, maxSize });
-  return new Promise((r) =>
-    setTimeout(
-      () =>
-        r(
-          paths.map((input) => {
-            const ext = input.split(".").pop()?.toLowerCase();
-            if (ext === target) return { input, output: null, error: "Ist schon in diesem Format" };
-            return { input, output: input.replace(/\.[^.]+$/, `.${target}`), error: null };
-          }),
-        ),
-      900,
-    ),
-  );
+  return Promise.resolve({ files });
 }
 
 export function revealFile(path: string) {

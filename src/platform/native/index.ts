@@ -56,6 +56,11 @@ export function setMemoryLow(low: boolean) {
   if (isNative) void invoke("memory_low", { low });
 }
 
+/** Page out the WebView2 working set without changing the memory target. */
+export function trimMemory() {
+  if (isNative) void invoke("trim_memory");
+}
+
 /** Focus mode: window fully click-through (Rust only counts clicks to exit). */
 export function setPassthrough(on: boolean) {
   if (isNative) void invoke("set_passthrough", { on });

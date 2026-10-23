@@ -525,7 +525,7 @@ fn print_pdf(html: &str, output: &Path) -> Result<(), String> {
         .arg(format!("--user-data-dir={}", dir.join("profile").display()))
         .arg(format!("--print-to-pdf={}", output.display()))
         .arg(format!("file:///{}", page.display().to_string().replace('\\', "/")));
-    crate::convert::hide_console(&mut cmd);
+    crate::files::hide_console(&mut cmd);
     let status = cmd.output().map_err(|e| format!("PDF-Druck startet nicht: {e}"))?;
     let _ = std::fs::remove_dir_all(&dir);
     if status.status.success() && output.metadata().is_ok_and(|m| m.len() > 0) {

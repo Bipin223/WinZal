@@ -16,7 +16,9 @@ export function PrivacyDots() {
   const call = discordState.use().call;
 
   const talk = p.mic || p.camera || (!!call && !call.mute);
-  const dots = enabled ? [p.screen && "red", talk && "green"].filter((d): d is string => !!d) : [];
+  // The red recording dot is a privacy indicator: always show it while the screen
+  // is captured, even if the optional green mic/camera dots are switched off.
+  const dots = [p.screen && "red", enabled && talk && "green"].filter((d): d is string => !!d);
 
   return (
     // A bit right of the imagined camera in the middle, clear both closed and open.

@@ -6298,6 +6298,7 @@ dependencies = [
  "tokio",
  "webview2-com",
  "windows",
+ "windows-core",
  "winreg",
  "wmi",
  "zip 8.6.0",

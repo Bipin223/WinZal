@@ -4,7 +4,8 @@ import { settings, updateSettings } from "../../settings/store";
 
 /*
  * Mic/camera/screen use, polled once for the privacy dots and the presentation mode.
- * Only runs while one of them needs it.
+ * The red screen-recording dot is always active, so this poll runs for the whole
+ * session; the native query is a few registry reads plus the OBS log tail.
  */
 const POLL_MS = 1500;
 
@@ -16,24 +17,16 @@ const snoozed = createStore(false);
 let poll: number | undefined;
 
 function syncPolling() {
-  const s = settings.get();
-  const needed = s.privacyDots || s.presentation.auto;
-  if (needed && poll === undefined) {
-    const load = () =>
-      void fetchPrivacy().then((next) => {
-        const prev = privacy.get();
-        if (prev.mic === next.mic && prev.camera === next.camera && prev.screen === next.screen) return;
-        if (!next.screen) snoozed.set(false);
-        privacy.set(next);
-      });
-    load();
-    poll = window.setInterval(load, POLL_MS);
-  } else if (!needed && poll !== undefined) {
-    window.clearInterval(poll);
-    poll = undefined;
-    snoozed.set(false);
-    privacy.set({ mic: false, camera: false, screen: false });
-  }
+  if (poll !== undefined) return;
+  const load = () =>
+    void fetchPrivacy().then((next) => {
+      const prev = privacy.get();
+      if (prev.mic === next.mic && prev.camera === next.camera && prev.screen === next.screen) return;
+      if (!next.screen) snoozed.set(false);
+      privacy.set(next);
+    });
+  load();
+  poll = window.setInterval(load, POLL_MS);
 }
 settings.subscribe(syncPolling);
 syncPolling();

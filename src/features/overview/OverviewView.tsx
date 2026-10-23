@@ -15,6 +15,7 @@ import { describe, useForecast } from "../weather/store";
 import { settings } from "../../settings/store";
 import { formatTemp, formatTimeParts } from "../../lib/format";
 import { locale, t } from "../../i18n";
+import { ClockTime } from "../../notch/ClockTime";
 import { PowerActions, QuickControls, SystemRow } from "./Controls";
 
 /*
@@ -68,7 +69,7 @@ function Header() {
     <div className="relative flex items-end justify-between">
       <div>
         <div className="tabular text-[34px] leading-none font-semibold tracking-[-0.03em] text-label">
-          {time}
+          <ClockTime time={time} />
           {period && <span className="ml-1 text-title font-semibold tracking-normal text-label-3">{period}</span>}
         </div>
         <div className="mt-1 text-footnote text-label-3">{date}</div>

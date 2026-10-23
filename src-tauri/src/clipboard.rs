@@ -217,7 +217,7 @@ pub async fn clipboard_preview(id: u64, state: State<'_, ClipboardState>) -> Res
     .map_err(|e| e.to_string())
 }
 
-/// Ctrl+V in Shelf/Converter: files from the clipboard as paths. A copied image
+/// Ctrl+V in Shelf: files from the clipboard as paths. A copied image
 /// (screenshot) is saved as PNG under Pictures/Notch and that path is returned.
 #[tauri::command]
 pub async fn clipboard_paste_files() -> Result<Vec<String>, String> {

@@ -198,16 +198,20 @@ pub async fn focus_set(active: bool) -> Result<Focus, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let manager = sessions();
         if active {
-            // Prefer a focus session; if that fails, at least Do Not Disturb.
-            if manager.as_ref().and_then(|m| m.TryStartFocusSession().ok()).is_none() {
-                set_dnd(true)?;
+            // The quiet-hours state is the same switch the taskbar's Do Not Disturb
+            // button flips, and works for normal desktop apps on current builds.
+            if let Err(error) = set_dnd(true) {
+                // Fall back to a Windows focus session if WNF is blocked.
+                let session = manager.as_ref().and_then(|m| m.TryStartFocusSession().ok());
+                if session.is_none() {
+                    return Err(error);
+                }
             }
         } else {
+            let _ = set_dnd(false);
+            // End a session that may have been started before the WNF path worked.
             if let Some(m) = &manager {
                 let _ = m.DeactivateFocus();
-            }
-            if dnd_profile().is_some_and(|p| p != 0) {
-                set_dnd(false)?;
             }
         }
         Ok(read_focus())

@@ -3,7 +3,7 @@ mod ambient;
 mod audio;
 mod clipboard;
 mod controls;
-pub mod convert;
+mod files;
 mod discord;
 mod display;
 mod documents;
@@ -33,13 +33,13 @@ use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, SetForeground
 /// AltGr+Space types nothing, so there's no conflict.
 const SHORTCUT_LABEL: &str = "Strg+Alt+Leertaste";
 
-/// For main.rs: elevated "Unlock FPS" call (see fps::fps_unlock).
-pub fn fps_elevated_unlock(sid: &str) -> i32 {
-    fps::elevated_unlock(sid)
+/// For main.rs: elevated FPS helper (see fps::run_helper).
+pub fn fps_helper(main_pid: u32) -> ! {
+    fps::run_helper(main_pid)
 }
 
 /// WebView2 args shared by both render modes.
-const WEBVIEW_BASE_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,Translate,msEdgeTranslate,SpareRendererForSitePerProcess,OptimizationHints,MediaRouter,AutofillServerCommunication,AudioServiceOutOfProcess --disable-background-networking --disable-component-update --disable-sync --no-pings --renderer-process-limit=1 --in-process-gpu --js-flags=--max-old-space-size=64";
+const WEBVIEW_BASE_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,Translate,msEdgeTranslate,SpareRendererForSitePerProcess,OptimizationHints,MediaRouter,AutofillServerCommunication,AudioServiceOutOfProcess --disable-background-networking --disable-component-update --disable-sync --no-pings --renderer-process-limit=1 --in-process-gpu --enable-low-end-device-mode --enable-features=NetworkServiceInProcess --js-flags=--max-old-space-size=64";
 
 fn render_mode_path() -> Option<std::path::PathBuf> {
     let local = std::env::var_os("LOCALAPPDATA")?;
@@ -115,6 +115,8 @@ pub fn run() {
             media::media_sessions,
             media::media_select,
             memory::memory_low,
+            memory::trim_memory,
+            drop::drop_reinstall,
             clipboard::clipboard_list,
             clipboard::clipboard_mode,
             clipboard::clipboard_copy,
@@ -133,13 +135,12 @@ pub fn run() {
             secrets::secret_has,
             usage::usage_fetch,
             system::system_stats,
-            convert::convert_probe,
-            convert::convert_files,
-            convert::file_text,
-            convert::reveal_file,
-            convert::open_path,
-            convert::copy_files,
-            convert::file_preview,
+            files::file_probe,
+            files::file_text,
+            files::reveal_file,
+            files::open_path,
+            files::copy_files,
+            files::file_preview,
             display::display_monitors,
             display::display_apply,
             fps::gaming_fps,
@@ -196,6 +197,9 @@ pub fn run() {
             autostart_set,
         ])
         .setup(move |app| {
+            // Shared FPS counters (created by the normal app, read by the elevated
+            // helper). After single-instance, so a second launch cannot grab it.
+            fps::init();
             // The WebView2 arguments must be chosen at runtime, so this window is
             // built here instead of by Tauri's automatic config creation.
             let config = app

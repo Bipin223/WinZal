@@ -236,11 +236,17 @@ function WifiTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
   const [connecting, setConnecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
+  const busyRef = useRef(false);
+  const settle = useRef(0);
 
   useEffect(() => {
-    const load = () => void systemControls.network().then(setNet).catch(() => setNet(null));
+    // Don't let a slow 15 s poll race an optimistic toggle and flip the tile back.
+    const load = () => {
+      if (busyRef.current || Date.now() < settle.current) return;
+      void systemControls.network().then(setNet).catch(() => setNet(null));
+    };
     load();
-    const id = setInterval(load, 5000);
+    const id = setInterval(load, 15_000);
     return () => clearInterval(id);
   }, []);
 
@@ -280,11 +286,17 @@ function WifiTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
     if (!net) {
       // Unknown state: read it first instead of guessing and switching the radio.
       setBusy(true);
-      void systemControls.network().then(setNet).catch(() => setNet(null)).finally(() => setBusy(false));
+      busyRef.current = true;
+      void systemControls.network().then(setNet).catch(() => setNet(null)).finally(() => {
+        busyRef.current = false;
+        setBusy(false);
+      });
       return;
     }
     const next = !enabled;
     setBusy(true);
+    busyRef.current = true;
+    settle.current = Date.now() + 3000;
     setNet((current) =>
       current
         ? { ...current, enabled: next, connected: next ? current.connected : false, name: next ? current.name : "" }
@@ -294,7 +306,11 @@ function WifiTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
       .setWifi(next)
       .then(setNet)
       .catch(() => systemControls.network().then(setNet).catch(() => setNet(null)))
-      .finally(() => setBusy(false));
+      .finally(() => {
+        busyRef.current = false;
+        settle.current = Date.now() + 3000;
+        setBusy(false);
+      });
   };
 
   const connect = async (network: WifiNetwork) => {
@@ -306,6 +322,8 @@ function WifiTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
     }
     setConnecting(network.ssid);
     setError(null);
+    busyRef.current = true;
+    settle.current = Date.now() + 4000;
     try {
       setNet(await systemControls.wifiConnect(network.ssid));
       onClose();
@@ -313,6 +331,8 @@ function WifiTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
       setError(String(e));
       void loadNetworks();
     } finally {
+      busyRef.current = false;
+      settle.current = Date.now() + 3000;
       setConnecting(null);
     }
   };
@@ -321,7 +341,7 @@ function WifiTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
     <div ref={box} className="relative min-w-0">
       <ToggleTile
         label={t("WLAN")}
-        state={state}
+        state={busy ? "…" : state}
         active={active}
         onIcon={WifiOnIcon}
         offIcon={WifiOffIcon}
@@ -401,11 +421,16 @@ function BluetoothTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
   const [connecting, setConnecting] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
+  const busyRef = useRef(false);
+  const settle = useRef(0);
 
   useEffect(() => {
-    const load = () => void systemControls.bluetooth().then(setBt).catch(() => setBt(null));
+    const load = () => {
+      if (busyRef.current || Date.now() < settle.current) return;
+      void systemControls.bluetooth().then(setBt).catch(() => setBt(null));
+    };
     load();
-    const id = setInterval(load, 10000);
+    const id = setInterval(load, 20_000);
     return () => clearInterval(id);
   }, []);
 
@@ -448,12 +473,18 @@ function BluetoothTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
     }
     const next = !active;
     setBusy(true);
+    busyRef.current = true;
+    settle.current = Date.now() + 4000;
     setBt((current) => (current ? { ...current, on: next } : current));
     void systemControls
       .setBluetooth(next)
       .then(setBt)
       .catch(() => systemControls.bluetooth().then(setBt).catch(() => setBt(null)))
-      .finally(() => setBusy(false));
+      .finally(() => {
+        busyRef.current = false;
+        settle.current = Date.now() + 4000;
+        setBusy(false);
+      });
   };
 
   const connect = async (device: BluetoothPeer) => {
@@ -464,6 +495,8 @@ function BluetoothTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
     }
     setConnecting(device.address);
     setError(null);
+    busyRef.current = true;
+    settle.current = Date.now() + 12_000;
     try {
       if (await systemControls.bluetoothConnect(device.address)) {
         await systemControls.bluetooth().then(setBt).catch(() => {});
@@ -475,6 +508,8 @@ function BluetoothTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
     } catch (e) {
       setError(String(e));
     } finally {
+      busyRef.current = false;
+      settle.current = Date.now() + 8000;
       setConnecting(null);
     }
   };
@@ -483,7 +518,7 @@ function BluetoothTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
     <div ref={box} className="relative min-w-0">
       <ToggleTile
         label="Bluetooth"
-        state={state}
+        state={busy ? "…" : state}
         active={active}
         onIcon={BluetoothOnIcon}
         offIcon={BluetoothOffIcon}

@@ -59,6 +59,8 @@ export interface Settings {
     subtextBrightness: number;
     /** Show time + weather in the closed island. */
     clockWeather: boolean;
+    /** Colour of the first clock digit (OnePlus-style accent); red by default. */
+    clockAccent: string;
     /** true = hardware acceleration (smoother, more RAM); false = software/CPU (less RAM, more CPU). */
     gpuAcceleration: boolean;
   };
@@ -113,7 +115,7 @@ const defaults: Settings = {
   weather: null,
   display: { visibility: "always", monitor: null, offset: 0, focusStyle: "dim", idleStyle: "notch" },
   gaming: { mode: "off" },
-  privacyDots: false,
+  privacyDots: true,
   appearance: {
     accent: "auto",
     resting: "#000000",
@@ -125,6 +127,7 @@ const defaults: Settings = {
     dockIconBrightness: 100,
     subtextBrightness: 100,
     clockWeather: true,
+    clockAccent: "#ff453a",
     gpuAcceleration: false,
   },
   discord: { clientId: "" },

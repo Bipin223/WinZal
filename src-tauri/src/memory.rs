@@ -28,15 +28,29 @@ pub fn memory_low(low: bool, window: WebviewWindow) {
         let _ = core.SetMemoryUsageTargetLevel(level);
     });
 
-    if low && !TRIMMING.swap(true, Ordering::AcqRel) {
-        // The target level only lets Chromium trim; it may keep a large working set.
-        // Paging the WebView2 tree out on the closed notch keeps idle RAM low. It
-        // pages back in on the next hover (covered by the hover delay).
-        std::thread::spawn(|| {
-            trim_working_sets();
-            TRIMMING.store(false, Ordering::Release);
-        });
+    if low {
+        trim_async();
     }
+}
+
+/// Page out the WebView2 tree without changing the memory target. Used periodically
+/// while the notch is open; the next paint pages the hot bits back in.
+#[tauri::command]
+pub fn trim_memory() {
+    trim_async();
+}
+
+fn trim_async() {
+    if TRIMMING.swap(true, Ordering::AcqRel) {
+        return;
+    }
+    // The target level only lets Chromium trim; it may keep a large working set.
+    // Paging the WebView2 tree out keeps idle RAM low. It pages back in on the next
+    // hover/paint (covered by the hover delay).
+    std::thread::spawn(|| {
+        trim_working_sets();
+        TRIMMING.store(false, Ordering::Release);
+    });
 }
 
 fn trim_working_sets() {

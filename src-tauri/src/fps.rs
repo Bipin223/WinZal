@@ -1,36 +1,49 @@
 //! FPS for gaming mode: counts present calls of the foreground process via ETW
 //! (like PresentMon, heavily simplified).
 //!
-//! - Sources: Microsoft-Windows-DXGI (Present_Start, D3D10–12), Microsoft-Windows-D3D9 and
-//!   Microsoft-Windows-DxgKrnl (present/history/blit in the kernel). Every API goes through
-//!   DxgKrnl, so OpenGL (e.g. Minecraft Java) and Vulkan count too.
+//! - Sources: Microsoft-Windows-DXGI (Present_Start, PresentMultiplaneOverlay_Start),
+//!   Microsoft-Windows-D3D9 and Microsoft-Windows-DxgKrnl (present/history/blit in the
+//!   kernel). Every API goes through DxgKrnl, so OpenGL (e.g. Minecraft Java) and Vulkan
+//!   count too.
 //! - One frame can fire several of these events depending on the API, so each event
 //!   kind is counted separately and the highest count wins, never the sum.
 //! - Real-time ETW needs admin rights or membership in "Performance Log Users".
-//!   `fps_unlock` runs the app elevated once (UAC prompt shows "L4-Notchbar") and adds
-//!   the account to that group. Windows only applies group changes to new sign-ins,
-//!   so until then `gaming_fps` returns "relogin"; without membership "no-admin".
-//!   (Per-GUID ETW rights via EventAccessControl don't help: creating a real-time
-//!   session still requires the group, tested on Windows 11.) Errors retry every few seconds.
+//!   Instead of forcing a sign-out, the notch starts a tiny elevated helper
+//!   (`WinZal.exe --fps-helper <pid>`, one UAC prompt). The helper owns the ETW session
+//!   and publishes per-process present counters in shared memory; the normal,
+//!   non-elevated notch only reads them. It stops with the app.
 //! - The session only runs while polled (`IDLE`). It would survive a crash otherwise,
 //!   so a leftover session with the same name is stopped on start.
+//! - Direct ETW remains as a fallback when the app itself runs elevated or the account
+//!   is already in "Performance Log Users" (e.g. after the old unlock flow).
 
 use std::collections::HashMap;
+use std::os::windows::ffi::OsStrExt;
+use std::sync::atomic::{AtomicPtr, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use serde::Serialize;
-use windows::core::{GUID, PCWSTR, PWSTR};
-use windows::Win32::Foundation::{ERROR_ACCESS_DENIED, ERROR_ALREADY_EXISTS, ERROR_SUCCESS, WIN32_ERROR};
+use windows::core::{w, GUID, PCWSTR, PWSTR};
+use windows::Win32::Foundation::{
+    CloseHandle, ERROR_ACCESS_DENIED, ERROR_ALREADY_EXISTS, ERROR_CANCELLED, ERROR_SUCCESS, HANDLE, INVALID_HANDLE_VALUE, WIN32_ERROR,
+};
 use windows::Win32::System::Diagnostics::Etw::{
     CloseTrace, ControlTraceW, EnableTraceEx2, OpenTraceW, ProcessTrace, StartTraceW, CONTROLTRACE_HANDLE, EVENT_CONTROL_CODE_ENABLE_PROVIDER,
     EVENT_RECORD, EVENT_TRACE_CONTROL_STOP, EVENT_TRACE_LOGFILEW, EVENT_TRACE_PROPERTIES, EVENT_TRACE_REAL_TIME_MODE, PROCESSTRACE_HANDLE,
     PROCESS_TRACE_MODE_EVENT_RECORD, PROCESS_TRACE_MODE_REAL_TIME, WNODE_FLAG_TRACED_GUID,
 };
-use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+use windows::Win32::System::Memory::{
+    CreateFileMappingW, MapViewOfFile, OpenFileMappingW, FILE_MAP_ALL_ACCESS, MEMORY_MAPPED_VIEW_ADDRESS, PAGE_READWRITE,
+};
+use windows::Win32::System::SystemInformation::GetTickCount64;
+use windows::Win32::System::Threading::{GetCurrentProcessId, OpenProcess, WaitForSingleObject, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE};
+use windows::Win32::UI::Shell::{ShellExecuteExW, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW};
+use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId, SW_HIDE};
 
 const SESSION: &str = "NotchFps";
+const HELPER_SESSION: &str = "NotchFpsHelper";
 /// Fixed session GUID.
 const SESSION_GUID: GUID = GUID::from_u128(0x6f3e2a41_8c5d_4b7e_9a12_4c4e6f746368);
 const DXGI: GUID = GUID::from_u128(0xca11c036_0102_4a2d_a6ad_f03cfed5d3c9);
@@ -48,10 +61,18 @@ const IDLE: Duration = Duration::from_secs(10);
 const TRACE_LEVEL_INFORMATION: u8 = 4;
 /// Retry errors ("no-admin", "failed") after this long, e.g. after unlocking.
 const RETRY: Duration = Duration::from_secs(5);
+/// All event kinds we count separately. Max of the deltas is the FPS.
+const KINDS: usize = 7;
+const SLOTS: usize = 512;
+const SHARED_NAME: &str = "Local\\WinZalFps-v1";
+const SHARED_MAGIC: u32 = 0x575A_4650; // WZFP
+const SHARED_VERSION: u32 = 1;
+const ERR_NO_ADMIN: u32 = 1;
+const ERR_FAILED: u32 = 2;
 
 #[derive(Default)]
 struct Counter {
-    /// Presents per (process, event kind) since the last poll.
+    /// Presents per (process, event kind) since the last poll (direct mode).
     counts: HashMap<(u32, u16), u32>,
     since: Option<Instant>,
     wanted_at: Option<Instant>,
@@ -60,6 +81,15 @@ struct Counter {
     error_at: Option<Instant>,
     /// Smoothed FPS of the last polled process.
     last: Option<(u32, f64)>,
+    helper: Option<HelperSample>,
+}
+
+#[derive(Clone, Copy)]
+struct HelperSample {
+    pid: u32,
+    epoch: u32,
+    counts: [u64; KINDS],
+    at: Instant,
 }
 
 fn counter() -> &'static Mutex<Counter> {
@@ -70,14 +100,29 @@ fn counter() -> &'static Mutex<Counter> {
 #[derive(Serialize)]
 pub struct Fps {
     fps: Option<f64>,
-    /// "no-admin" | "relogin" | "failed"
+    /// "no-admin" | "failed"
     error: Option<&'static str>,
+}
+
+pub fn init() {
+    if let Some(shared) = shared() {
+        unsafe {
+            (*shared).main_pid.store(GetCurrentProcessId(), Ordering::Relaxed);
+        }
+    }
 }
 
 #[tauri::command]
 pub fn gaming_fps() -> Fps {
     let mut c = counter().lock().unwrap();
     c.wanted_at = Some(Instant::now());
+    let pid = foreground_pid();
+
+    // Elevated helper first: it can trace without this process being admin.
+    if let Some(result) = helper_fps(&mut c, pid) {
+        return result;
+    }
+
     if c.error.is_some() && c.error_at.is_none_or(|t| t.elapsed() > RETRY) {
         c.error = None;
     }
@@ -91,7 +136,6 @@ pub fn gaming_fps() -> Fps {
         return Fps { fps: None, error: Some(error) };
     }
 
-    let pid = foreground_pid();
     let elapsed = c.since.map(|s| s.elapsed().as_secs_f64()).unwrap_or(0.0);
     if elapsed < 0.25 {
         return Fps { fps: c.last.filter(|(p, _)| *p == pid).map(|(_, f)| f), error: None };
@@ -115,37 +159,358 @@ fn foreground_pid() -> u32 {
     pid
 }
 
-/// Buffer for EVENT_TRACE_PROPERTIES + session name (must follow directly).
-struct Props {
-    buf: Vec<u8>,
+// ── Shared memory (main ‹—› elevated helper) ────────────────────────────────
+
+#[repr(C)]
+struct FpsEntry {
+    pid: AtomicU32,
+    epoch: AtomicU32,
+    last: AtomicU64,
+    counts: [AtomicU64; KINDS],
 }
 
-impl Props {
-    fn new() -> Self {
-        // Room for any session name (incl. the probe); ControlTrace writes it back.
-        let name_len = 1024 * 2;
-        let size = std::mem::size_of::<EVENT_TRACE_PROPERTIES>() + name_len;
-        let mut buf = vec![0u8; size];
-        let p = buf.as_mut_ptr() as *mut EVENT_TRACE_PROPERTIES;
-        unsafe {
-            (*p).Wnode.BufferSize = size as u32;
-            (*p).Wnode.Flags = WNODE_FLAG_TRACED_GUID;
-            (*p).Wnode.ClientContext = 1; // QPC
-            (*p).Wnode.Guid = SESSION_GUID;
-            (*p).LogFileMode = EVENT_TRACE_REAL_TIME_MODE;
-            (*p).LoggerNameOffset = std::mem::size_of::<EVENT_TRACE_PROPERTIES>() as u32;
+#[repr(C)]
+struct FpsShared {
+    magic: AtomicU32,
+    version: AtomicU32,
+    helper_pid: AtomicU32,
+    main_pid: AtomicU32,
+    heartbeat: AtomicU64,
+    error: AtomicU32,
+    stop: AtomicU32,
+    entries: [FpsEntry; SLOTS],
+}
+
+static SHARED: OnceLock<usize> = OnceLock::new();
+static HELPER_SHARED: AtomicPtr<FpsShared> = AtomicPtr::new(std::ptr::null_mut());
+
+fn shared() -> Option<*mut FpsShared> {
+    if let Some(p) = SHARED.get() {
+        return Some(*p as *mut FpsShared);
+    }
+    static INIT: Mutex<()> = Mutex::new(());
+    let _guard = INIT.lock().unwrap();
+    if let Some(p) = SHARED.get() {
+        return Some(*p as *mut FpsShared);
+    }
+    let p = unsafe { open_mapping(false)? };
+    let _ = SHARED.set(p as usize);
+    Some(p)
+}
+
+unsafe fn open_mapping(helper: bool) -> Option<*mut FpsShared> {
+    let size = std::mem::size_of::<FpsShared>();
+    let name = wide(SHARED_NAME);
+    let create = || unsafe { CreateFileMappingW(INVALID_HANDLE_VALUE, None, PAGE_READWRITE, 0, size as u32, PCWSTR(name.as_ptr())) };
+    let open = || unsafe { OpenFileMappingW(FILE_MAP_ALL_ACCESS.0, false, PCWSTR(name.as_ptr())) };
+    let handle = if helper {
+        // The normal notch created the mapping; do not create a second, disconnected one.
+        open().or_else(|_| create())
+    } else {
+        create().or_else(|_| open())
+    }
+    .ok()?;
+    let view: MEMORY_MAPPED_VIEW_ADDRESS = unsafe { MapViewOfFile(handle, FILE_MAP_ALL_ACCESS, 0, 0, size) };
+    if view.Value.is_null() {
+        let _ = unsafe { CloseHandle(handle) };
+        return None;
+    }
+    // Keep the mapping handle and view alive for the whole process; this is a
+    // one-time ~37 KB section.
+    let shared = view.Value as *mut FpsShared;
+    unsafe {
+        let _ = (*shared).magic.compare_exchange(0, SHARED_MAGIC, Ordering::AcqRel, Ordering::Relaxed);
+        (*shared).version.store(SHARED_VERSION, Ordering::Relaxed);
+        if helper {
+            (*shared).helper_pid.store(GetCurrentProcessId(), Ordering::Relaxed);
+        } else {
+            (*shared).main_pid.store(GetCurrentProcessId(), Ordering::Relaxed);
         }
-        Self { buf }
+    }
+    // HANDLE is just a raw value; not closing it keeps the named mapping alive for
+    // the whole process lifetime (one-time ~37 KB section).
+    let _ = handle;
+    Some(shared)
+}
+
+fn helper_alive(shared: *mut FpsShared) -> bool {
+    let heartbeat = unsafe { (*shared).heartbeat.load(Ordering::Relaxed) };
+    heartbeat != 0 && unsafe { GetTickCount64() }.saturating_sub(heartbeat) < 5000
+}
+
+/// Reads the helper counters for the foreground process. `None` means "no helper";
+/// the caller then falls back to direct ETW.
+fn helper_fps(c: &mut Counter, pid: u32) -> Option<Fps> {
+    let shared = shared()?;
+    if !helper_alive(shared) {
+        c.helper = None;
+        return None;
+    }
+    let error = unsafe { (*shared).error.load(Ordering::Relaxed) };
+    if error == ERR_NO_ADMIN {
+        return Some(Fps { fps: None, error: Some("no-admin") });
+    }
+    if error != 0 {
+        return Some(Fps { fps: None, error: Some("failed") });
+    }
+    if pid == 0 {
+        return Some(Fps { fps: None, error: None });
+    }
+    let shared = unsafe { &*shared };
+    let entry = find_entry(shared, pid);
+    if entry.pid.load(Ordering::Relaxed) != pid {
+        c.helper = None;
+        c.last = None;
+        return Some(Fps { fps: None, error: None });
+    }
+    let epoch = entry.epoch.load(Ordering::Relaxed);
+    let mut counts = [0u64; KINDS];
+    for (slot, value) in counts.iter_mut().zip(entry.counts.iter()) {
+        *slot = value.load(Ordering::Relaxed);
+    }
+    let now = Instant::now();
+    if let Some(prev) = c.helper {
+        if prev.pid == pid && prev.epoch == epoch {
+            let elapsed = now.duration_since(prev.at).as_secs_f64();
+            if elapsed < 0.2 {
+                return Some(Fps { fps: c.last.filter(|(p, _)| *p == pid).map(|(_, f)| f), error: None });
+            }
+            let frames = (0..KINDS).map(|i| counts[i].saturating_sub(prev.counts[i])).max().unwrap_or(0) as f64;
+            let value = frames / elapsed;
+            let fps = match c.last {
+                Some((p, old)) if p == pid && value > 0.0 => old * 0.4 + value * 0.6,
+                _ => value,
+            };
+            c.last = Some((pid, fps));
+            c.helper = Some(HelperSample { pid, epoch, counts, at: now });
+            return Some(Fps { fps: (fps > 0.0).then_some(fps), error: None });
+        }
+    }
+    c.helper = Some(HelperSample { pid, epoch, counts, at: now });
+    if c.last.is_none_or(|(p, _)| p != pid) {
+        c.last = None;
+    }
+    Some(Fps { fps: c.last.filter(|(p, _)| *p == pid).map(|(_, f)| f), error: None })
+}
+
+fn find_entry<'a>(shared: &'a FpsShared, pid: u32) -> &'a FpsEntry {
+    let start = (pid as usize).wrapping_mul(2_654_435_761) % SLOTS;
+    for i in 0..SLOTS {
+        let entry = &shared.entries[(start + i) % SLOTS];
+        let current = entry.pid.load(Ordering::Relaxed);
+        if current == pid {
+            return entry;
+        }
+        if current == 0 && entry.pid.compare_exchange(0, pid, Ordering::AcqRel, Ordering::Relaxed).is_ok() {
+            entry.epoch.fetch_add(1, Ordering::AcqRel);
+            for count in &entry.counts {
+                count.store(0, Ordering::Relaxed);
+            }
+            entry.last.store(0, Ordering::Relaxed);
+            return entry;
+        }
+    }
+    &shared.entries[start]
+}
+
+// ── Elevated helper ─────────────────────────────────────────────────────────
+
+/// Starts the helper elevated (one UAC prompt) and waits until its ETW session is live.
+fn start_helper() -> &'static str {
+    let Some(shared) = shared() else { return "failed" };
+    if helper_alive(shared) {
+        return "ok";
+    }
+    unsafe {
+        (*shared).heartbeat.store(0, Ordering::Relaxed);
+        (*shared).error.store(0, Ordering::Relaxed);
+        (*shared).stop.store(0, Ordering::Relaxed);
+    }
+    // Stop a direct session from an earlier poll; both use the same session GUID.
+    stop_session(&wide(SESSION));
+
+    let Ok(exe) = std::env::current_exe() else { return "failed" };
+    let exe: Vec<u16> = exe.as_os_str().encode_wide().chain(Some(0)).collect();
+    let params = wide(&format!("--fps-helper {}", std::process::id()));
+    let mut info = SHELLEXECUTEINFOW {
+        cbSize: std::mem::size_of::<SHELLEXECUTEINFOW>() as u32,
+        fMask: SEE_MASK_NOCLOSEPROCESS,
+        lpVerb: w!("runas"),
+        lpFile: PCWSTR(exe.as_ptr()),
+        lpParameters: PCWSTR(params.as_ptr()),
+        nShow: SW_HIDE.0,
+        ..Default::default()
+    };
+    unsafe {
+        if let Err(e) = ShellExecuteExW(&mut info) {
+            return if e.code() == ERROR_CANCELLED.to_hresult() { "cancelled" } else { "failed" };
+        }
+        if !info.hProcess.is_invalid() {
+            let _ = CloseHandle(info.hProcess);
+        }
     }
 
-    fn ptr(&mut self) -> *mut EVENT_TRACE_PROPERTIES {
-        self.buf.as_mut_ptr() as *mut _
+    let deadline = Instant::now() + Duration::from_secs(15);
+    while Instant::now() < deadline {
+        thread::sleep(Duration::from_millis(150));
+        unsafe {
+            if (*shared).heartbeat.load(Ordering::Relaxed) != 0 {
+                // A direct session from an earlier poll would double the trace.
+                stop_session(&wide(SESSION));
+                return "ok";
+            }
+            match (*shared).error.load(Ordering::Relaxed) {
+                ERR_NO_ADMIN | ERR_FAILED => return "failed",
+                _ => {}
+            }
+        }
+    }
+    "failed"
+}
+
+/// One-time helper start from the UI. Returns ok | cancelled | failed (relogin kept
+/// for the old frontend contract, never returned).
+#[tauri::command]
+pub async fn fps_unlock() -> &'static str {
+    tauri::async_runtime::spawn_blocking(start_helper).await.unwrap_or("failed")
+}
+
+/// Runs in the elevated process (`--fps-helper <main-pid>`), before Tauri starts.
+pub fn run_helper(main_pid: u32) -> ! {
+    let Some(shared) = (unsafe { open_mapping(true) }) else { std::process::exit(2) };
+    HELPER_SHARED.store(shared, Ordering::Release);
+    unsafe {
+        (*shared).helper_pid.store(GetCurrentProcessId(), Ordering::Relaxed);
+        (*shared).main_pid.store(main_pid, Ordering::Relaxed);
+        (*shared).heartbeat.store(0, Ordering::Relaxed);
+        (*shared).error.store(0, Ordering::Relaxed);
+        (*shared).stop.store(0, Ordering::Relaxed);
+        for entry in (*shared).entries.iter() {
+            entry.pid.store(0, Ordering::Relaxed);
+            entry.epoch.store(0, Ordering::Relaxed);
+            entry.last.store(0, Ordering::Relaxed);
+            for count in &entry.counts {
+                count.store(0, Ordering::Relaxed);
+            }
+        }
+    }
+
+    let name = wide(HELPER_SESSION);
+    let (trace, logger) = match start_helper_trace(&name, shared) {
+        Some(pair) => pair,
+        None => {
+            unsafe { (*shared).heartbeat.store(0, Ordering::Relaxed) };
+            thread::sleep(Duration::from_secs(3));
+            std::process::exit(2);
+        }
+    };
+    let _keep_logger = logger;
+
+    let main = if main_pid != 0 {
+        unsafe { OpenProcess(PROCESS_SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION, false, main_pid).ok() }
+    } else {
+        None
+    };
+    let watch_name = name.clone();
+    let shared_addr = shared as usize;
+    let main_raw = main.map(|handle| handle.0 as usize);
+    thread::spawn(move || loop {
+        thread::sleep(Duration::from_secs(1));
+        let shared = shared_addr as *mut FpsShared;
+        let stop = unsafe { (*shared).stop.load(Ordering::Relaxed) != 0 };
+        let gone = main_raw.is_some_and(|raw| unsafe { WaitForSingleObject(HANDLE(raw as *mut _), 0).0 == 0 });
+        if stop || gone {
+            stop_session(&watch_name);
+            break;
+        }
+        unsafe { (*shared).heartbeat.store(GetTickCount64(), Ordering::Relaxed) };
+    });
+
+    unsafe {
+        (*shared).heartbeat.store(GetTickCount64(), Ordering::Relaxed);
+        let _ = ProcessTrace(&[trace], None, None);
+        let _ = CloseTrace(trace);
+        (*shared).heartbeat.store(0, Ordering::Relaxed);
+    }
+    std::process::exit(0);
+}
+
+/// StartTrace + providers + OpenTrace for the helper. Returns the trace handle and the
+/// logger-name buffer (must stay alive while ProcessTrace runs).
+fn start_helper_trace(name: &[u16], shared: *mut FpsShared) -> Option<(PROCESSTRACE_HANDLE, Vec<u16>)> {
+    let mut handle = CONTROLTRACE_HANDLE::default();
+    let mut props = Props::new();
+    let mut status = unsafe { StartTraceW(&mut handle, PCWSTR(name.as_ptr()), props.ptr()) };
+    if status == ERROR_ALREADY_EXISTS {
+        stop_session(name);
+        props = Props::new();
+        status = unsafe { StartTraceW(&mut handle, PCWSTR(name.as_ptr()), props.ptr()) };
+    }
+    if status != ERROR_SUCCESS {
+        unsafe { (*shared).error.store(if status == ERROR_ACCESS_DENIED { ERR_NO_ADMIN } else { ERR_FAILED }, Ordering::Relaxed) };
+        return None;
+    }
+    for (provider, keyword) in [(DXGI, 0), (D3D9, 0), (DXGKRNL, KMT_KEYWORD_PRESENT)] {
+        let status = unsafe { EnableTraceEx2(handle, &provider, EVENT_CONTROL_CODE_ENABLE_PROVIDER.0, TRACE_LEVEL_INFORMATION, keyword, 0, 0, None) };
+        if WIN32_ERROR(status.0) != ERROR_SUCCESS {
+            stop_session(name);
+            unsafe { (*shared).error.store(if WIN32_ERROR(status.0) == ERROR_ACCESS_DENIED { ERR_NO_ADMIN } else { ERR_FAILED }, Ordering::Relaxed) };
+            return None;
+        }
+    }
+    let mut logger = name.to_vec();
+    let mut logfile = EVENT_TRACE_LOGFILEW::default();
+    logfile.LoggerName = PWSTR(logger.as_mut_ptr());
+    logfile.Anonymous1.ProcessTraceMode = PROCESS_TRACE_MODE_REAL_TIME | PROCESS_TRACE_MODE_EVENT_RECORD;
+    logfile.Anonymous2.EventRecordCallback = Some(helper_on_event);
+    let trace = unsafe { OpenTraceW(&mut logfile) };
+    if trace.Value == u64::MAX {
+        stop_session(name);
+        unsafe { (*shared).error.store(ERR_FAILED, Ordering::Relaxed) };
+        return None;
+    }
+    Some((trace, logger))
+}
+
+unsafe extern "system" fn helper_on_event(record: *mut EVENT_RECORD) {
+    let Some(r) = (unsafe { record.as_ref() }) else { return };
+    let Some(kind) = event_kind(r.EventHeader.ProviderId, r.EventHeader.EventDescriptor.Id) else { return };
+    let Some(shared) = (unsafe { HELPER_SHARED.load(Ordering::Relaxed).as_ref() }) else { return };
+    let pid = r.EventHeader.ProcessId;
+    if pid == 0 {
+        return;
+    }
+    let entry = find_entry(shared, pid);
+    if entry.pid.load(Ordering::Relaxed) != pid {
+        return;
+    }
+    entry.counts[kind].fetch_add(1, Ordering::Relaxed);
+    entry.last.store(GetTickCount64(), Ordering::Relaxed);
+}
+
+fn event_kind(provider: GUID, id: u16) -> Option<usize> {
+    if provider == DXGI {
+        match id {
+            42 => Some(0),
+            55 => Some(1),
+            _ => None,
+        }
+    } else if provider == D3D9 && id == D3D9_PRESENT {
+        Some(2)
+    } else if provider == DXGKRNL {
+        match id {
+            166 => Some(3),
+            171 => Some(4),
+            184 => Some(5),
+            215 => Some(6),
+            _ => None,
+        }
+    } else {
+        None
     }
 }
 
-fn wide(s: &str) -> Vec<u16> {
-    s.encode_utf16().chain(Some(0)).collect()
-}
+// ── Direct ETW (fallback when already elevated / in Performance Log Users) ──
 
 fn stop_session(name: &[u16]) {
     let mut props = Props::new();
@@ -172,11 +537,7 @@ fn run() {
         status = unsafe { StartTraceW(&mut handle, PCWSTR(name.as_ptr()), props.ptr()) };
     }
     if status != ERROR_SUCCESS {
-        return fail(match status {
-            ERROR_ACCESS_DENIED if unlock::pending_relogin() => "relogin",
-            ERROR_ACCESS_DENIED => "no-admin",
-            _ => "failed",
-        });
+        return fail(if status == ERROR_ACCESS_DENIED { "no-admin" } else { "failed" });
     }
 
     // DxgKrnl is very chatty, so only the Present keyword. DXGI/D3D9 are quiet (0 = all).
@@ -184,7 +545,7 @@ fn run() {
         let status = unsafe { EnableTraceEx2(handle, &provider, EVENT_CONTROL_CODE_ENABLE_PROVIDER.0, TRACE_LEVEL_INFORMATION, keyword, 0, 0, None) };
         if WIN32_ERROR(status.0) != ERROR_SUCCESS {
             stop_session(&name);
-            return fail("failed");
+            return fail(if WIN32_ERROR(status.0) == ERROR_ACCESS_DENIED { "no-admin" } else { "failed" });
         }
     }
 
@@ -239,195 +600,36 @@ unsafe extern "system" fn on_event(record: *mut EVENT_RECORD) {
     }
 }
 
-/// One-time unlock: runs the app itself elevated (`--fps-unlock <SID>`) so the UAC
-/// prompt shows "L4-Notchbar" instead of PowerShell. The SID comes from this
-/// non-elevated process: with a standard account, a different admin account signs in
-/// at the UAC prompt, but this account is the one to unlock.
-///
-/// Result: "ok" (FPS work now, e.g. the app runs elevated), "relogin" (after signing
-/// out and back in), "cancelled", "failed".
-#[tauri::command]
-pub async fn fps_unlock() -> &'static str {
-    tauri::async_runtime::spawn_blocking(|| {
-        let Some(sid) = unlock::current_user_sid() else { return "failed" };
-        match unlock::run_elevated(&sid) {
-            Err(result) => result,
-            Ok(0) => {
-                // Forget the error so the next poll restarts the session.
-                let mut c = counter().lock().unwrap();
-                c.error = None;
-                drop(c);
-                if unlock::can_trace() { "ok" } else { "relogin" }
-            }
-            Ok(_) => "failed",
-        }
-    })
-    .await
-    .unwrap_or("failed")
+// ── ETW plumbing ────────────────────────────────────────────────────────────
+
+/// Buffer for EVENT_TRACE_PROPERTIES + session name (must follow directly).
+struct Props {
+    buf: Vec<u8>,
 }
 
-/// Runs in the elevated process (see main.rs). Returns the exit code: 0 ok, 2 failed.
-pub fn elevated_unlock(sid: &str) -> i32 {
-    unlock::grant(sid)
+impl Props {
+    fn new() -> Self {
+        // Room for any session name (incl. the probe); ControlTrace writes it back.
+        let name_len = 1024 * 2;
+        let size = std::mem::size_of::<EVENT_TRACE_PROPERTIES>() + name_len;
+        let mut buf = vec![0u8; size];
+        let p = buf.as_mut_ptr() as *mut EVENT_TRACE_PROPERTIES;
+        unsafe {
+            (*p).Wnode.BufferSize = size as u32;
+            (*p).Wnode.Flags = WNODE_FLAG_TRACED_GUID;
+            (*p).Wnode.ClientContext = 1; // QPC
+            (*p).Wnode.Guid = SESSION_GUID;
+            (*p).LogFileMode = EVENT_TRACE_REAL_TIME_MODE;
+            (*p).LoggerNameOffset = std::mem::size_of::<EVENT_TRACE_PROPERTIES>() as u32;
+        }
+        Self { buf }
+    }
+
+    fn ptr(&mut self) -> *mut EVENT_TRACE_PROPERTIES {
+        self.buf.as_mut_ptr() as *mut _
+    }
 }
 
-mod unlock {
-    use std::os::windows::ffi::OsStrExt;
-
-    use windows::core::{w, PCWSTR, PWSTR};
-    use windows::core::BOOL;
-    use windows::Win32::Foundation::{CloseHandle, HANDLE, HLOCAL, LocalFree, ERROR_CANCELLED, ERROR_SUCCESS};
-    use windows::Win32::NetworkManagement::NetManagement::{
-        NetApiBufferFree, NetLocalGroupAddMembers, NetLocalGroupGetMembers, LOCALGROUP_MEMBERS_INFO_0, MAX_PREFERRED_LENGTH,
-    };
-    use windows::Win32::Security::Authorization::{ConvertSidToStringSidW, ConvertStringSidToSidW};
-    use windows::Win32::Security::{
-        CheckTokenMembership, GetTokenInformation, LookupAccountSidW, TokenUser, PSID, SID_NAME_USE, TOKEN_QUERY, TOKEN_USER,
-    };
-    use windows::Win32::System::Diagnostics::Etw::{StartTraceW, CONTROLTRACE_HANDLE};
-    use windows::Win32::System::Threading::{GetCurrentProcess, GetExitCodeProcess, OpenProcessToken, WaitForSingleObject, INFINITE};
-    use windows::Win32::UI::Shell::{ShellExecuteExW, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW};
-    use windows::Win32::UI::WindowsAndMessaging::SW_HIDE;
-
-    use super::{stop_session, wide, Props};
-
-    /// Performance Log Users (well-known SID, the name is localized).
-    const LOG_USERS: windows::core::PCWSTR = w!("S-1-5-32-559");
-
-    /// Already a member of the group (ERROR_MEMBER_IN_ALIAS).
-    const MEMBER_IN_ALIAS: u32 = 1378;
-
-    pub fn current_user_sid() -> Option<String> {
-        unsafe {
-            let mut token = HANDLE::default();
-            OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).ok()?;
-            let mut len = 0;
-            let _ = GetTokenInformation(token, TokenUser, None, 0, &mut len);
-            let mut buf = vec![0u8; len as usize];
-            let ok = GetTokenInformation(token, TokenUser, Some(buf.as_mut_ptr().cast()), len, &mut len);
-            let _ = CloseHandle(token);
-            ok.ok()?;
-            let user = &*(buf.as_ptr() as *const TOKEN_USER);
-            sid_string(user.User.Sid)
-        }
-    }
-
-    unsafe fn sid_string(sid: PSID) -> Option<String> {
-        let mut text = PWSTR::null();
-        unsafe { ConvertSidToStringSidW(sid, &mut text) }.ok()?;
-        let s = unsafe { text.to_string() }.ok();
-        let _ = unsafe { LocalFree(Some(HLOCAL(text.0.cast()))) };
-        s
-    }
-
-    /// Localized name of "Performance Log Users", null-terminated.
-    fn log_users_name() -> Option<[u16; 256]> {
-        unsafe {
-            let mut group_sid = PSID::default();
-            ConvertStringSidToSidW(LOG_USERS, &mut group_sid).ok()?;
-            let mut name = [0u16; 256];
-            let mut domain = [0u16; 256];
-            let (mut name_len, mut domain_len) = (name.len() as u32, domain.len() as u32);
-            let mut kind = SID_NAME_USE::default();
-            let found = LookupAccountSidW(
-                PCWSTR::null(),
-                group_sid,
-                Some(PWSTR(name.as_mut_ptr())),
-                &mut name_len,
-                Some(PWSTR(domain.as_mut_ptr())),
-                &mut domain_len,
-                &mut kind,
-            );
-            let _ = LocalFree(Some(HLOCAL(group_sid.0)));
-            found.ok().map(|_| name)
-        }
-    }
-
-    /// Unlocked, but not active yet: the account is in the group, this sign-in's
-    /// token isn't (Windows applies group changes only to new sign-ins).
-    pub fn pending_relogin() -> bool {
-        unsafe {
-            let mut group_sid = PSID::default();
-            if ConvertStringSidToSidW(LOG_USERS, &mut group_sid).is_err() {
-                return false;
-            }
-            let mut in_token = BOOL::default();
-            let active = CheckTokenMembership(None, group_sid, &mut in_token).is_ok() && in_token.as_bool();
-            let _ = LocalFree(Some(HLOCAL(group_sid.0)));
-            !active && is_listed_member()
-        }
-    }
-
-    /// Is the current account listed in the group (as stored, not as in the token)?
-    fn is_listed_member() -> bool {
-        let (Some(me), Some(group)) = (current_user_sid(), log_users_name()) else { return false };
-        unsafe {
-            let mut buf: *mut u8 = std::ptr::null_mut();
-            let (mut read, mut total) = (0u32, 0u32);
-            let status = NetLocalGroupGetMembers(PCWSTR::null(), PCWSTR(group.as_ptr()), 0, &mut buf, MAX_PREFERRED_LENGTH, &mut read, &mut total, None);
-            if status != 0 || buf.is_null() {
-                return false;
-            }
-            let members = std::slice::from_raw_parts(buf as *const LOCALGROUP_MEMBERS_INFO_0, read as usize);
-            let found = members.iter().any(|m| sid_string(m.lgrmi0_sid).is_some_and(|s| s == me));
-            let _ = NetApiBufferFree(Some(buf.cast()));
-            found
-        }
-    }
-
-    /// Starts this exe elevated with `--fps-unlock <SID>` and waits for it to exit.
-    pub fn run_elevated(sid: &str) -> Result<u32, &'static str> {
-        let exe = std::env::current_exe().map_err(|_| "failed")?;
-        let exe: Vec<u16> = exe.as_os_str().encode_wide().chain(Some(0)).collect();
-        let params = wide(&format!("--fps-unlock {sid}"));
-        let mut info = SHELLEXECUTEINFOW {
-            cbSize: std::mem::size_of::<SHELLEXECUTEINFOW>() as u32,
-            fMask: SEE_MASK_NOCLOSEPROCESS,
-            lpVerb: w!("runas"),
-            lpFile: PCWSTR(exe.as_ptr()),
-            lpParameters: PCWSTR(params.as_ptr()),
-            nShow: SW_HIDE.0,
-            ..Default::default()
-        };
-        unsafe {
-            if let Err(e) = ShellExecuteExW(&mut info) {
-                return Err(if e.code() == ERROR_CANCELLED.to_hresult() { "cancelled" } else { "failed" });
-            }
-            if info.hProcess.is_invalid() {
-                return Err("failed");
-            }
-            WaitForSingleObject(info.hProcess, INFINITE);
-            let mut code = 1;
-            let _ = GetExitCodeProcess(info.hProcess, &mut code);
-            let _ = CloseHandle(info.hProcess);
-            Ok(code)
-        }
-    }
-
-    /// In the elevated process: add the account to "Performance Log Users".
-    pub fn grant(sid: &str) -> i32 {
-        let Some(group) = log_users_name() else { return 2 };
-        unsafe {
-            let mut psid = PSID::default();
-            if ConvertStringSidToSidW(PCWSTR(wide(sid).as_ptr()), &mut psid).is_err() {
-                return 2;
-            }
-            let entry = LOCALGROUP_MEMBERS_INFO_0 { lgrmi0_sid: psid };
-            let status = NetLocalGroupAddMembers(PCWSTR::null(), PCWSTR(group.as_ptr()), 0, &entry as *const _ as *const u8, 1);
-            let _ = LocalFree(Some(HLOCAL(psid.0)));
-            if status == 0 || status == MEMBER_IN_ALIAS { 0 } else { 2 }
-        }
-    }
-
-    /// Can this (non-elevated) process start a session now? Start one briefly and stop it.
-    pub fn can_trace() -> bool {
-        let name = wide("NotchFpsProbe");
-        let mut props = Props::new();
-        let mut handle = CONTROLTRACE_HANDLE::default();
-        let ok = unsafe { StartTraceW(&mut handle, PCWSTR(name.as_ptr()), props.ptr()) } == ERROR_SUCCESS;
-        if ok {
-            stop_session(&name);
-        }
-        ok
-    }
+fn wide(s: &str) -> Vec<u16> {
+    s.encode_utf16().chain(Some(0)).collect()
 }

@@ -3,13 +3,14 @@ import { AnimatePresence, motion, type Transition } from "motion/react";
 import { GearSix, PushPin, Selection } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
 import { useNowPlaying } from "../platform/media";
-import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onTrayOpen, setHitRect, setMemoryLow } from "../platform/native";
+import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onTrayOpen, setHitRect, setMemoryLow, trimMemory } from "../platform/native";
 import { PrivacyDots } from "../features/privacy/PrivacyDots";
 import { FOCUS_CLICKS, focusMode, setFocusMode } from "./focus";
 import { useDragToMove } from "./drag";
 import { LiveSlot, useLiveActivity } from "./live";
 import { DOCK_HEIGHT, HEADER_HEIGHT, geometry, openGeometry, type NotchGeometry } from "./geometry";
 import { HeaderButton, headerSlot } from "./header";
+import { ClockTime } from "./ClockTime";
 import { sizeOverride } from "./size";
 import { NotchShape } from "./NotchShape";
 import { drop } from "../platform/drop";
@@ -180,7 +181,16 @@ export function Notch() {
     };
   }, [status]);
 
-  // 1â€“9 switches tools while open and not typing.
+  // While open, page the WebView2 working set out every 20 s. This keeps Task
+  // Manager near the memory target without losing the live UI; hot pages fault
+  // back in immediately.
+  useEffect(() => {
+    if (status === "closed") return;
+    const id = window.setInterval(() => trimMemory(), 20_000);
+    return () => window.clearInterval(id);
+  }, [status]);
+
+  // 1–9 switches tools while open and not typing.
   useEffect(() => {
     if (status !== "open") return;
     const onKey = (e: KeyboardEvent) => {
@@ -292,7 +302,7 @@ function ClosedClock() {
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
       <div className="flex items-center gap-1">
-        <span className="tabular text-[12px] font-semibold text-label">{time}</span>
+        <ClockTime time={time} className="tabular text-[12px] font-semibold text-label" />
         {period && <span className="text-[9px] font-semibold text-label-3">{period}</span>}
       </div>
       {wx && (
