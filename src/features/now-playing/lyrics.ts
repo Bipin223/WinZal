@@ -28,11 +28,14 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
   const npRef = useRef(np);
   npRef.current = np;
   const track = np ? `${np.title}\u0001${np.artist}\u0001${Math.round(np.duration)}` : "";
+  const playing = np?.isPlaying ?? false;
 
   useEffect(() => {
     if (!enabled || !np || !np.title.trim()) {
-      setLines([]);
-      setIndex(-1);
+      // Functional setters bail out when already empty, so a music track change
+      // with lyrics off does not cause an extra render.
+      setLines((prev) => (prev.length ? [] : prev));
+      setIndex((prev) => (prev === -1 ? prev : -1));
       return;
     }
     const cached = parsed.get(track);
@@ -66,23 +69,27 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, track]);
 
+  // While playing, four tiny checks per second; no per-frame React work.
   useEffect(() => {
     if (!enabled || lines.length === 0) return;
     const update = () => {
       const now = npRef.current;
       if (!now) return;
-      const position = livePosition(now);
-      let next = -1;
-      for (let i = 0; i < lines.length; i++) {
-        if (lines[i].at <= position) next = i;
-        else break;
-      }
+      const next = indexAt(lines, livePosition(now));
       setIndex((prev) => (prev === next ? prev : next));
     };
     update();
+    if (!playing) return;
     const id = window.setInterval(update, 250);
     return () => window.clearInterval(id);
-  }, [enabled, lines]);
+  }, [enabled, lines, playing]);
+
+  // Paused: still follow a seek once, but do not keep a 250 ms timer alive.
+  useEffect(() => {
+    if (!enabled || playing || !np || lines.length === 0) return;
+    const next = indexAt(lines, livePosition(np));
+    setIndex((prev) => (prev === next ? prev : next));
+  }, [enabled, playing, lines, np?.position]);
 
   if (index < 0 || !lines[index]) return { current: null, next: null, index: -1 };
   return {
@@ -90,6 +97,16 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
     next: lines[index + 1]?.text ?? null,
     index,
   };
+}
+
+/** First line whose timestamp is at or before `position`; -1 before the first line. */
+function indexAt(lines: Line[], position: number): number {
+  let next = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].at <= position) next = i;
+    else break;
+  }
+  return next;
 }
 
 /** "[00:12.34] text" (and multiple timestamps per line) → sorted lines. */
