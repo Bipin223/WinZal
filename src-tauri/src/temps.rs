@@ -4,7 +4,8 @@
 //!   The provider only exposes its singleton instance to elevated processes, so
 //!   this is used from the elevated FPS helper (or an elevated WinZal).
 //! - Everyone else: GPU temperature from `nvidia-smi` (NVIDIA driver, no admin).
-//!   CPU temperature stays unknown; Windows does not expose it without a driver.
+//!   CPU temperature falls back to the elevated helper's ACPI thermal zone; the
+//!   normal process cannot read `MSAcpi_ThermalZoneTemperature`.
 
 use std::collections::HashMap;
 use std::io::Write;
@@ -181,4 +182,107 @@ pub fn nvidia_smi() -> Option<u32> {
         .parse::<u32>()
         .ok()
         .filter(|t| *t > 0 && *t < 150)
+}
+
+/// ACPI thermal-zone fallback through the standard Windows performance
+/// counters. Unlike `MSAcpi_ThermalZoneTemperature`, this works without admin
+/// rights; the elevated helper also uses the direct WMI provider as a backup.
+pub struct ThermalPerf {
+    wmi: WMIConnection,
+}
+
+impl ThermalPerf {
+    pub fn open() -> Option<Self> {
+        match WMIConnection::with_namespace_path("ROOT\\CIMV2") {
+            Ok(wmi) => Some(Self { wmi }),
+            Err(error) => {
+                trace(&format!("thermal perf connect failed: {error:?}"));
+                None
+            }
+        }
+    }
+
+    /// Hottest ACPI thermal zone in °C.
+    pub fn cpu(&self) -> Option<u32> {
+        let rows: Vec<HashMap<String, Variant>> = match self.wmi.raw_query(
+            "SELECT Name, Temperature, HighPrecisionTemperature FROM Win32_PerfFormattedData_Counters_ThermalZoneInformation",
+        ) {
+            Ok(rows) => rows,
+            Err(error) => {
+                trace(&format!("thermal perf query failed: {error:?}"));
+                return None;
+            }
+        };
+        let mut best = None;
+        for row in rows {
+            let high = match row.get("HighPrecisionTemperature") {
+                Some(Variant::UI4(value)) => Some(*value as f64 / 10.0 - 273.15),
+                Some(Variant::UI2(value)) => Some(*value as f64 / 10.0 - 273.15),
+                _ => None,
+            };
+            let kelvin = match row.get("Temperature") {
+                Some(Variant::UI4(value)) => Some(*value as f64 - 273.15),
+                Some(Variant::UI2(value)) => Some(*value as f64 - 273.15),
+                _ => None,
+            };
+            let celsius = high.filter(|v| (1.0..150.0).contains(v)).or(kelvin.filter(|v| (1.0..150.0).contains(v)));
+            if let Some(value) = celsius {
+                let value = value.round() as u32;
+                best = Some(best.map_or(value, |current: u32| current.max(value)));
+            }
+        }
+        if best.is_some() {
+            trace(&format!("thermal perf cpu={best:?}"));
+        }
+        best
+    }
+}
+
+/// ACPI thermal-zone fallback for machines without Lenovo's GameZone provider.
+/// The WMI provider is normally restricted to elevated processes, so the FPS
+/// helper uses this; the unprivileged app uses `ThermalPerf` instead.
+pub struct Acpi {
+    wmi: WMIConnection,
+}
+
+impl Acpi {
+    pub fn open() -> Option<Self> {
+        match WMIConnection::with_namespace_path("ROOT\\WMI") {
+            Ok(wmi) => Some(Self { wmi }),
+            Err(error) => {
+                trace(&format!("acpi wmi connect failed: {error:?}"));
+                None
+            }
+        }
+    }
+
+    /// Hottest ACPI thermal zone in °C. Some machines expose several zones;
+    /// the hottest one is the closest approximation to the CPU package.
+    pub fn cpu(&self) -> Option<u32> {
+        let rows: Vec<HashMap<String, Variant>> = match self.wmi.raw_query("SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature") {
+            Ok(rows) => rows,
+            Err(error) => {
+                trace(&format!("acpi query failed: {error:?}"));
+                return None;
+            }
+        };
+        let mut best = None;
+        for row in rows {
+            let tenths = match row.get("CurrentTemperature") {
+                Some(Variant::UI4(value)) => *value,
+                Some(Variant::UI2(value)) => *value as u32,
+                Some(Variant::I4(value)) if *value >= 0 => *value as u32,
+                _ => continue,
+            };
+            let celsius = (tenths as f64 / 10.0 - 273.15).round();
+            if (1.0..150.0).contains(&celsius) {
+                let value = celsius as u32;
+                best = Some(best.map_or(value, |current: u32| current.max(value)));
+            }
+        }
+        if best.is_some() {
+            trace(&format!("acpi cpu={best:?}"));
+        }
+        best
+    }
 }

@@ -610,7 +610,9 @@ fn event_kind(provider: GUID, id: u16) -> Option<usize> {
 fn temp_loop(shared_addr: usize) {
     let shared = shared_addr as *mut FpsShared;
     let mut lenovo: Option<crate::temps::Lenovo> = None;
+    let mut acpi: Option<crate::temps::Acpi> = None;
     let mut last_open = Instant::now() - Duration::from_secs(60);
+    let mut last_acpi_open = Instant::now() - Duration::from_secs(60);
     let mut last_read = Instant::now() - Duration::from_secs(10);
     loop {
         if unsafe { (*shared).stop.load(Ordering::Relaxed) } != 0 {
@@ -646,7 +648,7 @@ fn temp_loop(shared_addr: usize) {
         if last_read.elapsed() > Duration::from_secs(2) {
             last_read = Instant::now();
             let mut mode = None;
-            let (cpu, mut gpu) = match lenovo.as_ref() {
+            let (mut cpu, mut gpu) = match lenovo.as_ref() {
                 Some(l) => {
                     mode = l.mode();
                     l.temps()
@@ -661,6 +663,18 @@ fn temp_loop(shared_addr: usize) {
             }
             if gpu.is_none() {
                 gpu = crate::temps::nvidia_smi();
+            }
+            // Non-Lenovo machines often expose CPU temperature through the ACPI
+            // thermal zone once the helper is elevated. Retry the connection
+            // occasionally if the provider is not ready yet.
+            if cpu.is_none() {
+                if acpi.is_none() && last_acpi_open.elapsed() > Duration::from_secs(30) {
+                    acpi = crate::temps::Acpi::open();
+                    last_acpi_open = Instant::now();
+                }
+                if let Some(sensor) = &acpi {
+                    cpu = sensor.cpu();
+                }
             }
             if cpu.is_none() && gpu.is_none() && lenovo.is_some() && mode.is_none() {
                 // The provider answered but has no sensors (e.g. non-Lenovo); retry later.

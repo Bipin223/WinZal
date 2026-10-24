@@ -46,12 +46,12 @@ export interface Settings {
   /** Notch colours and shape. `accent: "auto"` follows the album art. */
   appearance: {
     accent: string;
-    resting: string;
-    expanded: string;
     material: "solid" | "dark" | "glass";
     corners: "rounded" | "squared";
-    /** Dark, light, or follow the Windows app theme. */
-    theme: "dark" | "light" | "system";
+    /** Dark, light, follow Windows, or a custom island color with matching text. */
+    theme: "dark" | "light" | "system" | "custom";
+    /** Surface color for the custom theme. Text switches automatically. */
+    themeColor: string;
     /** Dynamic = attached notch, Windows = floating island with a rim. */
     style: "dynamic" | "windows";
     /** Squeeze/bounce while dragging the notch. */
@@ -136,11 +136,10 @@ const defaults: Settings = {
   privacyDots: true,
   appearance: {
     accent: "auto",
-    resting: "#000000",
-    expanded: "#000000",
     material: "solid",
     corners: "rounded",
     theme: "dark",
+    themeColor: "#141416",
     style: "dynamic",
     dragAnimation: true,
     clockWeather: true,
@@ -212,7 +211,14 @@ settings.set((s) => {
     appearance: {
       ...defaults.appearance,
       ...s.appearance,
-      theme: (s.appearance as { theme?: "dark" | "light" | "system" } | undefined)?.theme ?? "dark",
+      theme: (() => {
+        const stored = (s.appearance as { theme?: string } | undefined)?.theme;
+        return stored === "light" || stored === "system" || stored === "custom" ? stored : "dark";
+      })(),
+      themeColor: (() => {
+        const stored = (s.appearance as { themeColor?: string } | undefined)?.themeColor;
+        return typeof stored === "string" && /^#[0-9a-f]{6}$/i.test(stored) ? stored : defaults.appearance.themeColor;
+      })(),
       // The old "blur" line option is now the word-by-word reveal. Removed
       // Current / Slide / Scale variants fall back to the Apple transition.
       lyricsAnimation: (() => {

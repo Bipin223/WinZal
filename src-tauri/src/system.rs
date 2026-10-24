@@ -236,14 +236,16 @@ impl Temp {
 fn spawn_temp(temp: Arc<Temp>) {
     thread::spawn(move || {
         let mut lenovo = None;
+        let mut perf: Option<temps::ThermalPerf> = None;
         let mut last_open = Instant::now() - Duration::from_secs(60);
+        let mut last_perf_open = Instant::now() - Duration::from_secs(60);
         loop {
             if temp.wanted_at.lock().unwrap().elapsed() > TEMP_IDLE {
                 thread::sleep(Duration::from_millis(500));
                 continue;
             }
             let (helper_cpu, helper_gpu) = crate::fps::helper_temps();
-            if helper_cpu.is_some() || helper_gpu.is_some() {
+            if helper_cpu.is_some() && helper_gpu.is_some() {
                 // system_stats prefers the helper's values; don't duplicate WMI.
                 temp.cpu.store(0, Ordering::Relaxed);
                 temp.gpu.store(0, Ordering::Relaxed);
@@ -254,8 +256,19 @@ fn spawn_temp(temp: Arc<Temp>) {
                 }
                 let (cpu, gpu) = lenovo.as_ref().map(|l| l.temps()).unwrap_or((None, None));
                 let gpu = gpu.or_else(temps::nvidia_smi);
-                temp.cpu.store(cpu.unwrap_or(0), Ordering::Relaxed);
-                temp.gpu.store(gpu.unwrap_or(0), Ordering::Relaxed);
+                // The performance-counter thermal zone works without admin and
+                // covers machines where Lenovo's GameZone provider is missing.
+                let cpu = if cpu.is_none() {
+                    if perf.is_none() && last_perf_open.elapsed() > Duration::from_secs(30) {
+                        perf = temps::ThermalPerf::open();
+                        last_perf_open = Instant::now();
+                    }
+                    perf.as_ref().and_then(|sensor| sensor.cpu())
+                } else {
+                    cpu
+                };
+                temp.cpu.store(if helper_cpu.is_some() { 0 } else { cpu.unwrap_or(0) }, Ordering::Relaxed);
+                temp.gpu.store(if helper_gpu.is_some() { 0 } else { gpu.unwrap_or(0) }, Ordering::Relaxed);
             }
             thread::sleep(Duration::from_secs(2));
         }

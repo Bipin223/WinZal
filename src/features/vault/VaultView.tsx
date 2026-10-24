@@ -4,6 +4,7 @@ import {
   Check,
   Eye,
   EyeSlash,
+  Fingerprint,
   Key,
   LockSimple,
   LockSimpleOpen,
@@ -82,6 +83,8 @@ function VaultContent() {
   const [screen, setScreen] = useState<Screen>({ kind: "list" });
   /** Action that hit "locked"; runs again after the PIN. */
   const [prompt, setPrompt] = useState<null | (() => Promise<void>)>(null);
+  const [helloDismissed, setHelloDismissed] = useState(false);
+  const [helloSupported, setHelloSupported] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   const setKind = (k: VaultKind) => {
@@ -91,6 +94,7 @@ function VaultContent() {
 
   useEffect(() => {
     void refreshVault();
+    void vault.helloSupported().then(setHelloSupported, () => setHelloSupported(false));
     return () => {
       revealStore.set(null);
       void vault.lock();
@@ -134,7 +138,10 @@ function VaultContent() {
     key = "hello";
     body = (
       <HelloPrompt
-        onCancel={() => setPrompt(null)}
+        onCancel={() => {
+          setPrompt(null);
+          setHelloDismissed(true);
+        }}
         onUnlocked={async () => {
           const retry = prompt;
           setPrompt(null);
@@ -159,6 +166,33 @@ function VaultContent() {
           setPrompt(null);
           await run(retry);
           return null;
+        }}
+      />
+    );
+  } else if (status.hello && !status.unlocked && helloDismissed) {
+    key = "hello-locked";
+    body = (
+      <div className="flex h-full flex-col items-center justify-center gap-2.5 text-center">
+        <div className="flex size-10 items-center justify-center rounded-full bg-fill-2 text-label-2">
+          <LockSimple size={20} weight="bold" />
+        </div>
+        <div>
+          <div className="text-body font-medium text-label">{t("Tresor gesperrt")}</div>
+          <div className="mt-0.5 text-caption text-label-3">{t("Mit Windows Hello entsperren, um Passwörter und Codes zu sehen.")}</div>
+        </div>
+        <Button primary onClick={() => setHelloDismissed(false)}>
+          {t("Mit Windows Hello entsperren")}
+        </Button>
+      </div>
+    );
+  } else if (status.hello && !status.unlocked) {
+    key = "hello-auto";
+    body = (
+      <HelloPrompt
+        onCancel={() => setHelloDismissed(true)}
+        onUnlocked={async () => {
+          setHelloDismissed(false);
+          await refreshVault();
         }}
       />
     );
@@ -199,7 +233,11 @@ function VaultContent() {
           <HeaderButton
             label={status.unlocked ? t("Sperren") : t("Entsperren")}
             active={status.unlocked}
-            onClick={() => (status.unlocked ? (revealStore.set(null), void vault.lock()) : setPrompt(() => async () => {}))}
+            onClick={() =>
+              status.unlocked
+                ? (revealStore.set(null), setHelloDismissed(true), void vault.lock())
+                : (setHelloDismissed(false), setPrompt(() => async () => {}))
+            }
           >
             {status.unlocked ? <LockSimpleOpen size={14} weight="bold" /> : <LockSimple size={14} weight="bold" />}
           </HeaderButton>
@@ -210,6 +248,20 @@ function VaultContent() {
             <Plus size={14} weight="bold" />
           </HeaderButton>
         </HeaderActions>
+      )}
+      {ready && key === "list" && status && !status.hello && helloSupported && (
+        <div className="mb-1 flex items-center gap-2 rounded-[10px] bg-fill-1 px-2.5 py-2">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-fill-2 text-label-2">
+            <Fingerprint size={14} weight="bold" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-caption font-semibold text-label">{t("Windows Hello schützt den Tresor")}</div>
+            <div className="truncate text-[9px] leading-[11px] text-label-3">
+              {t("Einträge mit Gesicht, Finger oder Windows-PIN versiegeln")}
+            </div>
+          </div>
+          <Button onClick={() => void run(() => vault.helloEnable())}>{t("Aktivieren")}</Button>
+        </div>
       )}
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.div

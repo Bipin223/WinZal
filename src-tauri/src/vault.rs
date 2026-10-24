@@ -11,12 +11,13 @@
 //!   Rust (only the 6-digit codes do). Only "show password" returns a password.
 //! - Copies are marked so clipboard histories (ours, Win+V, cloud) skip them, and
 //!   passwords/codes are cleared from the clipboard after 30 s.
-//! - Optional Windows Hello (setting, off by default): the secrets are additionally
-//!   sealed with AES-256-GCM. The key is SHA-256 of a Windows Hello signature over a
-//!   random challenge (RSA PKCS#1 v1.5 is deterministic, so the same key comes back
-//!   every time). The private key lives in the TPM and signs only after Hello
-//!   (face, finger, Windows PIN), so even code running as the user can't read the
-//!   secrets without that confirmation. Names and usernames stay readable for the list.
+//! - Optional Windows Hello (setting, off by default): the whole item list is
+//!   additionally sealed with AES-256-GCM. The key is SHA-256 of a Windows Hello
+//!   signature over a random challenge (RSA PKCS#1 v1.5 is deterministic, so the
+//!   same key comes back every time). The private key is managed by Windows Hello
+//!   (TPM-backed when available) and signs only after face/finger/PIN confirmation.
+//!   While locked, no item names, usernames, secrets or codes are stored outside
+//!   the seal. Only the Hello challenge and the PIN/lockout settings remain visible.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -185,10 +186,19 @@ fn load_full(app: &AppHandle, state: &VaultState) -> Result<Data, String> {
         return Err("locked".into());
     }
     let key = state.hello_key.lock().unwrap().ok_or("locked")?;
-    let secrets = open_sealed(&key, &hello.sealed)?;
-    for item in &mut data.items {
-        if let Some(secret) = secrets.get(&item.id) {
-            item.secret = secret.clone();
+    let plain = open_sealed(&key, &hello.sealed)?;
+    if !plain.is_empty() {
+        // New format: the complete item list is sealed. Old Hello vaults kept
+        // names/usernames outside and only sealed {id: secret}; migrate on read.
+        if let Ok(items) = serde_json::from_slice::<Vec<Item>>(&plain) {
+            data.items = items;
+        } else {
+            let secrets: HashMap<String, String> = serde_json::from_slice(&plain).map_err(|_| "unreadable".to_string())?;
+            for item in &mut data.items {
+                if let Some(secret) = secrets.get(&item.id) {
+                    item.secret = secret.clone();
+                }
+            }
         }
     }
     data.key = Some(key);
@@ -196,18 +206,17 @@ fn load_full(app: &AppHandle, state: &VaultState) -> Result<Data, String> {
 }
 
 /// Atomic: temp file, then rename, so a crash never leaves half a vault.
-/// With Windows Hello the secrets are resealed (if opened) and never written in the clear.
+/// With Windows Hello the complete item list is resealed and never written in
+/// the clear. Without an open Hello key the existing seal is left untouched.
 fn save(app: &AppHandle, data: &Data) -> Result<(), String> {
     let path = path(app)?;
     let mut out = data.clone();
+    let resealed = data.key.is_some() && out.hello.is_some();
     if let (Some(hello), Some(key)) = (out.hello.as_mut(), data.key) {
-        let secrets: HashMap<&str, &str> = data.items.iter().map(|i| (i.id.as_str(), i.secret.as_str())).collect();
-        hello.sealed = seal(&key, &serde_json::to_vec(&secrets).map_err(|e| e.to_string())?)?;
+        hello.sealed = seal(&key, &serde_json::to_vec(&data.items).map_err(|e| e.to_string())?)?;
     }
-    if out.hello.is_some() {
-        for item in &mut out.items {
-            item.secret.clear();
-        }
+    if resealed {
+        out.items.clear();
     }
     let plain = serde_json::to_vec(&out).map_err(|e| e.to_string())?;
     let cipher = protect(&plain)?;
@@ -287,20 +296,34 @@ pub fn vault_status(app: AppHandle, state: State<'_, VaultState>) -> Status {
     let _guard = state.lock.lock().unwrap();
     let unlocked = is_unlocked(&state);
     match load(&app) {
-        Ok(data) => Status {
-            has_pin: data.pin.is_some(),
-            unlocked,
-            pin_passwords: data.pin_passwords,
-            pin_totp: data.pin_totp,
-            locked_for: data.locked_until.saturating_sub(now_secs()),
-            unreadable: false,
-            hello: data.hello.is_some(),
-            items: data
-                .items
-                .iter()
-                .map(|i| ItemInfo { id: i.id.clone(), kind: i.kind, name: i.name.clone(), username: i.username.clone(), period: i.otp.period })
-                .collect(),
-        },
+        Ok(data) => {
+            let hello = data.hello.is_some();
+            // New Hello vaults keep the complete item list inside the AES seal,
+            // so it only exists after a successful Hello unlock. PIN-only vaults
+            // keep the list available for the current convenience behavior.
+            let items = if hello {
+                if unlocked {
+                    load_full(&app, &state).map(|full| full.items).unwrap_or_default()
+                } else {
+                    Vec::new()
+                }
+            } else {
+                data.items
+            };
+            Status {
+                has_pin: data.pin.is_some(),
+                unlocked,
+                pin_passwords: data.pin_passwords,
+                pin_totp: data.pin_totp,
+                locked_for: data.locked_until.saturating_sub(now_secs()),
+                unreadable: false,
+                hello,
+                items: items
+                    .iter()
+                    .map(|i| ItemInfo { id: i.id.clone(), kind: i.kind, name: i.name.clone(), username: i.username.clone(), period: i.otp.period })
+                    .collect(),
+            }
+        }
         Err(_) => Status { has_pin: false, unlocked: false, pin_passwords: true, pin_totp: true, locked_for: 0, unreadable: true, hello: false, items: Vec::new() },
     }
 }
@@ -458,7 +481,10 @@ pub fn vault_reveal(id: String, app: AppHandle, state: State<'_, VaultState>) ->
 #[tauri::command]
 pub fn vault_copy(id: String, field: String, app: AppHandle, state: State<'_, VaultState>) -> Result<(), String> {
     let _guard = state.lock.lock().unwrap();
-    let data = if field == "username" { load(&app)? } else { load_full(&app, &state)? };
+    let data = load_full(&app, &state)?;
+    // A Hello vault must be unlocked even to copy a username, otherwise the
+    // hidden item list could be read through known IDs.
+    require(&state, data.hello.is_some())?;
     let item = data.items.iter().find(|i| i.id == id).ok_or("not-found")?;
     let (text, clear) = match (field.as_str(), item.kind) {
         ("username", _) => (item.username.clone(), false),
@@ -584,6 +610,10 @@ pub async fn vault_hello_unlock(app: AppHandle, state: State<'_, VaultState>) ->
     open_sealed(&key, &hello.sealed).map_err(|_| "hello-failed".to_string())?;
     *state.hello_key.lock().unwrap() = Some(key);
     *state.unlocked_until.lock().unwrap() = Some(Instant::now() + UNLOCK_IDLE);
+    // Upgrade old Hello vaults (names outside the seal) to the sealed full list.
+    if let Ok(data) = load_full(&app, &state) {
+        let _ = save(&app, &data);
+    }
     Ok(())
 }
 
@@ -646,19 +676,18 @@ fn seal(key: &[u8; 32], plain: &[u8]) -> Result<String, String> {
     Ok(base64::engine::general_purpose::STANDARD.encode(out))
 }
 
-fn open_sealed(key: &[u8; 32], sealed: &str) -> Result<HashMap<String, String>, String> {
+fn open_sealed(key: &[u8; 32], sealed: &str) -> Result<Vec<u8>, String> {
     if sealed.is_empty() {
-        return Ok(HashMap::new());
+        return Ok(Vec::new());
     }
     let bytes = b64(sealed)?;
     if bytes.len() < 12 {
         return Err("unreadable".into());
     }
     let (nonce, body) = bytes.split_at(12);
-    let plain = Aes256Gcm::new(key.into())
+    Aes256Gcm::new(key.into())
         .decrypt(Nonce::from_slice(nonce), body)
-        .map_err(|_| "unreadable".to_string())?;
-    serde_json::from_slice(&plain).map_err(|_| "unreadable".to_string())
+        .map_err(|_| "unreadable".to_string())
 }
 
 mod hello {
@@ -955,9 +984,19 @@ mod tests {
     fn hello_seal() {
         let key = [7u8; 32];
         let sealed = seal(&key, br#"{"a":"secret"}"#).unwrap();
-        assert_eq!(open_sealed(&key, &sealed).unwrap()["a"], "secret");
+        assert_eq!(open_sealed(&key, &sealed).unwrap(), br#"{"a":"secret"}"#);
         assert!(open_sealed(&[8u8; 32], &sealed).is_err());
         assert!(open_sealed(&key, "").unwrap().is_empty());
+    }
+
+    #[test]
+    fn hello_seals_the_full_item_list() {
+        let key = [9u8; 32];
+        let items = vec![item("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", "SHA1", 6)];
+        let plain = serde_json::to_vec(&items).unwrap();
+        let sealed = seal(&key, &plain).unwrap();
+        let opened: Vec<Item> = serde_json::from_slice(&open_sealed(&key, &sealed).unwrap()).unwrap();
+        assert_eq!(opened[0].secret, items[0].secret);
     }
 
     #[test]

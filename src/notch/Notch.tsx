@@ -16,7 +16,7 @@ import { LiveRightInset } from "./liveEdges";
 import { RECORDING_EXTRA, RECORDING_INSET, RecordingBadge, useRecording } from "./recording";
 import { sizeOverride } from "./size";
 import { lyricsTextWidth } from "../features/now-playing/lyricsWidth";
-import { isLightColor, themedSurface, useThemeLight } from "../features/appearance/theme";
+import { DARK_SURFACE, LIGHT_SURFACE, isLightColor, useThemeLight } from "../features/appearance/theme";
 import { NotchShape } from "./NotchShape";
 import { drop } from "../platform/drop";
 import { settings } from "../settings/store";
@@ -149,7 +149,7 @@ export function Notch() {
   // Gaming stats own the pill; a playing track gets its own little island instead.
   const gamingSatellite =
     pillLive === "system" && !!np?.isPlaying && appearance.musicInPill && !line && !idleLine && status !== "open";
-  const surface = themedSurface(status === "open" ? appearance.expanded : appearance.resting, light);
+  const surface = appearance.theme === "custom" ? appearance.themeColor : light ? LIGHT_SURFACE : DARK_SURFACE;
   const surfaceLight = isLightColor(surface);
   const transition = useTransitionFor(status, displayShape);
 

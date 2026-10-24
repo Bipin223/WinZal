@@ -69,8 +69,8 @@
 }
 
 /* Light theme: the whole notch and its panels become a soft white surface.
-   The island body itself follows `themedSurface` in Notch.tsx, so custom
-   island colors still win. */
+   The island body itself follows the selected theme in Notch.tsx, so a custom
+   theme color still wins. */
 :root[data-theme="light"] {
   --color-notch: #f5f5f7;
   --color-label: rgb(0 0 0 / 0.96);

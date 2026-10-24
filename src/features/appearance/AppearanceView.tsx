@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowCounterClockwise, Plus } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, Eyedropper, Plus } from "@phosphor-icons/react";
 import { invoke } from "@tauri-apps/api/core";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { springs } from "../../design/motion";
@@ -9,21 +9,20 @@ import { settings, updateSettings, type Settings } from "../../settings/store";
 import { Switch } from "../../ui/controls";
 import { SelectedDot } from "../../ui/SelectedDot";
 import { t } from "../../i18n";
-import { DARK_SURFACE, LIGHT_SURFACE, isLightTheme, systemLight, themedSurface, useThemeLight } from "./theme";
+import { DARK_SURFACE, LIGHT_SURFACE, useThemeLight } from "./theme";
 
 type Appearance = Settings["appearance"];
 
 const ACCENTS = ["auto", "#0a84ff", "#30d158", "#ffd60a", "#ff9f0a", "#ff453a", "#bf5af2", "#ffffff"];
 const CLOCK_ACCENTS = ["#ff453a", "#ff9f0a", "#ffd60a", "#30d158", "#0a84ff", "#bf5af2", "#ffffff"];
-const NOTCH_COLORS = ["#000000", "#f5f5f7", "#ffffff", "#0b0b0f", "#111827", "#0f1a14", "#1a0f1a", "#1c1c1e"];
+const THEME_COLORS = ["#0b0b0f", "#1c1c1e", "#0b1220", "#0f1a14", "#1a0f1a", "#f5f5f7", "#fdf6e3", "#ffffff"];
 
 const DEFAULTS: Appearance = {
   accent: "auto",
-  resting: "#000000",
-  expanded: "#000000",
   material: "solid",
   corners: "rounded",
   theme: "dark",
+  themeColor: "#141416",
   style: "dynamic",
   dragAnimation: true,
   clockWeather: true,
@@ -54,18 +53,6 @@ export function AppearanceView() {
   const set = (patch: Partial<Appearance>) => updateSettings({ appearance: { ...a, ...patch } });
   const [restarting, setRestarting] = useState(false);
 
-  const setTheme = (theme: Appearance["theme"]) => {
-    const light = isLightTheme(theme, systemLight.get());
-    const surface = light ? LIGHT_SURFACE : DARK_SURFACE;
-    const defaultResting = a.resting === DARK_SURFACE || a.resting === LIGHT_SURFACE;
-    const defaultExpanded = a.expanded === DARK_SURFACE || a.expanded === LIGHT_SURFACE;
-    set({
-      theme,
-      ...(defaultResting ? { resting: surface } : {}),
-      ...(defaultExpanded ? { expanded: surface } : {}),
-    });
-  };
-
   const setRenderMode = async (gpu: boolean) => {
     if (restarting) return;
     // Persist in localStorage for the UI, in Rust's mode file for the next launch,
@@ -83,7 +70,7 @@ export function AppearanceView() {
   };
 
   const alpha = a.material === "glass" ? 0.62 : a.material === "dark" ? 0.82 : 1;
-  const previewFill = fillWithAlpha(themedSurface(a.resting, themeLight), alpha);
+  const previewFill = fillWithAlpha(a.theme === "custom" ? a.themeColor : themeLight ? LIGHT_SURFACE : DARK_SURFACE, alpha);
   const accent = a.accent === "auto" ? "#0a84ff" : a.accent;
 
   return (
@@ -97,10 +84,16 @@ export function AppearanceView() {
             ["dark", t("Dark")],
             ["light", t("Light")],
             ["system", t("System")],
+            ["custom", t("Custom")],
           ]}
-          onChange={(theme) => setTheme(theme as Appearance["theme"])}
+          onChange={(theme) => set({ theme: theme as Appearance["theme"] })}
         />
       </Section>
+      {a.theme === "custom" && (
+        <Section label={t("Theme color")}>
+          <ThemeColorPicker value={a.themeColor} themeLight={themeLight} onChange={(themeColor) => set({ themeColor })} />
+        </Section>
+      )}
       <Section label={t("Style")}>
         <div className="grid grid-cols-2 gap-1.5">
           <StyleCard active={a.style === "dynamic"} label={t("Dynamic Island")} onClick={() => set({ style: "dynamic" })} />
@@ -135,12 +128,6 @@ export function AppearanceView() {
             onChange={(value) => set({ clockBold: value === "bold" })}
           />
         </div>
-      </Section>
-      <Section label={t("Ruhende Notch")}>
-        <Swatches value={a.resting} colors={NOTCH_COLORS} onChange={(resting) => set({ resting })} />
-      </Section>
-      <Section label={t("Offene Notch")}>
-        <Swatches value={a.expanded} colors={NOTCH_COLORS} onChange={(expanded) => set({ expanded })} />
       </Section>
       <div className="grid grid-cols-2 gap-1.5">
         <div className="rounded-[12px] bg-fill-1 p-2">
@@ -301,8 +288,60 @@ function ToggleRow({
   );
 }
 
-function Swatches({ value, colors, onChange }: { value: string; colors: string[]; onChange: (v: string) => void }) {
-  const custom = !colors.includes(value) && /^#?[0-9a-f]{6}$/i.test(value);
+function ThemeColorPicker({ value, themeLight, onChange }: { value: string; themeLight: boolean; onChange: (v: string) => void }) {
+  const color = /^#[0-9a-f]{6}$/i.test(value) ? value : "#141416";
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2.5">
+        <label
+          title={t("Theme color")}
+          className="relative size-10 shrink-0 cursor-pointer overflow-hidden rounded-[12px] ring-2 ring-label"
+          style={{ background: color }}
+        >
+          <input
+            type="color"
+            aria-label={t("Theme color")}
+            value={color}
+            onChange={(event) => onChange(event.target.value)}
+            className="absolute inset-0 size-full cursor-pointer opacity-0"
+          />
+          <span className="pointer-events-none absolute inset-0 grid place-items-center">
+            <Eyedropper
+              size={15}
+              weight="bold"
+              className={themeLight ? "text-black/70" : "text-white [filter:drop-shadow(0_1px_2px_rgb(0_0_0/0.65))]"}
+            />
+          </span>
+        </label>
+        <div className="min-w-0">
+          <div className="text-caption font-semibold text-label">{t("Custom theme color")}</div>
+          <div className="truncate text-caption text-label-3 tabular">
+            {color.toUpperCase()} · {themeLight ? t("Dark text") : t("Light text")}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5">
+        {THEME_COLORS.map((preset) => {
+          const active = color.toLowerCase() === preset.toLowerCase();
+          return (
+            <button
+              key={preset}
+              type="button"
+              aria-label={preset}
+              onClick={() => onChange(preset)}
+              className={`relative size-5 shrink-0 rounded-full ring-2 transition-colors ${active ? "ring-label" : "ring-transparent"}`}
+              style={{ background: preset }}
+            >
+              {active && <SelectedDot size={5} className="absolute inset-0 m-auto ring-1 ring-white/80" />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Swatches({ value, colors, onChange }: { value: string; colors: string[]; onChange: (v: string) => void }) {  const custom = !colors.includes(value) && /^#?[0-9a-f]{6}$/i.test(value);
   return (
     <div className="flex items-center gap-1.5">
       {colors.map((color) => {

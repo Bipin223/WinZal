@@ -23,6 +23,7 @@ import {
 import { content, fade, springs } from "../../design/motion";
 import { alarmSounds, playAlarm, stopAlarm, type AlarmDuration } from "../../lib/sound";
 import { nav } from "../../notch/nav";
+import { requestSize } from "../../notch/size";
 import { tabs } from "../../notch/tabs";
 import { autostart, display, fetchFps, secrets, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName, type UsageId } from "../../platform/services";
 import { settings, updateAsk, updateSettings, type AskProvider } from "../../settings/store";
@@ -78,6 +79,19 @@ const sectionPage: Record<string, PageId> = {
 /** Last open page survives closing/opening the notch (the component is rebuilt). */
 let savedPage: PageId = "general";
 
+/** Trim the settings window to the page so short pages don't leave a blank area. */
+const PAGE_HEIGHT: Record<PageId, number> = {
+  general: 460,
+  display: 460,
+  appearance: 460,
+  music: 460,
+  tools: 460,
+  timer: 460,
+  ai: 460,
+  accounts: 460,
+  about: 410,
+};
+
 /**
  * Settings like macOS: categories on the left, only their content on the right.
  * Other tools jump straight to their section via `navigate("settings", "<section>")`.
@@ -90,6 +104,11 @@ export function SettingsView() {
     savedPage = p;
     setPageState(p);
   };
+
+  useEffect(() => {
+    requestSize("settings", { w: 660, h: PAGE_HEIGHT[page] });
+  }, [page]);
+  useEffect(() => () => requestSize("settings", null), []);
 
   useEffect(() => {
     if (!section || !sectionPage[section]) return;
