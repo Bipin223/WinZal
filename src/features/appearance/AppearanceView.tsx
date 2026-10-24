@@ -26,6 +26,7 @@ const DEFAULTS: Appearance = {
   dockIconBrightness: 100,
   subtextBrightness: 100,
   clockWeather: true,
+  musicInPill: true,
   clockAccent: "#ff453a",
   clockText: "large",
   clockBold: false,
@@ -107,47 +108,6 @@ export function AppearanceView() {
           />
         </div>
       </Section>
-      <Section label={t("Songtext")}>
-        <ToggleRow
-          label={t("Lyrics in the closed pill")}
-          checked={a.lyricsInPill}
-          onChange={(lyricsInPill) => set({ lyricsInPill })}
-        />
-        {a.lyricsInPill && (
-          <div className="mt-2 grid gap-2">
-            <Choice
-              label={t("Layout")}
-              value={a.lyricsLayout}
-              options={[
-                ["inline", t("In line")],
-                ["lines", t("Line by line")],
-              ]}
-              onChange={(lyricsLayout) => set({ lyricsLayout: lyricsLayout as Appearance["lyricsLayout"] })}
-            />
-            <div className="grid grid-cols-2 gap-2">
-              <Choice
-                label={t("Pill size")}
-                value={a.lyricsSize}
-                options={[
-                  ["default", t("Default")],
-                  ["large", t("Large")],
-                ]}
-                onChange={(lyricsSize) => set({ lyricsSize: lyricsSize as Appearance["lyricsSize"] })}
-              />
-              <Choice
-                label={t("Animation")}
-                value={a.lyricsAnimation}
-                options={[
-                  ["current", t("Current")],
-                  ["apple", t("Apple")],
-                  ["blur", t("Blur")],
-                ]}
-                onChange={(lyricsAnimation) => set({ lyricsAnimation: lyricsAnimation as Appearance["lyricsAnimation"] })}
-              />
-            </div>
-          </div>
-        )}
-      </Section>
       <Section label={t("Ruhende Notch")}>
         <Swatches value={a.resting} colors={NOTCH_COLORS} onChange={(resting) => set({ resting })} />
       </Section>
@@ -220,7 +180,20 @@ export function AppearanceView() {
         />
       </Section>
       <button
-        onClick={() => updateSettings({ appearance: { ...DEFAULTS, gpuAcceleration: a.gpuAcceleration } })}
+        onClick={() =>
+          updateSettings({
+            appearance: {
+              ...DEFAULTS,
+              gpuAcceleration: a.gpuAcceleration,
+              // Music lives in its own settings page; Appearance reset leaves it alone.
+              musicInPill: a.musicInPill,
+              lyricsInPill: a.lyricsInPill,
+              lyricsLayout: a.lyricsLayout,
+              lyricsSize: a.lyricsSize,
+              lyricsAnimation: a.lyricsAnimation,
+            },
+          })
+        }
         className="pressable flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-[10px] bg-fill-1 text-caption text-label-2 hover:text-label"
       >
         <ArrowCounterClockwise size={12} weight="bold" />

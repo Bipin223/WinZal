@@ -7,6 +7,7 @@ import { LiveDiscord } from "../features/discord/LiveDiscord";
 import { useDiscordCall } from "../features/discord/store";
 import { LiveGaming } from "../features/system/LiveGaming";
 import { useGamingLive } from "../features/system/gaming";
+import { settings } from "../settings/store";
 import { geometry } from "./geometry";
 import { LiveSpread, ShapeWidth } from "./liveEdges";
 import { RECORDING_EXTRA } from "./recording";
@@ -21,10 +22,11 @@ export function useLiveActivity(): { id: string | null } {
   const timerLive = useTimerLive();
   const call = useDiscordCall();
   const np = useNowPlaying();
+  const musicInPill = settings.use().appearance.musicInPill;
   if (gaming) return { id: "system" };
   if (timerLive) return { id: "timer" };
   if (call) return { id: "discord" };
-  if (np?.isPlaying) return { id: "media" };
+  if (np?.isPlaying && musicInPill) return { id: "media" };
   return { id: null };
 }
 

@@ -515,5 +515,21 @@
   "Songtext": "Lyrics",
   "Aktuelle Zeile in der geschlossenen Pille": "Current line in the closed pill",
   "Lyrics in the closed pill": "Lyrics in the closed pill",
-  "Shows the current synced line instead of the title when available (LRCLIB).": "Shows the current synced line instead of the title when available (LRCLIB)."
+  "Shows the current synced line instead of the title when available (LRCLIB).": "Shows the current synced line instead of the title when available (LRCLIB).",
+  "Musik": "Music",
+  "Musik in der geschlossenen Notch": "Music in the closed notch",
+  "Cover, Titel und Equalizer, während Musik läuft": "Cover, title and equalizer while music plays",
+  "Songtext in der geschlossenen Pille": "Lyrics in the closed pill",
+  "Synchronisierte Zeile von LRCLIB, wenn verfügbar": "Synced line from LRCLIB when available",
+  "Zeilen-Layout": "Line layout",
+  "In einer Zeile": "In line",
+  "Zeile für Zeile": "Line by line",
+  "Pill-Größe": "Pill size",
+  "Standard": "Default",
+  "Aktuell": "Current",
+  "Apple Music": "Apple Music",
+  "Unscharf": "Blur",
+  "FPS & CPU-Temperatur": "FPS & CPU temperature",
+  "Einmalige Windows-Abfrage – schaltet FPS und CPU-Temperatur frei": "One-time Windows prompt – enables FPS and CPU temperature",
+  "Freigeschaltet – FPS und CPU-Temperatur laufen": "Enabled – FPS and CPU temperature are live"
 }

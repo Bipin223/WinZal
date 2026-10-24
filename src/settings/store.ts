@@ -59,6 +59,8 @@ export interface Settings {
     subtextBrightness: number;
     /** Show time + weather in the closed island. */
     clockWeather: boolean;
+    /** Show the playing track in the closed pill at all (music only in the Now Playing tab when off). */
+    musicInPill: boolean;
     /** Colour of the first clock digit (OnePlus-style accent); red by default. */
     clockAccent: string;
     /** Closed clock pill: compact or bigger/bolder text (large default). */
@@ -139,6 +141,7 @@ const defaults: Settings = {
     dockIconBrightness: 100,
     subtextBrightness: 100,
     clockWeather: true,
+    musicInPill: true,
     clockAccent: "#ff453a",
     clockText: "large",
     clockBold: false,

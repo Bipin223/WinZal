@@ -8,13 +8,13 @@ import {
   Keyboard,
   LockSimple,
   Monitor,
+  MusicNotesSimple,
   Palette,
   Play,
   Plugs,
   SlidersHorizontal,
   Sparkle,
   SquaresFour,
-  SignOut,
   Stop,
   Timer,
   type Icon,
@@ -32,6 +32,7 @@ import { discordState, reconnectDiscord } from "../discord/store";
 import { fps } from "../system/gaming";
 import { PlaceSearch } from "../weather/WeatherView";
 import { AppearanceView } from "../appearance/AppearanceView";
+import { MusicSettings } from "./MusicSettings";
 import { VaultSettings } from "../vault/VaultSettings";
 import { detectPlace } from "../weather/store";
 import { focusMode, setFocusMode } from "../../notch/focus";
@@ -40,12 +41,13 @@ import { between, changelog, itemText, markSeen, useUnseen } from "../../lib/cha
 import { privacy, togglePresentation, usePresenting } from "../privacy/store";
 import { locale, t, tBackend } from "../../i18n";
 
-type PageId = "general" | "display" | "appearance" | "tools" | "timer" | "ai" | "accounts";
+type PageId = "general" | "display" | "appearance" | "music" | "tools" | "timer" | "ai" | "accounts";
 
 const pages: { id: PageId; label: string; icon: Icon }[] = [
   { id: "general", label: "Allgemein", icon: SlidersHorizontal },
   { id: "display", label: "Darstellung", icon: Monitor },
   { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "music", label: "Musik", icon: MusicNotesSimple },
   { id: "tools", label: "Tools", icon: SquaresFour },
   { id: "timer", label: "Timer", icon: Timer },
   { id: "ai", label: "AI", icon: Sparkle },
@@ -58,6 +60,8 @@ const sectionPage: Record<string, PageId> = {
   updates: "general",
   display: "display",
   appearance: "appearance",
+  music: "music",
+  lyrics: "music",
   presentation: "display",
   alarm: "timer",
   ask: "ai",
@@ -139,6 +143,7 @@ export function SettingsView() {
               </>
             )}
             {page === "appearance" && <AppearanceView />}
+            {page === "music" && <MusicSettings />}
             {page === "tools" && (
               <>
                 <Tools />
@@ -490,7 +495,6 @@ function Display() {
   const s = settings.use();
   const d = s.display;
   const focus = focusMode.use();
-  const fpsError = fps.use().error;
   const [monitors, setMonitors] = useState<MonitorInfo[]>([]);
   useEffect(() => {
     void display.monitors().then(setMonitors);
@@ -597,12 +601,7 @@ function Display() {
           ]}
         />
       </Row>
-      {fpsError === "no-admin" && <FpsUnlockRow />}
-      {fpsError === "relogin" && (
-        <Row label={t("FPS freischalten")} hint={t("Fertig – einmal ab- und wieder anmelden, dann laufen die FPS")}>
-          <SignOut size={18} weight="bold" className="text-orange" />
-        </Row>
-      )}
+      <FpsUnlockRow />
       <Row label={t("Aufnahme-Punkte")} hint={t("Rot: Bildschirm wird aufgenommen (immer sichtbar) · Grün: Mikrofon/Kamera aktiv")}>
         <Switch label={t("Aufnahme-Punkte")} checked={s.privacyDots} onChange={(privacyDots) => updateSettings({ privacyDots })} />
       </Row>
@@ -777,15 +776,15 @@ function UsageProviders() {
 function FpsUnlockRow() {
   const [state, setState] = useState<"idle" | "busy" | "ok" | "relogin" | "cancelled" | "failed">("idle");
   const hint = {
-    idle: t("Einmalige Windows-Abfrage – die FPS laufen sofort, kein Abmelden"),
+    idle: t("Einmalige Windows-Abfrage – schaltet FPS und CPU-Temperatur frei"),
     busy: t("Bitte die Windows-Abfrage bestätigen …"),
-    ok: t("Freigeschaltet – die FPS laufen"),
+    ok: t("Freigeschaltet – FPS und CPU-Temperatur laufen"),
     relogin: t("Fertig – einmal ab- und wieder anmelden, dann laufen die FPS"),
     cancelled: t("Abgebrochen"),
     failed: t("Hat nicht geklappt – noch einmal versuchen oder WinZal als Administrator starten"),
   }[state];
   return (
-    <Row label={t("FPS freischalten")} hint={hint}>
+    <Row label={t("FPS & CPU-Temperatur")} hint={hint}>
       {state === "ok" || state === "relogin" ? (
         <CheckCircle size={18} weight="fill" className="text-green" />
       ) : (
