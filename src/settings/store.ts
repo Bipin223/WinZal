@@ -151,7 +151,7 @@ const defaults: Settings = {
     lyricsAnimation: "current",
     gpuAcceleration: false,
   },
-  discord: { clientId: "", presence: true, appName: "", statusLine: "title" },
+  discord: { clientId: "", presence: true, appName: "Bipin Rizal’s WinZal app", statusLine: "title" },
   alarm: { sound: "chime", volume: 0.7, duration: 5 },
   language: "en",
   units: regionUnits(),
@@ -244,6 +244,17 @@ try {
   }
 } catch {
   // localStorage unavailable: defaults already use bold.
+}
+
+// Give the Discord card its default author name once. A name the user typed
+// themselves is never overwritten; clearing it afterwards also sticks.
+try {
+  if (!localStorage.getItem("notch:discord-app-name")) {
+    settings.set((s) => (s.discord.appName ? s : { ...s, discord: { ...s.discord, appName: "Bipin Rizal’s WinZal app" } }));
+    localStorage.setItem("notch:discord-app-name", "1");
+  }
+} catch {
+  // localStorage unavailable: the default is already set.
 }
 
 /** Old gaming modes were off / fullscreen / always; now off / games / always. */

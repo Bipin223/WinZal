@@ -1,8 +1,7 @@
-import { GithubLogo, Globe, Heart, type Icon } from "@phosphor-icons/react";
+import { GithubLogo, Globe, type Icon } from "@phosphor-icons/react";
 import avatar from "../../assets/bipin.png";
 import { update } from "../../lib/update";
 import { systemControls } from "../../platform/services";
-import { Group, Row } from "../../ui/controls";
 import { t } from "../../i18n";
 
 /**
@@ -19,6 +18,9 @@ export function AboutView() {
         <div aria-hidden className="absolute -top-24 -right-16 size-56 rounded-full bg-accent/20 blur-3xl" />
         <div aria-hidden className="absolute -bottom-24 -left-20 size-52 rounded-full bg-white/[0.04] blur-3xl" />
         <div className="relative flex flex-col items-center px-6 py-7 text-center">
+          <div className="absolute top-4 right-4 rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-medium tabular text-label-3">
+            {version}
+          </div>
           <div className="mb-3 text-[10px] font-medium tracking-[0.12em] text-label-3">{t("Developed By")}</div>
           <img
             src={avatar}
@@ -35,27 +37,6 @@ export function AboutView() {
             <LinkButton icon={Globe} label={t("Webseite")} onClick={() => open("https://bipin-rijal.vercel.app")} />
           </div>
         </div>
-      </div>
-      <Group title="WinZal">
-        <Row label={t("Version")}>
-          <span className="tabular text-caption text-label-2">{version}</span>
-        </Row>
-        <Row label={t("Autor")}>
-          <span className="text-caption text-label-2">Bipin Rizal</span>
-        </Row>
-        <Row label="GitHub">
-          <button
-            type="button"
-            onClick={() => open("https://github.com/Bipin223")}
-            className="pressable text-caption font-medium text-link hover:underline"
-          >
-            @Bipin223
-          </button>
-        </Row>
-      </Group>
-      <div className="flex items-center justify-center gap-1.5 pt-1 pb-2 text-caption text-label-4">
-        <Heart size={11} weight="fill" className="text-red/70" />
-        Made with Love by <span className="font-medium text-label-3">Bipin Rizal</span>
       </div>
     </div>
   );

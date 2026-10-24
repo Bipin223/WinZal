@@ -8,11 +8,12 @@
 //! - The manager is requested fresh on every poll. A long-lived one goes stale when
 //!   an app recreates its session (Spotify closed to the tray, reopened), and then
 //!   keeps reporting the old status and position.
-//! - Which session is shown: a playing one wins (Windows' current first, then the
-//!   app shown before, then any). If nothing plays, the app shown before stays, so
-//!   pausing with a media key doesn't make it jump to another app.
+//! - Which session is shown: the first one that started playing wins; when nothing
+//!   plays, the app shown before stays. Pausing/stopping it hands over to the next
+//!   session that is still playing.
 //! - Controls go to the shown app, not to whatever Windows considers current.
 
+use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -190,6 +191,8 @@ pub fn spawn(app: AppHandle) {
         let mut last: Option<NowPlaying> = None;
         let mut last_sent_at = SystemTime::now();
         let mut artwork = Artwork { key: String::new(), since: Instant::now(), data: None };
+        // First playing session wins: app id → when we first saw it playing.
+        let mut playing_since: HashMap<String, Instant> = HashMap::new();
         // Requested once and reused: a new manager per poll is a cross-process
         // round trip every 400 ms. Dropped (and requested again) on an error.
         let mut manager: Option<SessionManager> = None;
@@ -204,10 +207,35 @@ pub fn spawn(app: AppHandle) {
             };
             let shown = last.as_ref().map(|np| np.app_id.as_str()).unwrap_or_default();
             let selected = app.state::<MediaState>().selected();
+            let all = sessions(manager_ref);
+            // Remember the order in which sessions started playing. If two players are
+            // playing, the first one keeps the pill; pausing it hands over to the next.
+            let mut seen = HashSet::new();
+            for session in &all {
+                let id = session_app_id(session);
+                if is_playing(session) {
+                    seen.insert(id.clone());
+                    playing_since.entry(id).or_insert_with(Instant::now);
+                }
+            }
+            playing_since.retain(|id, _| seen.contains(id));
+            // Explicitly chosen app: keep it while it plays, but hand over to another
+            // playing app as soon as it pauses/stops. That makes multiple players feel
+            // automatic instead of sticking to the last session forever.
             let current = if let Some(id) = selected.as_deref() {
-                let session = sessions(manager_ref).into_iter().find(|s| session_app_id(s) == id);
-                match session {
-                    Some(session) => read(&session, &mut artwork).ok(),
+                match all.iter().find(|s| session_app_id(s) == id) {
+                    Some(session) => {
+                        let playing = is_playing(session);
+                        let next = if playing {
+                            Some(session)
+                        } else {
+                            first_playing(&all, Some(id), &playing_since)
+                        };
+                        if !playing && next.is_some() {
+                            app.state::<MediaState>().set_selected(None);
+                        }
+                        next.and_then(|session| read(session, &mut artwork).ok())
+                    }
                     None => {
                         // The chosen app closed: fall back to another playing app.
                         app.state::<MediaState>().set_selected(None);
@@ -217,7 +245,9 @@ pub fn spawn(app: AppHandle) {
             } else {
                 None
             };
-            let current = current.or_else(|| pick(manager_ref, shown).and_then(|session| read(&session, &mut artwork).ok()));
+            let current = current.or_else(|| {
+                pick(manager_ref, &all, shown, &playing_since).and_then(|session| read(&session, &mut artwork).ok())
+            });
             // Nothing found: is the manager still alive (e.g. after an Explorer restart)?
             if current.is_none() && manager_ref.GetSessions().is_err() {
                 manager = None;
@@ -246,19 +276,27 @@ fn is_playing(session: &Session) -> bool {
     session.GetPlaybackInfo().and_then(|p| p.PlaybackStatus()).is_ok_and(|s| s == PlaybackStatus::Playing)
 }
 
+/// Earliest-started playing session (optionally excluding one app).
+fn first_playing<'a>(
+    all: &'a [Session],
+    exclude: Option<&str>,
+    since: &HashMap<String, Instant>,
+) -> Option<&'a Session> {
+    all.iter()
+        .filter(|s| exclude.is_none_or(|id| session_app_id(s) != id) && is_playing(s))
+        .min_by_key(|s| since.get(&session_app_id(s)).copied())
+}
+
 /// The session to show; `shown` is the app shown so far (see the module docs).
-fn pick(manager: &SessionManager, shown: &str) -> Option<Session> {
-    let current = manager.GetCurrentSession().ok();
-    if current.as_ref().is_some_and(is_playing) {
-        return current;
+fn pick(manager: &SessionManager, all: &[Session], shown: &str, since: &HashMap<String, Instant>) -> Option<Session> {
+    // If anything plays, the one that started first wins — even when Windows'
+    // "current session" points at a newer player.
+    if let Some(first) = first_playing(all, None, since) {
+        return Some(first.clone());
     }
-    let all = sessions(manager);
+    let current = manager.GetCurrentSession().ok();
     let by_shown = || all.iter().find(|s| session_app_id(s) == shown).cloned();
-    by_shown()
-        .filter(is_playing)
-        .or_else(|| all.iter().find(|s| is_playing(s)).cloned())
-        .or_else(by_shown)
-        .or(current)
+    by_shown().or(current)
 }
 
 /// Cover of the shown track: reloaded on a track change and for a while after it.
