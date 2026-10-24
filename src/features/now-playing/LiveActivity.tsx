@@ -57,7 +57,7 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
         )}
       </div>
       <LiveEdge side="right">
-        <Equalizer playing={np.isPlaying} />
+        <Equalizer playing={np.isPlaying} fps={30} />
       </LiveEdge>
     </motion.div>
   );

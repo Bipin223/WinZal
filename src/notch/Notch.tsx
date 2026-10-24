@@ -24,6 +24,7 @@ import { findTab, settingsTab, tabs, type NotchTab } from "./tabs";
 import { holdOpen, pinned, togglePin, useNotchState, type NotchStatus } from "./useNotchState";
 import { t, locale } from "../i18n";
 import { formatTemp, formatTimeParts } from "../lib/format";
+import { useMinute } from "../lib/useMinute";
 import { describe, useForecast } from "../features/weather/store";
 import { timer } from "../features/timer/store";
 
@@ -320,13 +321,9 @@ export function Notch() {
 
 /** Windows-island style: a clock in the floating closed pill. */
 function ClosedClock() {
-  const [now, setNow] = useState(() => new Date());
+  const now = useMinute();
   const forecast = useForecast();
   const large = settings.use().appearance.clockText === "large";
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(id);
-  }, []);
   const { time, period } = formatTimeParts(now);
   const date = now.toLocaleDateString(locale(), { weekday: "short", day: "numeric", month: "short" });
   const wx = forecast && forecast !== "error" ? describe(forecast.current.code, forecast.current.day) : null;

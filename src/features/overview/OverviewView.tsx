@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Eye, EyeSlash, MusicNoteSimple, Timer } from "@phosphor-icons/react";
 import { DiscordLogo } from "../../ui/brands";
@@ -16,6 +16,7 @@ import { settings } from "../../settings/store";
 import { formatTemp, formatTimeParts } from "../../lib/format";
 import { locale, t } from "../../i18n";
 import { ClockTime } from "../../notch/ClockTime";
+import { useMinute } from "../../lib/useMinute";
 import { PowerActions, QuickControls, SystemRow } from "./Controls";
 
 /*
@@ -48,17 +49,8 @@ export function OverviewView() {
   );
 }
 
-function useNow(): Date {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return now;
-}
-
 function Header() {
-  const now = useNow();
+  const now = useMinute();
   const forecast = useForecast();
   const appearance = settings.use().appearance;
   const place = settings.use().weather;

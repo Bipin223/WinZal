@@ -35,7 +35,18 @@ function synthetic(i: number, t: number): number {
 }
 
 /** `tint` = Tailwind background class for the bars (Discord: green instead of accent). */
-export function Equalizer({ playing, height = 12, tint = "bg-accent" }: { playing: boolean; height?: number; tint?: string }) {
+export function Equalizer({
+  playing,
+  height = 12,
+  tint = "bg-accent",
+  fps = 60,
+}: {
+  playing: boolean;
+  height?: number;
+  tint?: string;
+  /** 30 for the always-on closed pill; 60 for the opened views. */
+  fps?: 30 | 60;
+}) {
   const bars = useRef<(HTMLSpanElement | null)[]>([]);
   const playingRef = useRef(playing);
   const levels = useRef<{ values: Levels; at: number } | null>(null);
@@ -81,6 +92,7 @@ export function Equalizer({ playing, height = 12, tint = "bg-accent" }: { playin
 
   // Animation loop: runs while something moves, sleeps when paused and settled.
   useEffect(() => {
+    const minFrame = fps === 30 ? 30 : MIN_FRAME_MS;
     const value = [IDLE, IDLE, IDLE, IDLE];
     let frame = 0;
     let last = performance.now();
@@ -89,7 +101,7 @@ export function Equalizer({ playing, height = 12, tint = "bg-accent" }: { playin
     const tick = (now: number) => {
       // Cap at ~60 fps: on 120/144/240 Hz screens every 2nd (3rd) frame, evenly
       // paced. Levels only arrive 40×/s, more frames don't add motion.
-      if (now - last < MIN_FRAME_MS) {
+      if (now - last < minFrame) {
         frame = requestAnimationFrame(tick);
         return;
       }
@@ -134,7 +146,7 @@ export function Equalizer({ playing, height = 12, tint = "bg-accent" }: { playin
       cancelAnimationFrame(frame);
       wake.current = () => {};
     };
-  }, []);
+  }, [fps]);
 
   return (
     <div className="flex items-center gap-[2px]" style={{ height }} aria-hidden>
