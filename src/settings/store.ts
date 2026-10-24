@@ -19,7 +19,8 @@ export interface Settings {
   tools: { id: string; enabled: boolean }[];
   /** AI usage: which providers are shown (order = display order). */
   usage: { claude: boolean; codex: boolean; gemini: boolean; cursor: boolean };
-  ask: { provider: AskProvider; configs: Record<AskProvider, AskProviderConfig> };
+  /** `saveHistory` off keeps chats in memory only; existing files are never deleted by the switch. */
+  ask: { provider: AskProvider; configs: Record<AskProvider, AskProviderConfig>; saveHistory: boolean };
   /** `auto` = detected via IP (again on every start); a picked location stays. */
   weather: { name: string; lat: number; lon: number; auto?: boolean } | null;
   /**
@@ -131,6 +132,7 @@ const defaults: Settings = {
       groq: { model: "llama-3.3-70b-versatile", effort: "medium", baseUrl: "" },
       custom: { model: "", effort: "medium", baseUrl: "" },
     },
+    saveHistory: true,
   },
   weather: null,
   display: { visibility: "always", monitor: null, offset: 0, focusStyle: "dim", idleStyle: "notch" },
@@ -311,7 +313,8 @@ function migrateAsk(old: Partial<Settings["ask"]> | undefined): Settings["ask"] 
     if (!merged.model.trim() || merged.model.startsWith("gemini-2.5-")) merged.model = defaults.ask.configs[p].model;
     configs[p] = merged;
   }
-  return { provider, configs };
+  // Existing installs default to saving; only an explicit false turns it off.
+  return { provider, configs, saveHistory: typeof old?.saveHistory === "boolean" ? old.saveHistory : true };
 }
 
 export function updateAsk(provider: AskProvider, patch: Partial<AskProviderConfig>) {

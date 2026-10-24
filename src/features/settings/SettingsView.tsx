@@ -421,6 +421,16 @@ function Ask() {
           options={effortLevels}
         />
       </Row>
+      <Row
+        label={t("Chats speichern")}
+        hint={t("Bis zu drei Chats lokal auf diesem PC. Aus: nichts wird geschrieben; vorhandene Chats bleiben im Verlauf lesbar und löschbar.")}
+      >
+        <Switch
+          label={t("Chats speichern")}
+          checked={s.ask.saveHistory}
+          onChange={(on) => updateSettings({ ask: { ...s.ask, saveHistory: on } })}
+        />
+      </Row>
     </Group>
   );
 }

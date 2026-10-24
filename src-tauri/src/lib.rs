@@ -139,6 +139,7 @@ pub fn run() {
             ask_history::ask_history_load,
             ask_history::ask_history_save,
             ask_history::ask_history_delete,
+    ask_history::ask_history_clear,
             secrets::secret_set,
             secrets::secret_delete,
             secrets::secret_has,

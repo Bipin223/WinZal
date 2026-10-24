@@ -123,3 +123,24 @@ pub fn ask_history_delete(app: AppHandle, id: String) -> Result<Vec<AskSummary>,
     write_index(&dir, &list)?;
     Ok(list)
 }
+
+/// Explicit "delete all" from the chat history menu. Only files whose name is a
+/// valid conversation id are removed, so nothing else in the ask folder is touched.
+#[tauri::command]
+pub fn ask_history_clear(app: AppHandle) -> Result<Vec<AskSummary>, String> {
+    let dir = folder(&app)?;
+    if let Ok(entries) = fs::read_dir(&dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+                continue;
+            }
+            let stem = path.file_stem().and_then(|name| name.to_str()).unwrap_or_default();
+            if valid_id(stem) && stem != "index" {
+                let _ = fs::remove_file(path);
+            }
+        }
+    }
+    write_index(&dir, &[])?;
+    Ok(Vec::new())
+}

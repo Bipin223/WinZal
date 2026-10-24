@@ -6,7 +6,8 @@ import { createStore } from "../../lib/store";
 import { HeaderActions, HeaderButton } from "../../notch/header";
 import { navigate } from "../../notch/nav";
 import { clipboard } from "../../platform/clipboard";
-import { settings } from "../../settings/store";
+import { settings, updateSettings } from "../../settings/store";
+import { Switch } from "../../ui/controls";
 import { providerInfo, streamChat, type ChatMessage } from "./providers";
 import { askAttachment, clearAskAttachment } from "./handoff";
 import { askHistory, type AskSummary } from "./history";
@@ -36,6 +37,7 @@ function titleFor(messages: ChatMessage[]): string {
 
 /** Older builds kept the chat in localStorage; move it to the new history. */
 async function migrateLegacyChat() {
+  if (!settings.get().ask.saveHistory) return;
   const raw = localStorage.getItem("notch:ask-chat");
   if (!raw) return;
   try {
@@ -61,6 +63,8 @@ async function migrateLegacyChat() {
 
 /** Queue a save; only the active chat is serialized, and only after a turn. */
 function persist(messages: ChatMessage[]) {
+  // Saving off: keep the chat in memory only and never touch existing files.
+  if (!settings.get().ask.saveHistory) return;
   const clean = messages.filter((message) => message.content.trim() || (message.images?.length ?? 0) > 0);
   if (clean.length === 0) return;
   const snapshot = clean.map((message) => ({ ...message }));
@@ -72,6 +76,8 @@ function persist(messages: ChatMessage[]) {
   active.set({ id, title, updatedAt });
   saveQueue = saveQueue
     .then(async () => {
+      // The switch may have been turned off while an earlier save was queued.
+      if (!settings.get().ask.saveHistory) return;
       const list = await askHistory.save({ id, title, updatedAt, messages: snapshot });
       history.set(list);
     })
@@ -109,17 +115,20 @@ export function AskView() {
   const current = active.use();
   const saved = history.use();
   const ask = settings.use().ask;
+  const saveHistory = ask.saveHistory;
   const provider = ask.provider;
   const config = ask.configs[provider];
   const [draft, setDraft] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const attachment = askAttachment.use();
   const abort = useRef<AbortController | null>(null);
   const list = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const wasStreaming = useRef(false);
+  const firstSaveEffect = useRef(true);
 
   useEffect(() => {
     input.current?.focus({ preventScroll: true });
@@ -139,10 +148,17 @@ export function AskView() {
     historyHydrated = true;
     void (async () => {
       try {
-        await migrateLegacyChat();
+        // Only switch/migrate/auto-open when saving is on. Turning it off must
+        // leave old chats untouched and must not reopen one behind the user's back.
+        if (settings.get().ask.saveHistory) await migrateLegacyChat();
         const list = await askHistory.list();
         history.set(list);
-        if (list.length > 0 && chat.get().length === 0 && active.get().id === null) {
+        if (
+          settings.get().ask.saveHistory &&
+          list.length > 0 &&
+          chat.get().length === 0 &&
+          active.get().id === null
+        ) {
           const conversation = await askHistory.load(list[0].id);
           if (conversation && chat.get().length === 0) {
             chat.set(conversation.messages);
@@ -154,6 +170,22 @@ export function AskView() {
       }
     })();
   }, []);
+
+  // Turning saving back on makes an old in-memory chat (if any) migratable,
+  // without overwriting the conversation that is open right now.
+  useEffect(() => {
+    if (firstSaveEffect.current) {
+      firstSaveEffect.current = false;
+      return;
+    }
+    if (!saveHistory) return;
+    if (chat.get().length > 0 || active.get().id !== null) return;
+    void (async () => {
+      await migrateLegacyChat();
+      const list = await askHistory.list();
+      history.set(list);
+    })().catch(() => {});
+  }, [saveHistory]);
 
   // A turn is saved when streaming ends (completed, stopped or failed).
   useEffect(() => {
@@ -206,6 +238,30 @@ export function AskView() {
     } catch {
       // Ignore a failed delete; the item stays in the list.
     }
+  };
+
+  const clearSaved = async () => {
+    await saveQueue.catch(() => {});
+    try {
+      const list = await askHistory.clear();
+      history.set(list);
+      setConfirmClear(false);
+      setHistoryOpen(false);
+      // The open chat was one of the deleted files: start a clean memory-only
+      // conversation. An unsaved draft stays untouched.
+      if (active.get().id !== null) {
+        abort.current?.abort();
+        chat.set([]);
+        active.set({ id: null, title: "", updatedAt: 0 });
+      }
+    } catch {
+      // Keep the menu open and the files in place if the delete failed.
+    }
+  };
+
+  const setSaving = (on: boolean) => {
+    updateSettings((s) => ({ ask: { ...s.ask, saveHistory: on } }));
+    if (!on) setConfirmClear(false);
   };
 
   const send = async (text: string) => {
@@ -273,7 +329,14 @@ export function AskView() {
         >
           {config.model || providerInfo[provider].label}
         </button>
-        <HeaderButton label={t("Chat-Verlauf")} active={historyOpen} onClick={() => setHistoryOpen((open) => !open)}>
+        <HeaderButton
+          label={saveHistory ? t("Chat-Verlauf") : t("Chat-Verlauf - Speichern aus")}
+          active={historyOpen}
+          onClick={() => {
+            setConfirmClear(false);
+            setHistoryOpen((open) => !open);
+          }}
+        >
           <Chats size={14} weight="bold" />
         </HeaderButton>
         <HeaderButton label={t("Neuer Chat")} disabled={messages.length === 0} onClick={startNew}>
@@ -284,9 +347,22 @@ export function AskView() {
       {historyOpen && (
         <>
           <div className="absolute inset-0 z-20" onClick={() => setHistoryOpen(false)} />
-          <div className="absolute right-3 top-8 z-30 w-[270px] overflow-hidden rounded-[12px] bg-elevated p-1.5 shadow-2xl">
-            <div className="px-2 py-1 text-[10px] font-semibold tracking-wide text-label-3 uppercase">{t("Gespeicherte Chats")}</div>
-            <div className="max-h-[220px] overflow-y-auto [scrollbar-width:none]">
+          <div className="absolute right-3 top-8 z-30 w-[280px] overflow-hidden rounded-[12px] bg-elevated p-1.5 shadow-2xl">
+            <div className="flex items-center justify-between px-2 py-1">
+              <div className="text-[10px] font-semibold tracking-wide text-label-3 uppercase">{t("Gespeicherte Chats")}</div>
+              {saved.length > 0 && (
+                <button
+                  type="button"
+                  aria-label={t("Alle löschen")}
+                  title={t("Alle löschen")}
+                  onClick={() => setConfirmClear(true)}
+                  className="pressable flex size-5 items-center justify-center rounded-[6px] text-label-4 hover:text-red"
+                >
+                  <Trash size={11} weight="bold" />
+                </button>
+              )}
+            </div>
+            <div className="max-h-[200px] overflow-y-auto [scrollbar-width:none]">
               {saved.length === 0 ? (
                 <div className="px-2 py-2 text-caption text-label-4">{t("Noch keine gespeicherten Chats")}</div>
               ) : (
@@ -312,6 +388,36 @@ export function AskView() {
                   </div>
                 ))
               )}
+            </div>
+            {confirmClear && saved.length > 0 && (
+              <div className="mx-1 mt-1 rounded-[8px] bg-fill-1 p-2">
+                <div className="text-[10px] leading-[13px] font-medium text-label">{t("Alle gespeicherten Chats löschen?")}</div>
+                <div className="mt-1.5 flex justify-end gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmClear(false)}
+                    className="pressable h-6 rounded-full bg-fill-2 px-2.5 text-[10px] font-medium text-label-2 hover:text-label"
+                  >
+                    {t("Abbrechen")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void clearSaved()}
+                    className="pressable h-6 rounded-full bg-red px-2.5 text-[10px] font-semibold text-white"
+                  >
+                    {t("Löschen")}
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="mt-1 flex items-center justify-between gap-2 border-t border-separator px-2 pt-2 pb-1">
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold text-label">{t("Chats speichern")}</div>
+                <div className="mt-0.5 text-[9px] leading-[11px] text-label-4">
+                  {saveHistory ? t("Bis zu 3 Chats lokal auf diesem PC") : t("Aus - dieser Chat bleibt nur im Speicher")}
+                </div>
+              </div>
+              <Switch label={t("Chats speichern")} checked={saveHistory} onChange={setSaving} />
             </div>
           </div>
         </>

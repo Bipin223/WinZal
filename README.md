@@ -84,7 +84,7 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 - **Vault** with passwords and live 2FA codes, a 4-digit PIN, optional **Windows Hello**, DPAPI + TPM-backed encryption and no back door.
 - **Timer** with focus/break presets, six alarm sounds and a running countdown in the closed notch.
 - **To-dos** and **Notes**, stored locally.
-- **Ask**: chat with Gemini, Groq or any OpenAI-compatible endpoint. API keys stay in the backend. Conversations are saved locally and can be reopened from the chat history button in the Ask header; only the open chat is held in memory.
+- **Ask**: chat with Gemini, Groq or any OpenAI-compatible endpoint. API keys stay in the backend. Conversations can be saved locally and reopened from the chat history button in the Ask header; only the open chat is held in memory. Turn saving off under **Settings → AI** (or in the history menu) and new turns stay in memory only. Existing chats remain readable and can be deleted from the history menu.
 - **AI usage**: limits for Claude, ChatGPT, Gemini and Cursor from the CLIs you are already signed in to.
 - **Weather** through Open-Meteo, with a city picker and automatic IP-based location.
 - **Hardware**: live CPU, RAM, GPU, VRAM and ping, with history while the notch is closed.
@@ -129,7 +129,7 @@ If you are on **1.6.1 or older**, install **1.6.3 manually once**; after that, f
 
 Updates are in-place upgrades: only the app files are replaced. Settings, vault, notes, to-dos and saved Ask chats live in the Windows app-data folder, outside the installation directory, and are never removed by an update.
 
-Saved Ask conversations live in the app data folder as one small JSON file per chat, keeping the **latest 3** chats. Only the open conversation is loaded into the webview, so history does not sit in RAM.
+Saved Ask conversations live in the app data folder as one small JSON file per chat, keeping the **latest 3** chats. Only the open conversation is loaded into the webview, so history does not sit in RAM. Chat saving can be switched off in **Settings → AI** or the history menu; this stops new writes without deleting existing chats. **Delete all saved chats** in the history menu is the explicit way to remove them.
 
 ## Using WinZal
 

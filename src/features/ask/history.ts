@@ -28,4 +28,6 @@ export const askHistory = {
   save: (conversation: AskConversation): Promise<AskSummary[]> =>
     isNative ? invoke<AskSummary[]>("ask_history_save", { conversation }) : Promise.resolve([]),
   remove: (id: string): Promise<AskSummary[]> => (isNative ? invoke<AskSummary[]>("ask_history_delete", { id }) : Promise.resolve([])),
+  /** Explicit clear-all; the save switch never calls this. */
+  clear: (): Promise<AskSummary[]> => (isNative ? invoke<AskSummary[]>("ask_history_clear") : Promise.resolve([])),
 };

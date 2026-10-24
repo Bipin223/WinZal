@@ -6,6 +6,14 @@
       {
         "de": "Die erste Ziffer der geschlossenen Uhr ist kräftiger und etwas größer",
         "en": "The first digit of the closed clock is bolder and slightly larger"
+      },
+      {
+        "de": "Chats speichern lässt sich in den Einstellungen und im Verlauf-Menü abschalten; neue Nachrichten bleiben dann nur im Arbeitsspeicher",
+        "en": "Chat saving can be switched off in Settings and in the history menu; new turns then stay in memory only"
+      },
+      {
+        "de": "Vorhandene Chats bleiben beim Abschalten lesbar und können einzeln oder mit Bestätigung alle auf einmal gelöscht werden",
+        "en": "Existing chats stay readable when saving is off and can be deleted one by one or all at once with confirmation"
       }
     ]
   },

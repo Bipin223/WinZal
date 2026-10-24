@@ -20,7 +20,11 @@ export function startShowcase() {
       ...s.tools.filter((x) => !SHOWCASE_TOOLS.includes(x.id)).map((x) => ({ id: x.id, enabled: false })),
     ],
     weather: { name: "Amsterdam", lat: 52.37, lon: 4.89, auto: false },
-    ask: { provider: "gemini", configs: { ...s.ask.configs, gemini: { model: "gemini-3.5-flash", effort: "high", baseUrl: "" } } },
+    ask: {
+      provider: "gemini",
+      configs: { ...s.ask.configs, gemini: { model: "gemini-3.5-flash", effort: "high", baseUrl: "" } },
+      saveHistory: s.ask.saveHistory,
+    },
   }));
   navigate("overview");
 
