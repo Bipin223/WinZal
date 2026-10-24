@@ -27,6 +27,7 @@ const DEFAULTS: Appearance = {
   subtextBrightness: 100,
   clockWeather: true,
   clockAccent: "#ff453a",
+  clockText: "compact",
   gpuAcceleration: false,
 };
 
@@ -88,6 +89,17 @@ export function AppearanceView() {
       </Section>
       <Section label={t("Uhr-Akzent")} hint={t("Färbt die erste Ziffer der Uhrzeit")}>
         <Swatches value={a.clockAccent} colors={CLOCK_ACCENTS} onChange={(clockAccent) => set({ clockAccent })} />
+      </Section>
+      <Section label={t("Uhr-Text")} hint={t("Nur in der geschlossenen Pille")}>
+        <Choice
+          label={t("Größe")}
+          value={a.clockText}
+          options={[
+            ["compact", t("Kompakt")],
+            ["large", t("Groß")],
+          ]}
+          onChange={(clockText) => set({ clockText: clockText as Appearance["clockText"] })}
+        />
       </Section>
       <Section label={t("Ruhende Notch")} hint={t("Geschlossen")}>
         <Swatches value={a.resting} colors={NOTCH_COLORS} onChange={(resting) => set({ resting })} />

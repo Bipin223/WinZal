@@ -124,7 +124,11 @@ export function Notch() {
     : shape;
   const topPad = floating && !tightHit ? 8 : 0;
   const sticky = useStickyHitZone(status, size.h);
-  const displayShape = showRecording ? { ...finalShape, w: finalShape.w + RECORDING_EXTRA } : finalShape;
+  const clockExtra = appearance.clockText === "large" && clockPill && !line && !idleLine && status !== "open" ? 10 : 0;
+  const displayShape = {
+    ...finalShape,
+    w: finalShape.w + (showRecording ? RECORDING_EXTRA : 0) + clockExtra,
+  };
   const transition = useTransitionFor(status, displayShape);
 
   // Click outside closes (in the browser the fake desktop, in Tauri the window blur).
@@ -310,6 +314,7 @@ export function Notch() {
 function ClosedClock() {
   const [now, setNow] = useState(() => new Date());
   const forecast = useForecast();
+  const large = settings.use().appearance.clockText === "large";
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(id);
@@ -318,23 +323,27 @@ function ClosedClock() {
   const date = now.toLocaleDateString(locale(), { weekday: "short", day: "numeric", month: "short" });
   const wx = forecast && forecast !== "error" ? describe(forecast.current.code, forecast.current.day) : null;
   const temp = forecast && forecast !== "error" ? formatTemp(forecast.current.temp) : null;
+  const timeClass = large ? "text-[14px] font-bold" : "text-[12px] font-semibold";
+  const smallClass = large ? "text-[10px] font-semibold" : "text-[9px] font-medium";
+  const tempClass = large ? "text-[12px] font-bold" : "text-[11px] font-semibold";
+  const iconSize = large ? 14 : 12;
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
       <div className="flex items-center gap-1">
-        <ClockTime time={time} className="tabular text-[12px] font-semibold text-label" />
-        {period && <span className="text-[9px] font-semibold text-label-3">{period}</span>}
-        <span className="text-[9px] font-medium text-label-3">· {date}</span>
+        <ClockTime time={time} className={`tabular ${timeClass} text-label`} />
+        {period && <span className={`${smallClass} text-label-3`}>{period}</span>}
+        <span className={`${smallClass} text-label-3`}>· {date}</span>
       </div>
       {wx && (
         <>
           <span
             aria-hidden
-            className="mx-3 h-3.5 w-[2px] shrink-0 rounded-full"
+            className={`mx-3 ${large ? "h-4" : "h-3.5"} w-[2px] shrink-0 rounded-full`}
             style={{ background: "#ffffff", boxShadow: "0 0 6px rgb(255 255 255 / 0.35)" }}
           />
           <div className="flex items-center gap-1.5">
-            <wx.icon size={12} weight="fill" className="text-label-2" />
-            <span className="tabular text-[11px] font-semibold text-label-2">{temp}</span>
+            <wx.icon size={iconSize} weight="fill" className="text-label-2" />
+            <span className={`tabular ${tempClass} text-label-2`}>{temp}</span>
           </div>
         </>
       )}

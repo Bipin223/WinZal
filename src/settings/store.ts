@@ -61,6 +61,8 @@ export interface Settings {
     clockWeather: boolean;
     /** Colour of the first clock digit (OnePlus-style accent); red by default. */
     clockAccent: string;
+    /** Closed clock pill: compact (default) or bigger/bolder text. */
+    clockText: "compact" | "large";
     /** true = hardware acceleration (smoother, more RAM); false = software/CPU (less RAM, more CPU). */
     gpuAcceleration: boolean;
   };
@@ -128,6 +130,7 @@ const defaults: Settings = {
     subtextBrightness: 100,
     clockWeather: true,
     clockAccent: "#ff453a",
+    clockText: "compact",
     gpuAcceleration: false,
   },
   discord: { clientId: "" },

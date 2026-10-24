@@ -506,5 +506,10 @@
   "Einmalige Windows-Abfrage – die FPS laufen sofort, kein Abmelden": "One-time Windows prompt – FPS start immediately, no sign-out",
   "Hat nicht geklappt – noch einmal versuchen oder WinZal als Administrator starten": "Didn't work – try again or start WinZal as administrator once",
   "Uhr-Akzent": "Clock accent",
-  "Färbt die erste Ziffer der Uhrzeit": "Tints the first digit of the clock"
+  "Färbt die erste Ziffer der Uhrzeit": "Tints the first digit of the clock",
+  "Uhr-Text": "Clock text",
+  "Nur in der geschlossenen Pille": "Closed pill only",
+  "Größe": "Size",
+  "Kompakt": "Compact",
+  "Groß": "Large"
 }
