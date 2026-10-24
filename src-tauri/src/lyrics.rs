@@ -57,7 +57,9 @@ fn query(base: &str, title: &str, artist: &str, duration: f64) -> Option<reqwest
     {
         let mut pairs = url.query_pairs_mut();
         pairs.append_pair("track_name", title);
-        pairs.append_pair("artist_name", artist);
+        if !artist.is_empty() {
+            pairs.append_pair("artist_name", artist);
+        }
         if duration > 1.0 {
             pairs.append_pair("duration", &(duration.round() as i64).to_string());
         }
@@ -107,7 +109,7 @@ pub async fn lyrics_get(title: String, artist: String, duration: f64, state: Sta
     }
 
     let mut cache = state.0.lock().unwrap();
-    if cache.len() >= 200 {
+    if cache.len() >= 40 {
         cache.clear();
     }
     cache.insert(key, lyrics.clone());

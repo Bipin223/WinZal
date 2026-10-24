@@ -87,7 +87,10 @@ export function Notch() {
   const shownLive = line ? null : idleLine ? (alert ? "timer" : null) : live.id;
   // The closed clock is optional; Windows island prefers it over the live media slot.
   const clockWeather = appearance.clockWeather;
-  const pillLive = floating ? (clockWeather ? null : shownLive) : shownLive;
+  // Lyrics only make sense when the media pill is visible, so they win over the clock
+  // in the floating island (otherwise the whole lyrics option would do nothing there).
+  const lyricsPill = floating && appearance.lyricsInPill && shownLive === "media";
+  const pillLive = floating ? (clockWeather && !lyricsPill ? null : shownLive) : shownLive;
   const clockPill = clockWeather && !pillLive;
   // Screen recording gets its own chip at the right end of the closed pill.
   const { recording, since } = useRecording();
@@ -125,9 +128,14 @@ export function Notch() {
   const topPad = floating && !tightHit ? 8 : 0;
   const sticky = useStickyHitZone(status, size.h);
   const clockExtra = appearance.clockText === "large" && clockPill && !line && !idleLine && status !== "open" ? 10 : 0;
+  // Lyrics need more room than a title; this is opt-in and only affects the closed pill.
+  const lyricsExtra =
+    appearance.lyricsInPill && appearance.lyricsSize === "large" && pillLive === "media" && !line && !idleLine && status !== "open"
+      ? 84
+      : 0;
   const displayShape = {
     ...finalShape,
-    w: finalShape.w + (showRecording ? RECORDING_EXTRA : 0) + clockExtra,
+    w: finalShape.w + (showRecording ? RECORDING_EXTRA : 0) + clockExtra + lyricsExtra,
   };
   const transition = useTransitionFor(status, displayShape);
 

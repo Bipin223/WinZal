@@ -7,12 +7,22 @@ interface Line {
   text: string;
 }
 
+export interface LyricsDisplay {
+  current: string | null;
+  next: string | null;
+  index: number;
+}
+
+/** Parse once per track, even when the pill closes and reopens. */
+const parsed = new Map<string, Line[]>();
+const PARSED_MAX = 30;
+
 /**
- * Current synced lyric line for the closed music pill. Fetches once per track
- * (LRCLIB, Rust-cached), parses the LRC and only re-renders when the line changes.
- * The 250 ms timer is tiny; no per-frame React work, no extra animation loop.
+ * Current + next synced lyric line for the closed music pill. Fetches once per
+ * track (LRCLIB, Rust-cached + parsed cache here) and only re-renders when the
+ * line changes. No per-frame React work, no extra animation loop.
  */
-export function useLyricsLine(np: NowPlaying | null, enabled: boolean): string | null {
+export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDisplay {
   const [lines, setLines] = useState<Line[]>([]);
   const [index, setIndex] = useState(-1);
   const npRef = useRef(np);
@@ -25,19 +35,32 @@ export function useLyricsLine(np: NowPlaying | null, enabled: boolean): string |
       setIndex(-1);
       return;
     }
+    const cached = parsed.get(track);
+    if (cached) {
+      setLines(cached);
+      setIndex(-1);
+      return;
+    }
     let alive = true;
     setLines([]);
     setIndex(-1);
-    void fetchLyrics(np.title, np.artist, np.duration)
-      .then((lyrics) => {
-        if (!alive) return;
-        setLines(parseLrc(lyrics.synced));
-      })
-      .catch(() => {
-        if (alive) setLines([]);
-      });
+    // Small grace period: skipping tracks quickly does not fire a request per track.
+    const id = window.setTimeout(() => {
+      void fetchLyrics(np.title, np.artist, np.duration)
+        .then((lyrics) => {
+          if (!alive) return;
+          const next = parseLrc(lyrics.synced);
+          if (parsed.size >= PARSED_MAX) parsed.clear();
+          parsed.set(track, next);
+          setLines(next);
+        })
+        .catch(() => {
+          if (alive) setLines([]);
+        });
+    }, 300);
     return () => {
       alive = false;
+      window.clearTimeout(id);
     };
     // One fetch per track; position updates come from the timer below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -61,7 +84,12 @@ export function useLyricsLine(np: NowPlaying | null, enabled: boolean): string |
     return () => window.clearInterval(id);
   }, [enabled, lines]);
 
-  return index >= 0 ? lines[index]?.text ?? null : null;
+  if (index < 0 || !lines[index]) return { current: null, next: null, index: -1 };
+  return {
+    current: lines[index].text,
+    next: lines[index + 1]?.text ?? null,
+    index,
+  };
 }
 
 /** "[00:12.34] text" (and multiple timestamps per line) → sorted lines. */

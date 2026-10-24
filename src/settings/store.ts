@@ -63,8 +63,16 @@ export interface Settings {
     clockAccent: string;
     /** Closed clock pill: compact or bigger/bolder text (large default). */
     clockText: "compact" | "large";
+    /** Expanded overview clock: bold instead of semibold. */
+    clockBold: boolean;
     /** Show the current synced lyric line in the closed music pill instead of the title. */
     lyricsInPill: boolean;
+    /** One line (inline) or the current + next line. */
+    lyricsLayout: "inline" | "lines";
+    /** Keep the normal closed pill width or grow it so more of the line fits. */
+    lyricsSize: "default" | "large";
+    /** Line change animation: fade/blur (current), Apple Music-style scroll, or a stronger blur. */
+    lyricsAnimation: "current" | "apple" | "blur";
     /** true = hardware acceleration (smoother, more RAM); false = software/CPU (less RAM, more CPU). */
     gpuAcceleration: boolean;
   };
@@ -133,7 +141,11 @@ const defaults: Settings = {
     clockWeather: true,
     clockAccent: "#ff453a",
     clockText: "large",
+    clockBold: false,
     lyricsInPill: false,
+    lyricsLayout: "inline",
+    lyricsSize: "default",
+    lyricsAnimation: "current",
     gpuAcceleration: false,
   },
   discord: { clientId: "" },

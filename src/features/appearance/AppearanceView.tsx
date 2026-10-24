@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { motion } from "motion/react";
 import { ArrowCounterClockwise, Check } from "@phosphor-icons/react";
 import { invoke } from "@tauri-apps/api/core";
@@ -28,7 +28,11 @@ const DEFAULTS: Appearance = {
   clockWeather: true,
   clockAccent: "#ff453a",
   clockText: "large",
+  clockBold: false,
   lyricsInPill: false,
+  lyricsLayout: "inline",
+  lyricsSize: "default",
+  lyricsAnimation: "current",
   gpuAcceleration: false,
 };
 
@@ -68,125 +72,129 @@ export function AppearanceView() {
   return (
     <div className="flex flex-col gap-1.5 pb-2">
       <Preview fill={previewFill} accent={accent} corners={a.corners} islandStyle={a.style} />
-      <Section label={t("Style")} hint={t("How the island looks on your screen")}>
+      <Section label={t("Style")}>
         <div className="grid grid-cols-2 gap-1.5">
-          <StyleCard
-            active={a.style === "dynamic"}
-            label={t("Dynamic Island")}
-            hint={t("Hangs from the top edge like a notch, tabs with names.")}
-            onClick={() => set({ style: "dynamic" })}
-          />
-          <StyleCard
-            active={a.style === "windows"}
-            label={t("Windows Island")}
-            hint={t("A floating pill with a clock at rest and tabs at the bottom.")}
-            floating
-            onClick={() => set({ style: "windows" })}
-          />
+          <StyleCard active={a.style === "dynamic"} label={t("Dynamic Island")} onClick={() => set({ style: "dynamic" })} />
+          <StyleCard active={a.style === "windows"} label={t("Windows Island")} floating onClick={() => set({ style: "windows" })} />
         </div>
       </Section>
-      <Section label={t("Akzent")} hint={t("Aus dem Cover oder fest")}>
+      <Section label={t("Akzent")}>
         <Swatches value={a.accent} colors={ACCENTS} onChange={(accent) => set({ accent })} />
       </Section>
-      <Section label={t("Uhr-Akzent")} hint={t("Färbt die erste Ziffer der Uhrzeit")}>
+      <Section label={t("Uhr-Akzent")}>
         <Swatches value={a.clockAccent} colors={CLOCK_ACCENTS} onChange={(clockAccent) => set({ clockAccent })} />
       </Section>
-      <Section label={t("Uhr-Text")} hint={t("Nur in der geschlossenen Pille")}>
-        <Choice
-          label={t("Größe")}
-          value={a.clockText}
-          options={[
-            ["compact", t("Kompakt")],
-            ["large", t("Groß")],
-          ]}
-          onChange={(clockText) => set({ clockText: clockText as Appearance["clockText"] })}
-        />
-      </Section>
-      <Section label={t("Songtext")} hint={t("Aktuelle Zeile in der geschlossenen Pille")}>
-        <div className="flex items-center justify-between gap-3 py-0.5">
-          <div className="min-w-0">
-            <div className="text-caption font-semibold text-label-2">{t("Lyrics in the closed pill")}</div>
-            <div className="text-[9px] leading-[11px] text-label-4">
-              {t("Shows the current synced line instead of the title when available (LRCLIB).")}
-            </div>
-          </div>
-          <Switch checked={a.lyricsInPill} onChange={(lyricsInPill) => set({ lyricsInPill })} label={t("Lyrics in the closed pill")} />
+      <Section label={t("Uhr-Text")}>
+        <ToggleRow label={t("Clock & weather")} checked={a.clockWeather} onChange={(clockWeather) => set({ clockWeather })} />
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <Choice
+            label={t("Closed pill")}
+            value={a.clockText}
+            options={[
+              ["compact", t("Kompakt")],
+              ["large", t("Groß")],
+            ]}
+            onChange={(clockText) => set({ clockText: clockText as Appearance["clockText"] })}
+          />
+          <Choice
+            label={t("Expanded")}
+            value={a.clockBold ? "bold" : "regular"}
+            options={[
+              ["regular", t("Regular")],
+              ["bold", t("Bold")],
+            ]}
+            onChange={(value) => set({ clockBold: value === "bold" })}
+          />
         </div>
       </Section>
-      <Section label={t("Ruhende Notch")} hint={t("Geschlossen")}>
+      <Section label={t("Songtext")}>
+        <ToggleRow
+          label={t("Lyrics in the closed pill")}
+          checked={a.lyricsInPill}
+          onChange={(lyricsInPill) => set({ lyricsInPill })}
+        />
+        {a.lyricsInPill && (
+          <div className="mt-2 grid gap-2">
+            <Choice
+              label={t("Layout")}
+              value={a.lyricsLayout}
+              options={[
+                ["inline", t("In line")],
+                ["lines", t("Line by line")],
+              ]}
+              onChange={(lyricsLayout) => set({ lyricsLayout: lyricsLayout as Appearance["lyricsLayout"] })}
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <Choice
+                label={t("Pill size")}
+                value={a.lyricsSize}
+                options={[
+                  ["default", t("Default")],
+                  ["large", t("Large")],
+                ]}
+                onChange={(lyricsSize) => set({ lyricsSize: lyricsSize as Appearance["lyricsSize"] })}
+              />
+              <Choice
+                label={t("Animation")}
+                value={a.lyricsAnimation}
+                options={[
+                  ["current", t("Current")],
+                  ["apple", t("Apple")],
+                  ["blur", t("Blur")],
+                ]}
+                onChange={(lyricsAnimation) => set({ lyricsAnimation: lyricsAnimation as Appearance["lyricsAnimation"] })}
+              />
+            </div>
+          </div>
+        )}
+      </Section>
+      <Section label={t("Ruhende Notch")}>
         <Swatches value={a.resting} colors={NOTCH_COLORS} onChange={(resting) => set({ resting })} />
       </Section>
-      <Section label={t("Offene Notch")} hint={t("Ausgeklappt")}>
+      <Section label={t("Offene Notch")}>
         <Swatches value={a.expanded} colors={NOTCH_COLORS} onChange={(expanded) => set({ expanded })} />
       </Section>
       <div className="grid grid-cols-2 gap-1.5">
-        <Choice
-          label={t("Material")}
-          value={a.material}
-          options={[
-            ["solid", t("Fest")],
-            ["dark", t("Dunkles Glas")],
-            ["glass", t("Glas")],
-          ]}
-          onChange={(material) => set({ material: material as Appearance["material"] })}
-        />
-        <Choice
-          label={t("Ecken")}
-          value={a.corners}
-          options={[
-            ["rounded", t("Rund")],
-            ["squared", t("Eckig")],
-          ]}
-          onChange={(corners) => set({ corners: corners as Appearance["corners"] })}
-        />
+        <div className="rounded-[12px] bg-fill-1 p-2">
+          <Choice
+            label={t("Material")}
+            value={a.material}
+            options={[
+              ["solid", t("Fest")],
+              ["dark", t("Dunkles Glas")],
+              ["glass", t("Glas")],
+            ]}
+            onChange={(material) => set({ material: material as Appearance["material"] })}
+          />
+        </div>
+        <div className="rounded-[12px] bg-fill-1 p-2">
+          <Choice
+            label={t("Ecken")}
+            value={a.corners}
+            options={[
+              ["rounded", t("Rund")],
+              ["squared", t("Eckig")],
+            ]}
+            onChange={(corners) => set({ corners: corners as Appearance["corners"] })}
+          />
+        </div>
       </div>
-      <Section label={t("Interaction")} hint={t("Motion and edge light")}>
-        <div className="flex items-center justify-between gap-3 py-0.5">
-          <div className="min-w-0">
-            <div className="text-caption font-semibold text-label-2">{t("Drag animation")}</div>
-            <div className="text-[9px] leading-[11px] text-label-4">
-              {t("The notch squeezes and sways with the pointer.")}
-            </div>
-          </div>
-          <Switch
-            checked={a.dragAnimation}
-            onChange={(v) => set({ dragAnimation: v })}
-            label={t("Drag animation")}
-          />
-        </div>
-        <div className="flex items-center justify-between gap-3 py-0.5">
-          <div className="min-w-0">
-            <div className="text-caption font-semibold text-label-2">{t("Clock & weather")}</div>
-            <div className="text-[9px] leading-[11px] text-label-4">
-              {t("Show the time and temperature in the closed island.")}
-            </div>
-          </div>
-          <Switch
-            checked={a.clockWeather}
-            onChange={(v) => set({ clockWeather: v })}
-            label={t("Clock & weather")}
-          />
-        </div>
+      <Section label={t("Interaction")}>
+        <ToggleRow
+          label={t("Drag animation")}
+          checked={a.dragAnimation}
+          onChange={(dragAnimation) => set({ dragAnimation })}
+        />
       </Section>
-      <Section label={t("Performance")} hint={t("Restart required")}>
-        <div className="flex items-center justify-between gap-3 py-0.5">
-          <div className="min-w-0">
-            <div className="text-caption font-semibold text-label-2">{t("GPU acceleration")}</div>
-            <div className="text-[9px] leading-[11px] text-label-4">
-              {restarting
-                ? t("Restarting WinZal...")
-                : t("On: smoother animations, more RAM. Off: less RAM, more CPU.")}
-            </div>
-          </div>
-          <Switch
-            checked={a.gpuAcceleration}
-            onChange={(v) => void setRenderMode(v)}
-            label={t("GPU acceleration")}
-          />
-        </div>
+      <Section label={t("Performance")}>
+        <ToggleRow
+          label={restarting ? t("Restarting WinZal...") : t("GPU acceleration")}
+          checked={a.gpuAcceleration}
+          onChange={(v) => void setRenderMode(v)}
+        />
       </Section>
-      <Section label={t("Icons & subtext")} hint={t("Dim the small details")}>
-        <div className="flex items-center justify-between text-caption font-semibold text-label-2">
+      <Section label={t("Icons & subtext")}>
+        <div className="flex items-center justify-between text-caption font-medium text-label-2">
           <span>{t("Dock icons")}</span>
           <span className="tabular text-label-3">{a.dockIconBrightness}%</span>
         </div>
@@ -198,7 +206,7 @@ export function AppearanceView() {
           step={5}
           onChange={(v) => set({ dockIconBrightness: v })}
         />
-        <div className="mt-1 flex items-center justify-between text-caption font-semibold text-label-2">
+        <div className="mt-2 flex items-center justify-between text-caption font-medium text-label-2">
           <span>{t("Subtext")}</span>
           <span className="tabular text-label-3">{a.subtextBrightness}%</span>
         </div>
@@ -236,10 +244,6 @@ function Preview({
   const floating = islandStyle === "windows";
   return (
     <div className="relative flex h-[82px] shrink-0 items-center justify-center overflow-hidden rounded-[14px] bg-fill-1">
-      <div className="absolute inset-x-4 top-2 flex justify-between text-[9px] tracking-wide text-label-4">
-        <span>WINZAL</span>
-        <span>{t("Vorschau")}</span>
-      </div>
       <motion.div
         animate={{ backgroundColor: fill }}
         transition={springs.morph}
@@ -267,13 +271,7 @@ function Preview({
   );
 }
 
-function StyleCard(props: {
-  active: boolean;
-  label: string;
-  hint: string;
-  floating?: boolean;
-  onClick: () => void;
-}) {
+function StyleCard(props: { active: boolean; label: string; floating?: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
@@ -284,9 +282,7 @@ function StyleCard(props: {
     >
       <div className="relative mb-1.5 h-12 overflow-hidden rounded-[7px] bg-fill-2">
         {props.floating ? (
-          <div
-            className="mx-auto mt-3 flex h-7 w-24 items-center justify-center gap-1 rounded-[13px] bg-black"
-          >
+          <div className="mx-auto mt-3 flex h-7 w-24 items-center justify-center gap-1 rounded-[13px] bg-black">
             <span className="text-[8px] font-semibold text-white">9:44</span>
             <span className="text-[7px] text-white/60">12°</span>
           </div>
@@ -297,20 +293,33 @@ function StyleCard(props: {
           </div>
         )}
       </div>
-      <div className="truncate text-[10px] font-semibold text-label">{props.label}</div>
-      <div className="mt-0.5 text-[8px] leading-[10px] text-label-3">{props.hint}</div>
+      <div className="truncate text-caption font-semibold text-label">{props.label}</div>
     </button>
   );
 }
 
-function Section({ label, hint, children }: { label: string; hint: string; children: React.ReactNode }) {
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="shrink-0 rounded-[12px] bg-fill-1 px-3 py-1.5">
-      <div className="mb-1.5 flex items-center justify-between">
-        <span className="text-caption font-semibold text-label-2">{label}</span>
-        <span className="text-[10px] text-label-4">{hint}</span>
-      </div>
+    <div className="shrink-0 rounded-[12px] bg-fill-1 px-3 py-2">
+      <div className="mb-1.5 text-footnote font-semibold text-label-2">{label}</div>
       {children}
+    </div>
+  );
+}
+
+function ToggleRow({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex min-h-6 items-center justify-between gap-3">
+      <span className="min-w-0 truncate text-caption font-medium text-label-2">{label}</span>
+      <Switch checked={checked} onChange={onChange} label={label} />
     </div>
   );
 }
@@ -345,16 +354,18 @@ function Swatches({ value, colors, onChange }: { value: string; colors: string[]
   );
 }
 
+/** Full-width segmented control with a sliding pill; labels stay centred. */
 function Choice(props: {
   label: string;
   value: string;
   options: [string, string][];
   onChange: (v: string) => void;
 }) {
+  const id = useId();
   return (
-    <div className="rounded-[12px] bg-fill-1 px-2 py-1.5">
-      <div className="mb-1 text-caption font-semibold text-label-2">{props.label}</div>
-      <div className="flex gap-0.5">
+    <div className="min-w-0">
+      <div className="mb-1 truncate text-caption font-medium text-label-3">{props.label}</div>
+      <div className="flex rounded-[9px] bg-fill-2 p-[2px]">
         {props.options.map(([value, label]) => {
           const active = props.value === value;
           return (
@@ -362,11 +373,18 @@ function Choice(props: {
               key={value}
               type="button"
               onClick={() => props.onChange(value)}
-              className={`min-w-0 flex-1 truncate rounded-[7px] px-1.5 py-1 text-[10px] font-medium transition-colors ${
-                active ? "bg-label text-black" : "text-label-2 hover:text-label"
-              }`}
+              className="relative min-w-0 flex-1 rounded-[7px] px-1 py-[4px] text-caption font-medium leading-[13px] transition-colors duration-150"
             >
-              {label}
+              {active && (
+                <motion.span
+                  layoutId={`choice-${id}`}
+                  className="absolute inset-0 rounded-[7px] bg-label shadow-[0_1px_2px_rgb(0_0_0/0.25)]"
+                  transition={springs.snappy}
+                />
+              )}
+              <span className={`relative block truncate ${active ? "text-black" : "text-label-3 hover:text-label-2"}`}>
+                {label}
+              </span>
             </button>
           );
         })}

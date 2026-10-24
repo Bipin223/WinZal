@@ -60,6 +60,7 @@ function useNow(): Date {
 function Header() {
   const now = useNow();
   const forecast = useForecast();
+  const appearance = settings.use().appearance;
   const place = settings.use().weather;
   const weather = forecast && forecast !== "error" ? describe(forecast.current.code, forecast.current.day) : null;
   const { time, period } = formatTimeParts(now);
@@ -68,7 +69,11 @@ function Header() {
   return (
     <div className="relative flex items-end justify-between">
       <div>
-        <div className="tabular text-[34px] leading-none font-semibold tracking-[-0.03em] text-label">
+        <div
+          className={`tabular text-[34px] leading-none tracking-[-0.03em] text-label ${
+            appearance.clockBold ? "font-bold" : "font-semibold"
+          }`}
+        >
           <ClockTime time={time} />
           {period && <span className="ml-1 text-title font-semibold tracking-normal text-label-3">{period}</span>}
         </div>

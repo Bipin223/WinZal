@@ -25,13 +25,13 @@ fn trace(message: &str) {
     }
 }
 
+/// Lenovo returns `Data` plus a `ReturnValue` whose WMI type differs by model
+/// (bool on some, uint32 on others). Serde ignores the extra field; only Data counts.
 #[derive(serde::Deserialize)]
 #[allow(non_snake_case)]
 struct LenovoTemp {
     #[serde(default)]
     Data: u32,
-    #[serde(default)]
-    ReturnValue: bool,
 }
 
 /// Reusable Lenovo WMI connection. Create it inside the thread that uses it.
@@ -107,8 +107,16 @@ impl Lenovo {
         }
         match output {
             Some(output) => {
+                if std::env::var_os("WINZAL_TEMP_LOG").is_some() {
+                    // Lenovo's ReturnValue type differs between models; only Data matters.
+                    if let Ok(props) = output.list_properties() {
+                        for prop in props {
+                            trace(&format!("{method} out {prop} = {:?}", output.get_property(&prop)));
+                        }
+                    }
+                }
                 if let Ok(out) = output.into_desr::<LenovoTemp>() {
-                    trace(&format!("{method} data={} return={}", out.Data, out.ReturnValue));
+                    trace(&format!("{method} data={}", out.Data));
                     (out.Data > 0 && out.Data < 150).then_some(out.Data)
                 } else {
                     trace(&format!("{method} output deserialize failed"));

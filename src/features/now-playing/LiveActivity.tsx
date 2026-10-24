@@ -1,10 +1,10 @@
 import { AnimatePresence, motion } from "motion/react";
 import { MusicNoteSimple } from "@phosphor-icons/react";
-import { artwork as artworkSwap, content } from "../../design/motion";
+import { artwork as artworkSwap, content, springs } from "../../design/motion";
 import { useSmoothArtwork } from "./artwork";
 import type { NowPlaying } from "../../platform/media";
 import { Equalizer } from "./Equalizer";
-import { useLyricsLine } from "./lyrics";
+import { useLyrics } from "./lyrics";
 import { LiveEdge } from "../../notch/liveEdges";
 import { settings } from "../../settings/store";
 
@@ -13,9 +13,8 @@ import { settings } from "../../settings/store";
  * the middle stays empty like a real notch.
  */
 export function LiveActivity({ np }: { np: NowPlaying }) {
-  const lyricsOn = settings.use().appearance.lyricsInPill;
-  const lyric = useLyricsLine(np, lyricsOn);
-  const shown = lyric ?? np.title;
+  const appearance = settings.use().appearance;
+  const { current, next, index } = useLyrics(np, appearance.lyricsInPill);
   return (
     <motion.div
       className="absolute inset-0 flex items-center gap-2 px-[9px]"
@@ -33,23 +32,112 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
           WebkitMaskImage: "linear-gradient(90deg, #000 calc(100% - 22px), transparent)",
         }}
       >
-        <AnimatePresence mode="popLayout" initial={false}>
-          <motion.div
-            key={shown}
-            className="max-w-full overflow-hidden whitespace-nowrap text-[11px] leading-none font-semibold text-label"
-            initial={{ opacity: 0, transform: "translateY(3px)", filter: "blur(3px)" }}
-            animate={{ opacity: 1, transform: "translateY(0px)", filter: "blur(0px)", transition: content.enter }}
-            exit={{ opacity: 0, transform: "translateY(-3px)", filter: "blur(3px)", transition: content.exit }}
-            title={np.title}
-          >
-            {shown}
-          </motion.div>
-        </AnimatePresence>
+        {appearance.lyricsInPill && current ? (
+          <LyricLine
+            current={current}
+            next={next}
+            layout={appearance.lyricsLayout}
+            large={appearance.lyricsSize === "large"}
+            animation={appearance.lyricsAnimation}
+            index={index}
+          />
+        ) : (
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.div
+              key={np.title}
+              className="max-w-full overflow-hidden whitespace-nowrap text-[11px] leading-none font-semibold text-label"
+              initial={{ opacity: 0, transform: "translateY(3px)", filter: "blur(3px)" }}
+              animate={{ opacity: 1, transform: "translateY(0px)", filter: "blur(0px)", transition: content.enter }}
+              exit={{ opacity: 0, transform: "translateY(-3px)", filter: "blur(3px)", transition: content.exit }}
+              title={np.title}
+            >
+              {np.title}
+            </motion.div>
+          </AnimatePresence>
+        )}
       </div>
       <LiveEdge side="right">
         <Equalizer playing={np.isPlaying} />
       </LiveEdge>
     </motion.div>
+  );
+}
+
+/**
+ * One or two lyric lines in the middle of the closed pill. Layout and animation
+ * are separate options: "inline" keeps one shortened line, "lines" shows the
+ * current line plus the next one. Transitions use only opacity/transform/filter,
+ * so the notch keeps its rounded silhouette and nothing re-lays out the bar.
+ */
+function LyricLine({
+  current,
+  next,
+  layout,
+  large,
+  animation,
+  index,
+}: {
+  current: string;
+  next: string | null;
+  layout: "inline" | "lines";
+  large: boolean;
+  animation: "current" | "apple" | "blur";
+  index: number;
+}) {
+  const inline = layout === "inline";
+  const enter =
+    animation === "apple"
+      ? { opacity: 0, y: 9 }
+      : animation === "blur"
+        ? { opacity: 0, filter: "blur(6px)" }
+        : { opacity: 0, y: 3, filter: "blur(3px)" };
+  const active =
+    animation === "apple"
+      ? { opacity: 1, y: 0 }
+      : animation === "blur"
+        ? { opacity: 1, filter: "blur(0px)" }
+        : { opacity: 1, y: 0, filter: "blur(0px)" };
+  const leave =
+    animation === "apple"
+      ? { opacity: 0, y: -9 }
+      : animation === "blur"
+        ? { opacity: 0, filter: "blur(6px)" }
+        : { opacity: 0, y: -3, filter: "blur(3px)" };
+  const transition = animation === "apple" ? springs.snappy : content.enter;
+  return (
+    <AnimatePresence mode="popLayout" initial={false}>
+      <motion.div
+        key={index}
+        className="flex min-w-0 max-w-full flex-col items-center justify-center"
+        initial={enter}
+        animate={active}
+        exit={leave}
+        transition={transition}
+      >
+        <span
+          className={`max-w-full truncate font-semibold text-label ${
+            inline
+              ? large
+                ? "text-[12px] leading-none"
+                : "text-[11px] leading-none"
+              : large
+                ? "text-[12px] leading-[14px]"
+                : "text-[11px] leading-[13px]"
+          }`}
+        >
+          {current}
+        </span>
+        {!inline && next && (
+          <span
+            className={`max-w-full truncate font-medium text-label-4 ${
+              large ? "text-[10px] leading-[11px]" : "text-[9px] leading-[10px]"
+            } ${animation === "blur" ? "blur-[0.7px]" : ""}`}
+          >
+            {next}
+          </span>
+        )}
+      </motion.div>
+    </AnimatePresence>
   );
 }
 

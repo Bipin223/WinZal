@@ -129,11 +129,13 @@ fn matches(app_id: &str, exe: &str) -> bool {
         return true;
     }
     // AUMIDs like com.limusic.desktop-siw vs. limusic-app.exe: no shared prefix,
-    // but the meaningful token "limusic" is in both. Compare tokens of 5+ chars.
+    // but the meaningful token "limusic" is in both. Compare tokens of 5+ chars,
+    // skipping generic words that would match unrelated executables.
+    const GENERIC: [&str; 5] = ["desktop", "windows", "system", "application", "program"];
     app_id
         .split(|c: char| !c.is_alphanumeric())
         .map(squash)
-        .filter(|token| token.len() >= 5)
+        .filter(|token| token.len() >= 5 && !GENERIC.contains(&token.as_str()))
         .any(|token| stem.contains(&token) || token.contains(&stem))
 }
 
@@ -311,12 +313,15 @@ fn open_source(app_id: &str, title: &str) -> bool {
     if let Some(hwnd) = find_window(app_id, title) {
         return bring_to_front(hwnd);
     }
-    // Packaged apps (Store Spotify, Apple Music): Windows activates them by ID.
-    if app_id.contains('!') {
+    // Registered app IDs (Store apps, Spotify, Apple Music, LI Music, …): Windows
+    // activates the app even when its window is hidden or it runs in the background.
+    if app_id.contains('!') || app_id.contains('.') {
         unsafe {
             let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
             if let Ok(manager) = CoCreateInstance::<_, IApplicationActivationManager>(&ApplicationActivationManager, None, CLSCTX_LOCAL_SERVER) {
-                return manager.ActivateApplication(&HSTRING::from(app_id), PCWSTR::null(), ACTIVATEOPTIONS(0)).is_ok();
+                if manager.ActivateApplication(&HSTRING::from(app_id), PCWSTR::null(), ACTIVATEOPTIONS(0)).is_ok() {
+                    return true;
+                }
             }
         }
     }
