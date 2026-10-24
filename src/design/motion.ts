@@ -31,8 +31,10 @@ export const springs = {
   snappy: spring(0.24, 0.12),
   /** Apple Music lyric line: soft scale/slide, never overshoots. */
   lyrics: spring(0.46, 0),
-  /** Word-by-word lyric: a slower, extra-smooth rise with no overshoot. */
-  lyricWord: spring(0.52, 0),
+  /** Word-by-word lyric: a fluid rise with a gentle, lively overshoot. */
+  lyricWord: spring(0.52, 0.22),
+  /** Closed notch growing/shrinking for a lyric line. */
+  lyricWidth: spring(0.42, 0),
 } as const;
 
 const easeOut = [0.23, 1, 0.32, 1] as const;

@@ -20,7 +20,7 @@ import { content, tick } from "../../design/motion";
 import { createStore } from "../../lib/store";
 import { HeaderActions, HeaderButton } from "../../notch/header";
 import { Button, Empty, Segmented, Skeleton } from "../../ui/controls";
-import { SelectedDot } from "../../ui/SelectedDot";
+import { CopyCheck } from "../../ui/CardActions";
 import { refreshVault, vault, vaultError, vaultStatus, type VaultCode, type VaultItem, type VaultKind } from "../../platform/vault";
 import { PinEntry, unlockResult } from "./PinEntry";
 import { HelloPrompt } from "./HelloPrompt";
@@ -490,7 +490,7 @@ function useFeedback(id: string) {
 function Copied({ text }: { text: string }) {
   return (
     <span className="flex items-center gap-1 text-green">
-      <SelectedDot size={5} />
+      <CopyCheck size={11} />
       {text}
     </span>
   );

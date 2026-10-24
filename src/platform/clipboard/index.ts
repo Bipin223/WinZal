@@ -14,6 +14,8 @@ export interface ClipItem {
   folders: number;
   /** Unix time in ms. */
   copiedAt: number;
+  /** Pinned entries stay at the top and survive "clear all". */
+  pinned: boolean;
 }
 
 /** all = clipboard tool on, text = only Ask needs the latest text, off = neither. */
@@ -31,6 +33,7 @@ interface ClipboardSource {
   preview(id: number): Promise<ClipPreview | null>;
   subscribe(listener: () => void): () => void;
   copy(id: number): Promise<void>;
+  pin(id: number, pinned: boolean): void;
   remove(id: number): void;
   clear(): void;
   /** What gets recorded (from the enabled tools); drops entries the mode doesn't keep. */
@@ -55,6 +58,7 @@ function createNative(): ClipboardSource {
     },
     copy: (id) => invoke("clipboard_copy", { id }),
     preview: (id) => invoke<ClipPreview | null>("clipboard_preview", { id }),
+    pin: (id, pinned) => void invoke("clipboard_pin", { id, pinned }),
     remove: (id) => void invoke("clipboard_delete", { id }),
     clear: () => void invoke("clipboard_clear"),
     mode: (mode) => void invoke("clipboard_mode", { mode }),
@@ -64,15 +68,15 @@ function createNative(): ClipboardSource {
 // Sample data for the browser prototype.
 function createMock(): ClipboardSource {
   const now = Date.now();
-  let items: ClipItem[] = showcase ? showcaseClips.map(({ age, ...c }) => ({ ...c, copiedAt: now - age })) : [
-    { id: 7, kind: "image", text: "1600 × 1000", thumbnail: demoImage(1600, 1000), folders: 0, copiedAt: now - 5_000 },
-    { id: 8, kind: "image", text: "900 × 1400", thumbnail: demoImage(900, 1400), folders: 0, copiedAt: now - 60_000 },
-    { id: 1, kind: "link", text: "https://github.com/Lakr233/NotchDrop", thumbnail: null, folders: 0, copiedAt: now - 20_000 },
-    { id: 2, kind: "text", text: "Die letzten 10 % Feinschliff kosten die meiste Zeit.", thumbnail: null, folders: 0, copiedAt: now - 120_000 },
-    { id: 3, kind: "files", text: "Rechnung-Oktober.pdf\nVertrag.docx", thumbnail: null, folders: 0, copiedAt: now - 840_000 },
-    { id: 4, kind: "files", text: "Projekte", thumbnail: null, folders: 1, copiedAt: now - 1_800_000 },
-    { id: 5, kind: "text", text: "SpringVector3NaturalMotionAnimation", thumbnail: null, folders: 0, copiedAt: now - 3_600_000 },
-    { id: 6, kind: "text", text: "npm run tauri dev", thumbnail: null, folders: 0, copiedAt: now - 7_200_000 },
+  let items: ClipItem[] = showcase ? showcaseClips.map(({ age, ...c }) => ({ ...c, copiedAt: now - age, pinned: false })) : [
+    { id: 7, kind: "image", text: "1600 × 1000", thumbnail: demoImage(1600, 1000), folders: 0, copiedAt: now - 5_000, pinned: true },
+    { id: 8, kind: "image", text: "900 × 1400", thumbnail: demoImage(900, 1400), folders: 0, copiedAt: now - 60_000, pinned: false },
+    { id: 1, kind: "link", text: "https://github.com/Lakr233/NotchDrop", thumbnail: null, folders: 0, copiedAt: now - 20_000, pinned: false },
+    { id: 2, kind: "text", text: "Die letzten 10 % Feinschliff kosten die meiste Zeit.", thumbnail: null, folders: 0, copiedAt: now - 120_000, pinned: false },
+    { id: 3, kind: "files", text: "Rechnung-Oktober.pdf\nVertrag.docx", thumbnail: null, folders: 0, copiedAt: now - 840_000, pinned: false },
+    { id: 4, kind: "files", text: "Projekte", thumbnail: null, folders: 1, copiedAt: now - 1_800_000, pinned: false },
+    { id: 5, kind: "text", text: "SpringVector3NaturalMotionAnimation", thumbnail: null, folders: 0, copiedAt: now - 3_600_000, pinned: false },
+    { id: 6, kind: "text", text: "npm run tauri dev", thumbnail: null, folders: 0, copiedAt: now - 7_200_000, pinned: false },
   ];
   const listeners = new Set<() => void>();
   const set = (next: ClipItem[]) => {
@@ -87,15 +91,27 @@ function createMock(): ClipboardSource {
     },
     async copy(id) {
       const item = items.find((i) => i.id === id);
-      if (item) set([{ ...item, copiedAt: Date.now() }, ...items.filter((i) => i.id !== id)]);
+      if (item) set([...items.filter((i) => i.pinned), { ...item, copiedAt: Date.now() }, ...items.filter((i) => i.id !== id && !i.pinned)]);
     },
     async preview(id) {
       const item = items.find((i) => i.id === id);
       const [w, h] = item?.text.split(" × ").map(Number) ?? [];
       return item?.thumbnail && w ? { src: item.thumbnail, width: w, height: h } : null;
     },
+    pin(id, pinned) {
+      const item = items.find((i) => i.id === id);
+      if (!item || item.pinned === pinned) return;
+      const rest = items.filter((i) => i.id !== id);
+      if (pinned) {
+        set([{ ...item, pinned: true }, ...rest]);
+        return;
+      }
+      const first = rest.findIndex((i) => !i.pinned);
+      const at = first === -1 ? rest.length : first;
+      set([...rest.slice(0, at), { ...item, pinned: false }, ...rest.slice(at)]);
+    },
     remove: (id) => set(items.filter((i) => i.id !== id)),
-    clear: () => set([]),
+    clear: () => set(items.filter((i) => i.pinned)),
     mode(mode) {
       const keep = (i: ClipItem) => mode === "all" || (mode === "text" && (i.kind === "text" || i.kind === "link"));
       if (items.some((i) => !keep(i))) set(items.filter(keep));

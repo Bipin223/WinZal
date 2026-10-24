@@ -38,13 +38,14 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 ### The closed island
 
 - **Large clock by default**, with a separately selectable **Compact** clock. The first digit uses a red accent by default.
-- The expanded clock is **bold by default** and can be switched to Regular in Appearance.
+- The expanded clock is **bold by default** and can be switched to Regular in **Settings → Notch**.
 - **Live music**: cover, title and a real audio-driven equalizer in the closed pill. The first app that starts playing keeps the pill; if it pauses or stops, the next playing app takes over automatically.
-- **Synced lyrics** from LRCLIB, optional. One line or current + next line, **Apple Music (default) / Word by word / Reveal** animations, and a continuous **10–15 px text-size slider**. The pill grows to the measured line (up to 360 px) instead of fading readable text; extremely long lines scroll slowly. Choose **Wave**, **Pulse**, **Dots**, **Ripple** or **Aurora** as a visualizer, each with a live preview in Settings → Music; Wave is the default and every style follows the cover accent.
+- **Synced lyrics** from LRCLIB, optional. One line or current + next line, **Apple Music (default) / Word by word / Reveal** animations, and a continuous **10–15 px text-size slider** plus **Compact / Normal / Long** pill width. The pill grows to the measured line (up to 360 px) instead of fading readable text; extremely long lines scroll slowly. Choose **Wave**, **Pulse**, **Dots**, **Ripple** or **Aurora** as a visualizer, each with a live preview in Settings → Music; Wave is the default and every style follows the cover accent.
 - **Appearance**: **Dark**, **Light**, **System** or **Custom** theme. Custom has a full in-app HSV color picker with HEX/RGB fields; text, menus and icons switch between dark and light automatically. Island style, material, corners, clock weight and any color for the equalization or clock accent.
+- **Notch size**: live **Length** and **Width** sliders for the closed island, including music and live activities, with a black-pill preview that updates while you drag.
 - **Privacy dots** for microphone and camera (green) and screen recording (red), plus a recording badge.
 - **Gaming + music**: when the FPS pill is visible and music is playing, the equalizer moves into its own **circular satellite island** to the left of the FPS pill. It works in both the Dynamic and Windows island styles.
-- **Focus mode**: triple-click the notch to dim it or turn it into a thin line at the screen edge.
+- **Do not disturb**: the moon button, triple-clicking the notch, the Overview tile, Settings and the tray all switch Windows' real system-wide Do Not Disturb state.
 
 ### Music and media
 
@@ -74,13 +75,13 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 - Current voice call with the channel, server and speaking members.
 - Mute, deafen and hang up from the notch.
 - **Rich Presence** with your own app name, an optional “Shown after Listening to” line (**Song / Artist / App name**) and two buttons: **Listen on YouTube Music** and **Get WinZal**.
-- Uses the Discord desktop app and your own Discord developer application. Setup is under **Settings → Connections → Discord**.
+- Uses the Discord desktop app and your own Discord developer application. Setup is under **Settings → Discord**.
 
 ### Everything else
 
-- **Overview**: time, date, weather, now playing, Windows Focus (Do Not Disturb), volume, power mode, Wi-Fi/Bluetooth and the Glim night-light switch.
-- **Clipboard** history for text, links, images and files, with previews and filters. Password managers are excluded and history stays in memory.
-- **Shelf** for parking files: drop them on the notch or paste, then open, copy or reveal them later.
+- **Overview**: time, date, weather, now playing, Do Not Disturb, volume, power mode, Wi-Fi/Bluetooth and the Glim night-light switch.
+- **Clipboard** history for text, links, images and files, with filters and an in-notch image preview. Pin any clip to keep it on top and through **Clear all**; each card has compact glass Copy, Pin, Remove and **Ask AI** actions, with an animated check on copy. Password managers are excluded and history stays in memory.
+- **Shelf** for parking files: drop them on the notch or paste, then open, copy, preview images in the notch or reveal them later. It uses the same compact action layout as the clipboard.
 - **Vault** with passwords and live 2FA codes, a 4-digit PIN, optional **Windows Hello**, DPAPI + TPM-backed encryption and no back door.
 - **Timer** with focus/break presets, six alarm sounds and a running countdown in the closed notch.
 - **To-dos** and **Notes**, stored locally.
@@ -113,7 +114,7 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 
 ## Install
 
-1. Download **WinZal_1.6.8_x64-setup.exe** from the [latest release](https://github.com/Bipin223/WinZal/releases/latest).
+1. Download **WinZal_1.7.0_x64-setup.exe** from the [latest release](https://github.com/Bipin223/WinZal/releases/latest).
 2. Run it. It installs for your user only; Node, Rust or administrator rights are not needed.
 3. WinZal starts with Windows. The notch appears at the top of the screen and the tray icon keeps it reachable.
 
@@ -125,7 +126,7 @@ The installer is not code-signed, so Windows SmartScreen may warn on first launc
 
 WinZal **1.6.2 and newer** check a signed `latest.json` from GitHub shortly after startup and once a day. By default they also **install a found update automatically** after a short pause and restart. Turn either behavior off under **Settings → Updates**; a manual check always lets you read the changelog and click **Install** yourself.
 
-If you are on **1.6.1 or older**, install **1.6.8 manually once**; after that, future signed updates can install themselves. Settings and local data are preserved because the app ID stays the same.
+If you are on **1.6.1 or older**, install **1.7.0 manually once**; after that, future signed updates can install themselves. Settings and local data are preserved because the app ID stays the same.
 
 Updates are in-place upgrades: only the app files are replaced. Settings, vault, notes, to-dos and saved Ask chats live in the Windows app-data folder, outside the installation directory, and are never removed by an update.
 
@@ -140,16 +141,16 @@ Saved Ask conversations live in the app data folder as one small JSON file per c
 | Settings | Gear at the end of the tool bar, or the tray menu |
 | Tray | Left click opens the notch; right click for open, settings, autostart and quit |
 | Move | Drag the notch sideways, closed or by its header |
-| Focus mode | Triple-click the notch; triple-click again to leave |
+| Do not disturb | Triple-click the notch, or use the moon button, Settings or the tray menu |
 | Add files | Drag files onto the notch, or paste with **Ctrl + V** |
 | Power mode | Click the battery tile in Overview, or right-click it for Windows settings |
-| Lyrics | **Settings → Music** for layout, the 10-15 px text-size slider, one of three previewed animations (Apple Music default, Word by word, Reveal) and one of five previewed visualizer styles |
+| Lyrics | **Settings → Music** for layout, the 10-15 px text-size slider, **Compact / Normal / Long** pill width, one of three previewed animations (Apple Music default, Word by word, Reveal) and one of five previewed visualizer styles |
 
 ## Settings and integrations
 
-Settings are grouped into General, Display, Tools, Timer, AI, Connections, Music and Updates. The Appearance page also has a **Dark / Light / System** theme switch; System follows the Windows app theme. You can reorder or hide tools, choose the monitor, hide the notch in fullscreen apps, enable autostart and switch the language.
+Settings are grouped into **General**, **Notch**, **Music**, **Tools**, **Timer**, **AI**, **Discord** and **About**. The Notch page combines idle style, live length/width sliders, theme, island style, material, corners, accents, visibility, DND and gaming/FPS options. The Discord page holds Rich Presence and call setup. You can reorder or hide tools, choose the monitor, hide the notch in fullscreen apps, enable autostart and switch the language.
 
-**Discord.** Create an application at [discord.com/developers](https://discord.com/developers), copy its **Client ID** and **Client Secret** into **Connections → Discord**, add `http://localhost` as an OAuth2 redirect, then join a call. Discord asks for confirmation once.
+**Discord.** Create an application at [discord.com/developers](https://discord.com/developers), copy its **Client ID** and **Client Secret** into **Settings → Discord**, add `http://localhost` as an OAuth2 redirect, then join a call. Discord asks for confirmation once.
 
 **Ask.** Choose Gemini or Groq and paste your API key, or enter an OpenAI-compatible base URL and model. Keys are stored in Windows Credential Manager and never sent back to the interface.
 
@@ -157,7 +158,7 @@ Settings are grouped into General, Display, Tools, Timer, AI, Connections, Music
 
 **Weather.** Works out of the box with an approximate city from your IP. Pick a city manually in the weather tool to stop the lookup.
 
-**FPS and temperatures.** Open **Settings → Display → FPS & CPU temperature** and approve the one UAC prompt. The helper stops with WinZal, so the prompt is needed again on the next run.
+**FPS and temperatures.** Open **Settings → Notch → FPS & CPU temperature** and approve the one UAC prompt. The helper stops with WinZal, so the prompt is needed again on the next run.
 
 **Updates.** Automatic checks and automatic installation can be switched off under **Settings → Updates**. Manual **Check** and **Install** live there too.
 

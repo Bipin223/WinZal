@@ -1,18 +1,16 @@
 //! Overview: system volume and Windows focus.
 //!
 //! - Volume: default output device via `IAudioEndpointVolume` (same as the taskbar slider).
-//! - Focus: Windows 11 focus session (`FocusSessionManager`, also turns on Do Not Disturb).
-//!   Without that API (older builds), Do Not Disturb is set directly through the WNF state
-//!   `WNF_SHEL_QUIETHOURS_ACTIVE_PROFILE_CHANGED`, which is what the toggle in the
-//!   notification center does.
+//! - Focus: Windows Do Not Disturb through the undocumented `QuietHoursSettings`
+//!   COM class (`UserSelectedProfile`), the same value the taskbar DND button writes.
 
 use std::ffi::c_void;
 
 use serde::{Deserialize, Serialize};
-use windows::UI::Shell::FocusSessionManager;
+
 use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
 use windows::Win32::Media::Audio::{eConsole, eRender, IMMDeviceEnumerator, MMDeviceEnumerator};
-use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED};
+use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_ALL, COINIT_MULTITHREADED};
 
 #[derive(Serialize)]
 pub struct Volume {
@@ -155,37 +153,119 @@ pub async fn brightness_set(level: u32) -> Result<Brightness, String> {
 
 // ── Focus / Do Not Disturb ────────────────────────────────────────────────────
 
-const WNF_QUIET_HOURS: u64 = 0x0D83_063E_A3BF_1C75;
+// Windows' Do Not Disturb is stored in the undocumented QuietHoursSettings
+// COM class. Reading `UserSelectedProfile` is the same value the taskbar DND
+// button changes; setting it to PriorityOnly/Unrestricted toggles the real
+// system-wide Do Not Disturb state (verified against ToastNotificationMode).
+const CLSID_QUIET_HOURS: windows::core::GUID = windows::core::GUID::from_u128(0xf53321fa34f84b7fb9a3361877cb94cf);
+const IID_QUIET_HOURS: windows::core::GUID = windows::core::GUID::from_u128(0x6bff473281ec4ffbae67b6c1bc29631f);
+const PROFILE_PRIORITY: &str = "Microsoft.QuietHoursProfile.PriorityOnly";
+const PROFILE_OFF: &str = "Microsoft.QuietHoursProfile.Unrestricted";
 
-#[link(name = "ntdll")]
-unsafe extern "system" {
-    fn NtQueryWnfStateData(state: *const u64, type_id: *const c_void, scope: *const c_void, stamp: *mut u32, buffer: *mut c_void, size: *mut u32) -> i32;
-    fn NtUpdateWnfStateData(state: *const u64, buffer: *const c_void, length: u32, type_id: *const c_void, scope: *const c_void, matching_stamp: u32, check_stamp: u32) -> i32;
+#[repr(C)]
+struct QuietHoursVtbl {
+    query_interface: unsafe extern "system" fn(*mut c_void, *const windows::core::GUID, *mut *mut c_void) -> windows::core::HRESULT,
+    add_ref: unsafe extern "system" fn(*mut c_void) -> u32,
+    release: unsafe extern "system" fn(*mut c_void) -> u32,
+    get_profile: unsafe extern "system" fn(*mut c_void, *mut *mut u16) -> windows::core::HRESULT,
+    set_profile: unsafe extern "system" fn(*mut c_void, *const u16) -> windows::core::HRESULT,
 }
 
-/// 0 = off, 1 = priority only, 2 = alarms only.
-fn dnd_profile() -> Option<u32> {
-    let (mut stamp, mut value, mut size) = (0u32, 0u32, 4u32);
-    let status = unsafe { NtQueryWnfStateData(&WNF_QUIET_HOURS, std::ptr::null(), std::ptr::null(), &mut stamp, (&mut value as *mut u32).cast(), &mut size) };
-    (status >= 0).then_some(if size == 0 { 0 } else { value })
+#[repr(C)]
+struct QuietHours {
+    vtbl: *const QuietHoursVtbl,
+    /// The real interface pointer from `CoCreateInstance`; COM methods need this
+    /// as `this`, not the address of this local wrapper.
+    interface: *mut c_void,
+}
+
+#[link(name = "ole32")]
+unsafe extern "system" {
+    #[link_name = "CoCreateInstance"]
+    fn raw_co_create_instance(
+        rclsid: *const windows::core::GUID,
+        punkouter: *mut c_void,
+        dwclscontext: u32,
+        riid: *const windows::core::GUID,
+        ppv: *mut *mut c_void,
+    ) -> windows::core::HRESULT;
+    #[link_name = "CoTaskMemFree"]
+    fn raw_co_task_mem_free(ptr: *const c_void);
+}
+
+/// Runs a COM operation on a fresh MTA thread, so it never depends on Tauri's
+/// apartment state and needs no message pump.
+fn with_quiet_hours<T: Send + 'static>(action: impl FnOnce(&QuietHours) -> Result<T, String> + Send + 'static) -> Result<T, String> {
+    let join = std::thread::spawn(move || {
+        let initiated = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) }.is_ok();
+        let mut raw: *mut c_void = std::ptr::null_mut();
+        let created = unsafe {
+            raw_co_create_instance(&CLSID_QUIET_HOURS, std::ptr::null_mut(), 4 /* CLSCTX_LOCAL_SERVER */, &IID_QUIET_HOURS, &mut raw)
+        };
+        if created.is_err() || raw.is_null() {
+            if initiated {
+                unsafe { CoUninitialize() };
+            }
+            return Err(format!("Do Not Disturb COM unavailable ({created:?})"));
+        }
+        let vtbl = unsafe { *(raw as *const *const QuietHoursVtbl) };
+        let object = QuietHours { vtbl, interface: raw };
+        let result = action(&object);
+        unsafe {
+            if let Some(vtbl) = object.vtbl.as_ref() {
+                let _ = (vtbl.release)(object.interface);
+            }
+        }
+        if initiated {
+            unsafe { CoUninitialize() };
+        }
+        result
+    });
+    join.join().map_err(|_| "Do Not Disturb thread failed".to_string())?
+}
+
+fn quiet_hours_profile() -> Result<String, String> {
+    with_quiet_hours(|object| unsafe {
+        let vtbl = object.vtbl.as_ref().ok_or("Do Not Disturb COM unavailable")?;
+        let mut out: *mut u16 = std::ptr::null_mut();
+        let hr = (vtbl.get_profile)(object.interface, &mut out);
+        if hr.is_err() || out.is_null() {
+            return Err(format!("Do Not Disturb read failed ({hr:?})"));
+        }
+        let mut len = 0usize;
+        while *out.add(len) != 0 {
+            len += 1;
+        }
+        let value = String::from_utf16_lossy(std::slice::from_raw_parts(out, len));
+        raw_co_task_mem_free(out as *const c_void);
+        Ok(value)
+    })
+}
+
+fn set_quiet_hours_profile(profile: &str) -> Result<(), String> {
+    let profile = profile.to_string();
+    with_quiet_hours(move |object| unsafe {
+        let vtbl = object.vtbl.as_ref().ok_or("Do Not Disturb COM unavailable")?;
+        let wide: Vec<u16> = profile.encode_utf16().chain(Some(0)).collect();
+        let hr = (vtbl.set_profile)(object.interface, wide.as_ptr());
+        if hr.is_err() {
+            return Err(format!("Do Not Disturb write failed ({hr:?})"));
+        }
+        Ok(())
+    })
+}
+
+fn dnd_active() -> bool {
+    quiet_hours_profile()
+        .map(|profile| !profile.to_ascii_lowercase().ends_with(".unrestricted"))
+        .unwrap_or(false)
 }
 
 fn set_dnd(on: bool) -> Result<(), String> {
-    let value: u32 = if on { 1 } else { 0 };
-    let status = unsafe { NtUpdateWnfStateData(&WNF_QUIET_HOURS, (&value as *const u32).cast(), 4, std::ptr::null(), std::ptr::null(), 0, 0) };
-    if status >= 0 { Ok(()) } else { Err(format!("Nicht stören ließ sich nicht schalten ({status:#x})")) }
+    set_quiet_hours_profile(if on { PROFILE_PRIORITY } else { PROFILE_OFF })
 }
-
-fn sessions() -> Option<FocusSessionManager> {
-    FocusSessionManager::IsSupported().ok().filter(|&s| s).and_then(|_| FocusSessionManager::GetDefault().ok())
-}
-
 fn read_focus() -> Focus {
-    let dnd = dnd_profile().is_some_and(|p| p != 0);
-    match sessions() {
-        Some(m) => Focus { active: m.IsFocusActive().unwrap_or(false) || dnd, kind: "focus" },
-        None => Focus { active: dnd, kind: "dnd" },
-    }
+    Focus { active: dnd_active(), kind: "dnd" }
 }
 
 #[tauri::command]
@@ -196,24 +276,7 @@ pub async fn focus_get() -> Focus {
 #[tauri::command]
 pub async fn focus_set(active: bool) -> Result<Focus, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let manager = sessions();
-        if active {
-            // The quiet-hours state is the same switch the taskbar's Do Not Disturb
-            // button flips, and works for normal desktop apps on current builds.
-            if let Err(error) = set_dnd(true) {
-                // Fall back to a Windows focus session if WNF is blocked.
-                let session = manager.as_ref().and_then(|m| m.TryStartFocusSession().ok());
-                if session.is_none() {
-                    return Err(error);
-                }
-            }
-        } else {
-            let _ = set_dnd(false);
-            // End a session that may have been started before the WNF path worked.
-            if let Some(m) = &manager {
-                let _ = m.DeactivateFocus();
-            }
-        }
+        set_dnd(active)?;
         Ok(read_focus())
     })
     .await

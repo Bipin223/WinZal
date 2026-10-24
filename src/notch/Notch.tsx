@@ -1,6 +1,6 @@
-﻿import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { AnimatePresence, animate, motion, useMotionValue, type Transition } from "motion/react";
-import { GearSix, PushPin, Selection } from "@phosphor-icons/react";
+import { GearSix, MoonStars, PushPin } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
 import { useNowPlaying } from "../platform/media";
 import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onTrayOpen, setHitRect, setMemoryLow, trimMemory } from "../platform/native";
@@ -31,7 +31,7 @@ import { useMinute } from "../lib/useMinute";
 import { describe, useForecast } from "../features/weather/store";
 import { timer } from "../features/timer/store";
 
-/** `#rrggbb` + alpha â†’ `rgba(...)`; anything else is passed through untouched. */
+/** `#rrggbb` + alpha → `rgba(...)`; anything else is passed through untouched. */
 function fillWithAlpha(hex: string, alpha: number): string {
   if (alpha >= 1) return hex;
   const match = /^#?([0-9a-f]{6})$/i.exec(hex);
@@ -42,33 +42,31 @@ function fillWithAlpha(hex: string, alpha: number): string {
 
 /** If the notch was closed at most this long, it reopens on the last used tool. */
 const RESUME_MS = 60_000;
-/** Closed this long â†’ lower WebView2's memory target. */
+/** Closed this long → lower WebView2's memory target. */
 const MEMORY_LOW_AFTER_MS = 20_000;
 
 export function Notch() {
-  const { status, open, close, dismiss, toggle, onPointerEnter, onPointerLeave } = useNotchState();
+  const { status, open, dismiss, toggle, onPointerEnter, onPointerLeave } = useNotchState();
   const focus = focusMode.use();
   const { tools: toolSettings, display: displaySettings, appearance } = settings.use();
   const light = useThemeLight();
   const floating = appearance.style === "windows";
-  // Focus mode as a line: no live activity, no dots, only the thin strip at the edge.
-  const line = focus && displaySettings.focusStyle === "line";
   // Line as the normal closed look: hover and click work as usual, but nothing shows
   // while closed. Only a finished timer opens it into the notch, until dismissed.
   const timerDone = timer.use().finished;
-  const idleLine = !focus && displaySettings.idleStyle === "line";
+  const idleLine = displaySettings.idleStyle === "line";
   const alert = idleLine && timerDone;
   const visible = toolSettings.filter((t) => t.enabled).map((t) => findTab(t.id)).filter((t): t is NotchTab => !!t);
   const { tabId } = nav.use();
-  // Hidden tool active (e.g. just disabled) â†’ first visible one.
+  // Hidden tool active (e.g. just disabled) → first visible one.
   const tab = tabId === settingsTab.id ? settingsTab : (visible.find((t) => t.id === tabId) ?? visible[0] ?? tabs[0]);
   const np = useNowPlaying();
   const live = useLiveActivity();
 
   // Like the Dynamic Island: opening jumps to the running activity's tool,
-  // but only after a pause. Closed briefly (copying a key, grabbing a file) â†’ you
+  // but only after a pause. Closed briefly (copying a key, grabbing a file) → you
   // land where you were, e.g. in the settings.
-  // Layout effect runs before paint â†’ no frame with the old tab size.
+  // Layout effect runs before paint → no frame with the old tab size.
   const prevStatus = useRef(status);
   const closedAt = useRef(0);
   // A target tool from the tray (settings entry) takes priority over the live activity.
@@ -89,7 +87,7 @@ export function Notch() {
   const override = sizeOverride.use();
   const size = override?.tabId === tab.id ? override : tab.size;
   // Live activity shown in the closed notch (the idle line only lets the timer alarm through).
-  const shownLive = line ? null : idleLine ? (alert ? "timer" : null) : live.id;
+  const shownLive = idleLine ? (alert ? "timer" : null) : live.id;
   // The closed clock is optional; Windows island prefers it over the live media slot.
   const clockWeather = appearance.clockWeather;
   // Lyrics only make sense when the media pill is visible, so they win over the clock
@@ -99,17 +97,17 @@ export function Notch() {
   const clockPill = clockWeather && !pillLive;
   // Screen recording gets its own chip at the right end of the closed pill.
   const { recording, since } = useRecording();
-  const showRecording = recording && !line && !idleLine && status !== "open";
+  const showRecording = recording && !idleLine && status !== "open";
   const rightInset = useMotionValue(0);
   useEffect(() => {
     const control = animate(rightInset, showRecording ? RECORDING_INSET : 0, springs.snappy);
     return () => control.stop();
   }, [showRecording, rightInset]);
-  // The idle line never passes through the small notch: line â†’ slightly bigger line on
-  // hover â†’ open, and straight back to the line on close.
+  // The idle line never passes through the small notch: line → slightly bigger line on
+  // hover → open, and straight back to the line on close.
   const lineIdle = idleLine && !alert;
   const baseShape =
-    line || (lineIdle && status === "closed")
+    lineIdle && status === "closed"
       ? geometry.line
       : lineIdle && status === "peek"
         ? geometry.linePeek
@@ -118,40 +116,47 @@ export function Notch() {
     appearance.corners === "squared" && baseShape.r > 5
       ? { ...baseShape, r: Math.min(baseShape.r, 8), ear: Math.min(baseShape.ear, 3) }
       : baseShape;
+  const customIsland = baseShape !== geometry.line && baseShape !== geometry.linePeek && status !== "open";
+  const sizedShape = customIsland
+    ? { ...shape, w: Math.max(80, shape.w + appearance.islandWidth), h: appearance.islandHeight }
+    : shape;
   const tightHit = baseShape === geometry.line || baseShape === geometry.linePeek;
   const finalShape = floating
     ? {
-        ...shape,
+        ...sizedShape,
         ear: 0,
         // Keep the resting island tight: just the clock and the weather.
         w:
           floating && clockPill && status !== "open" && !tightHit
-            ? Math.min(shape.w, status === "peek" ? 222 : 206)
-            : shape.w,
+            ? Math.min(sizedShape.w, status === "peek" ? 222 + appearance.islandWidth : 206 + appearance.islandWidth)
+            : sizedShape.w,
       }
-    : shape;
+    : sizedShape;
   const topPad = floating && !tightHit ? 8 : 0;
   const sticky = useStickyHitZone(status, size.h);
   const lyricWidth = lyricsTextWidth.use();
-  const clockExtra = appearance.clockText === "large" && clockPill && !line && !idleLine && status !== "open" ? 10 : 0;
-  // Grow only enough for the current lyric (up to a sane cap); a title keeps the
-  // normal width and its right-edge fade. The text-size slider sets both the
-  // minimum breathing room and the measured line.
-  const lyricsMin = Math.max(0, Math.round((appearance.lyricsTextSize - 10) * 45));
-  const lyricsExtra =
-    appearance.lyricsInPill && pillLive === "media" && !line && !idleLine && status !== "open"
-      ? Math.min(360, Math.max(lyricsMin, lyricWidth + 12 - 214))
-      : 0;
+  const clockExtra = appearance.clockText === "large" && clockPill && !idleLine && status !== "open" ? 10 : 0;
+  // Grow or shrink to the line, with three levels of breathing room. `normal`
+  // is the text-fit width; compact caps long lines, long adds extra air.
+  const lyricPill = appearance.lyricsInPill && pillLive === "media" && !idleLine && status !== "open";
+  const lyricTarget = !lyricPill || lyricWidth <= 0
+    ? 0
+    : appearance.lyricsPillWidth === "compact"
+      ? Math.min(300, lyricWidth + 72)
+      : appearance.lyricsPillWidth === "long"
+        ? lyricWidth + 126
+        : lyricWidth + 78;
+  const lyricsExtra = lyricTarget > 0 ? Math.min(360, lyricTarget - geometry.live.w) : 0;
   const displayShape = {
     ...finalShape,
     w: finalShape.w + (showRecording ? RECORDING_EXTRA : 0) + clockExtra + lyricsExtra,
   };
   // Gaming stats own the pill; a playing track gets its own little island instead.
   const gamingSatellite =
-    pillLive === "system" && !!np?.isPlaying && appearance.musicInPill && !line && !idleLine && status !== "open";
+    pillLive === "system" && !!np?.isPlaying && appearance.musicInPill && !idleLine && status !== "open";
   const surface = appearance.theme === "custom" ? appearance.themeColor : light ? LIGHT_SURFACE : DARK_SURFACE;
   const surfaceLight = isLightColor(surface);
-  const transition = useTransitionFor(status, displayShape);
+  const transition = useTransitionFor(status, displayShape, lyricTarget > 0);
 
   // Click outside closes (in the browser the fake desktop, in Tauri the window blur).
   const hitRef = useRef<HTMLDivElement>(null);
@@ -170,16 +175,12 @@ export function Notch() {
   useNativeBridge(hitRef, onPointerEnter, onPointerLeave);
   const drag = useDragToMove(status);
 
-  // Focus mode on â†’ notch closes, no more hover.
-  useEffect(() => {
-    if (focus) close();
-  }, [focus, close]);
 
-  // Three quick clicks toggle focus mode (in the browser also off; natively Rust counts).
+  // Three quick clicks toggle Windows Do Not Disturb.
   const onClick = (e: React.MouseEvent) => {
     if (drag.moved()) return;
     if (e.detail >= FOCUS_CLICKS && !isInteractive(e.target)) return setFocusMode(!focus);
-    if (!focus && status !== "open") open();
+    if (status !== "open") open();
   };
 
   // Shortcut: opening takes focus (Esc, typing), closing gives it back.
@@ -199,7 +200,7 @@ export function Notch() {
     if (status === "closed") keyboardFocus(false);
   }, [status]);
 
-  // Closed for a while â†’ WebView2 may trim memory; back to normal on the first touch
+  // Closed for a while → WebView2 may trim memory; back to normal on the first touch
   // (peek), so the hover delay covers paging it back in before the notch opens.
   useEffect(() => {
     if (status !== "closed") {
@@ -251,7 +252,6 @@ export function Notch() {
             surface,
             appearance.material === "glass" ? 0.62 : appearance.material === "dark" ? 0.82 : 1,
           ),
-        opacity: focus && !line ? 0.5 : 1,
         transform: isNative ? undefined : `translateX(${drag.offset}px)`,
       }}
     >
@@ -264,10 +264,10 @@ export function Notch() {
         className={`pointer-events-auto ${tightHit ? "px-1 pb-1" : "px-4 pb-3"}`}
         style={{ minHeight: sticky.minHeight, paddingTop: topPad, cursor: drag.dragging ? "grabbing" : undefined }}
         onPointerMove={sticky.onPointerMove}
-        onPointerDown={focus ? undefined : drag.onPointerDown}
+        onPointerDown={drag.onPointerDown}
         // In Tauri, hover comes from the Rust poll (useNativeBridge), not the DOM.
-        onPointerEnter={isNative || focus ? undefined : onPointerEnter}
-        onPointerLeave={isNative || focus ? undefined : onPointerLeave}
+        onPointerEnter={isNative ? undefined : onPointerEnter}
+        onPointerLeave={isNative ? undefined : onPointerLeave}
         onClick={onClick}
       >
         <motion.div
@@ -287,10 +287,10 @@ export function Notch() {
           floating={floating}
         >
           <LiveRightInset.Provider value={rightInset}>
-            <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} />
+            <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} widthExtra={appearance.islandWidth} height={appearance.islandHeight} />
           </LiveRightInset.Provider>
-          {clockWeather && !line && !idleLine && status !== "open" && !pillLive && <ClosedClock />}
-          {!line && !idleLine && <PrivacyDots hideScreen={showRecording} />}
+          {clockWeather && !idleLine && status !== "open" && !pillLive && <ClosedClock />}
+          {!idleLine && <PrivacyDots hideScreen={showRecording} />}
           <AnimatePresence>
             {showRecording && (
               <RecordingBadge key="recording" since={since} className="absolute top-1/2 right-2 -translate-y-1/2" />
@@ -350,9 +350,9 @@ function ClosedClock() {
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
       <div className="flex items-center gap-1">
-        <ClockTime time={time} className={`tabular ${timeClass} text-label`} emphasizeFirst />
+        <ClockTime time={time} className={`tabular ${timeClass} text-label`} emphasizeHour />
         {period && <span className={`${smallClass} text-label-3`}>{period}</span>}
-        <span className={`${smallClass} text-label-3`}>· {date}</span>
+        <span className={`${smallClass} text-label-3`}>• {date}</span>
       </div>
       {wx && (
         <>
@@ -374,6 +374,7 @@ function ClosedClock() {
 /** Header: tool title on the left, actions + pin on the right. The middle (camera) stays free. */
 function Header({ title, onDragStart }: { title: string; onDragStart: (e: React.PointerEvent) => void }) {
   const isPinned = pinned.use();
+  const focus = focusMode.use();
   return (
     // Empty header space = drag handle.
     <div data-drag-handle onPointerDown={onDragStart} className="flex shrink-0 items-center justify-between gap-3 pr-3 pl-5" style={{ height: HEADER_HEIGHT + 4 }}>
@@ -393,8 +394,12 @@ function Header({ title, onDragStart }: { title: string; onDragStart: (e: React.
       <div className="flex items-center gap-1">
         {/* Tools render here via <HeaderActions> (src/notch/header.tsx). The grid stacks old and new during a switch. */}
         <div ref={(el) => headerSlot.set(el)} className="grid" />
-        <HeaderButton label={t("Fokus-Modus (3Ã— klicken zum Beenden)")} onClick={() => setFocusMode(true)}>
-          <Selection size={14} weight="bold" />
+        <HeaderButton
+          label={focus ? t("Nicht stören ausschalten") : t("Nicht stören")}
+          active={focus}
+          onClick={() => setFocusMode(!focus)}
+        >
+          <MoonStars size={14} weight={focus ? "fill" : "bold"} />
         </HeaderButton>
         <HeaderButton label={isPinned ? t("Lösen") : t("Offen halten")} active={isPinned} onClick={togglePin}>
           <PushPin size={14} weight={isPinned ? "fill" : "bold"} />
@@ -410,7 +415,7 @@ function Dock({ tabs, activeId }: { tabs: NotchTab[]; activeId: string }) {
   if (activeId !== settingsTab.id) lastTool.current = activeId;
   const inSettings = activeId === settingsTab.id;
   const updateReady = update.use().phase === "available";
-  // Dot on the gear = update ready or unseen changes â†’ jump straight to that section.
+  // Dot on the gear = update ready or unseen changes → jump straight to that section.
   const unseen = useUnseen().length > 0;
   const badge = updateReady || unseen;
 
@@ -504,8 +509,8 @@ function shapeFor(status: NotchStatus, live: string | null, size: { w: number; h
   return base;
 }
 
-/** Picks the spring for the transition (open â‰  close â‰  morph). */
-function useTransitionFor(status: NotchStatus, shape: NotchGeometry): Transition {
+/** Picks the spring for the transition (open ≠ close ≠ morph). */
+function useTransitionFor(status: NotchStatus, shape: NotchGeometry, smooth = false): Transition {
   const prev = useRef(status);
   const key = `${shape.w}x${shape.h}`;
   const prevKey = useRef(key);
@@ -513,7 +518,7 @@ function useTransitionFor(status: NotchStatus, shape: NotchGeometry): Transition
   let t: Transition;
   if (status === "open") t = prev.current === "open" ? springs.morph : springs.open;
   else if (status === "peek") t = springs.peek;
-  else t = prev.current === "open" ? springs.close : springs.morph;
+  else t = prev.current === "open" ? springs.close : smooth ? springs.lyricWidth : springs.morph;
 
   // Only switch when the shape actually changes, otherwise the running spring continues.
   const stable = useRef(t);
@@ -551,7 +556,7 @@ function useQuickDrop(status: NotchStatus, open: () => void, dismiss: () => void
           const current = nav.get().tabId;
           if (current !== "shelf") navigate("shelf");
         } else if (!dragging && holding.current) {
-          // Drag over: dropped â†’ stay open, cancelled â†’ close again.
+          // Drag over: dropped → stay open, cancelled → close again.
           holding.current = false;
           holdOpen(false);
           if (!dropped && openedByDrag.current) dismiss();
@@ -575,7 +580,7 @@ function useNativeBridge(
     const el = hitRef.current;
     if (!isNative || !el) return;
 
-    // The shape's size is animated by a spring â†’ ResizeObserver fires every frame.
+    // The shape's size is animated by a spring → ResizeObserver fires every frame.
     const report = () => {
       const r = el.getBoundingClientRect();
       setHitRect({ x: r.x, y: r.y, w: r.width, h: r.height });
@@ -585,7 +590,7 @@ function useNativeBridge(
     report();
 
     const offHover = onNativeHover((inside) => (inside ? onEnter() : onLeave()));
-    // Text field focused â†’ hold (clickable, no collapse) until focus leaves.
+    // Text field focused → hold (clickable, no collapse) until focus leaves.
     let typing = false;
     const onFocusIn = (e: FocusEvent) => {
       if (isTextField(e.target) && !typing) holdOpen((typing = true));

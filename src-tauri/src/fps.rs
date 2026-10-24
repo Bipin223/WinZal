@@ -451,6 +451,12 @@ fn start_helper() -> &'static str {
     "failed"
 }
 
+/// Is the elevated FPS helper alive right now (e.g. after a previous unlock)?
+#[tauri::command]
+pub fn fps_helper_ready() -> bool {
+    helper_ready()
+}
+
 /// One-time helper start from the UI. Returns ok | cancelled | failed (relogin kept
 /// for the old frontend contract, never returned).
 #[tauri::command]

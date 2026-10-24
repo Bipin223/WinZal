@@ -6,7 +6,7 @@ import { relaunch } from "@tauri-apps/plugin-process";
 import { springs } from "../../design/motion";
 import { isNative } from "../../platform/native";
 import { settings, updateSettings, type Settings } from "../../settings/store";
-import { Switch } from "../../ui/controls";
+import { Slider, Switch } from "../../ui/controls";
 import { SelectedDot } from "../../ui/SelectedDot";
 import { ColorPickerPanel } from "../../ui/ColorPicker";
 import { t } from "../../i18n";
@@ -23,6 +23,8 @@ const DEFAULTS: Appearance = {
   theme: "dark",
   themeColor: "#141416",
   style: "dynamic",
+  islandWidth: 0,
+  islandHeight: 30,
   dragAnimation: true,
   clockWeather: true,
   musicInPill: true,
@@ -32,6 +34,7 @@ const DEFAULTS: Appearance = {
   lyricsInPill: false,
   lyricsLayout: "inline",
   lyricsTextSize: 12,
+  lyricsPillWidth: "normal",
   lyricsVisualizer: true,
   lyricsVisualizerStyle: "wave",
   lyricsAnimation: "apple",
@@ -48,6 +51,7 @@ function fillWithAlpha(hex: string, alpha: number): string {
 
 export function AppearanceView() {
   const a = settings.use().appearance;
+  const display = settings.use().display;
   const themeLight = useThemeLight();
   const set = (patch: Partial<Appearance>) => updateSettings({ appearance: { ...a, ...patch } });
   const [restarting, setRestarting] = useState(false);
@@ -75,6 +79,43 @@ export function AppearanceView() {
   return (
     <div className="flex flex-col gap-1.5 pb-2">
       <Preview fill={previewFill} accent={accent} corners={a.corners} islandStyle={a.style} />
+      <Section label={t("Geschlossen")}>
+        <div className="mb-1.5 text-caption text-label-3">{t("The notch shows music, timers and more")}</div>
+        <Choice
+          label={t("Idle Appearance")}
+          value={display.idleStyle}
+          options={[
+            ["notch", t("Notch")],
+            ["line", t("Linie")],
+          ]}
+          onChange={(idleStyle) => updateSettings((current) => ({ display: { ...current.display, idleStyle: idleStyle as "notch" | "line" } }))}
+        />
+      </Section>
+      <Section label={t("Notch size")}>
+        <div className="mb-1.5 text-caption text-label-3">{t("Length and width of the notch – including music and more")}</div>
+        <div className="mb-2 flex h-11 items-center justify-center rounded-[10px] bg-fill-2">
+          <div
+            className="rounded-full bg-black shadow-[0_6px_18px_rgb(0_0_0/0.35)] transition-[width,height] duration-200"
+            style={{ width: 206 + a.islandWidth, height: a.islandHeight }}
+          />
+        </div>
+        <div className="grid grid-cols-[3fr_2fr] gap-3">
+          <div>
+            <div className="flex items-center justify-between text-caption font-medium text-label-2">
+              <span>{t("Length")}</span>
+              <span className="tabular text-label-3">{206 + a.islandWidth} px</span>
+            </div>
+            <Slider label={t("Length")} value={206 + a.islandWidth} min={160} max={420} step={1} onChange={(length) => set({ islandWidth: length - 206 })} />
+          </div>
+          <div>
+            <div className="flex items-center justify-between text-caption font-medium text-label-2">
+              <span>{t("Width")}</span>
+              <span className="tabular text-label-3">{a.islandHeight} px</span>
+            </div>
+            <Slider label={t("Width")} value={a.islandHeight} min={26} max={40} step={1} onChange={(islandHeight) => set({ islandHeight })} />
+          </div>
+        </div>
+      </Section>
       <Section label={t("Theme")}>
         <Choice
           label={t("Modus")}
@@ -178,6 +219,7 @@ export function AppearanceView() {
               lyricsInPill: a.lyricsInPill,
               lyricsLayout: a.lyricsLayout,
               lyricsTextSize: a.lyricsTextSize,
+              lyricsPillWidth: a.lyricsPillWidth,
               lyricsVisualizer: a.lyricsVisualizer,
               lyricsVisualizerStyle: a.lyricsVisualizerStyle,
               lyricsAnimation: a.lyricsAnimation,

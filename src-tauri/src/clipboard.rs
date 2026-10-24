@@ -88,6 +88,8 @@ pub struct ClipItem {
     folders: usize,
     /// Unix time in ms.
     copied_at: u64,
+    /// Pinned entries stay when clearing and are exempt from the history limits.
+    pinned: bool,
 }
 
 #[derive(Default)]
@@ -152,13 +154,32 @@ pub fn clipboard_copy(id: u64, app: AppHandle, state: State<'_, ClipboardState>)
         .map_err(|e| e.to_string())?;
         *state.last_seq.lock().unwrap() = unsafe { GetClipboardSequenceNumber() };
 
-        // Move to the top with a fresh timestamp.
+        // Move to the top with a fresh timestamp, below the pinned entries.
         let mut entry = entries.remove(index);
         entry.item.copied_at = now_ms();
-        entries.insert(0, entry);
+        insert_entry(&mut entries, entry);
     }
     emit(&app, &state);
     Ok(())
+}
+
+/// Pins float to the top, unpinned entries keep newest-first order below them.
+#[tauri::command]
+pub fn clipboard_pin(id: u64, pinned: bool, app: AppHandle, state: State<'_, ClipboardState>) {
+    let mut entries = state.entries.lock().unwrap();
+    let Some(index) = entries.iter().position(|e| e.id == id) else { return };
+    if entries[index].item.pinned == pinned {
+        return;
+    }
+    let mut entry = entries.remove(index);
+    entry.item.pinned = pinned;
+    if pinned {
+        entries.insert(0, entry);
+    } else {
+        insert_entry(&mut entries, entry);
+    }
+    drop(entries);
+    emit(&app, &state);
 }
 
 #[tauri::command]
@@ -167,10 +188,17 @@ pub fn clipboard_delete(id: u64, app: AppHandle, state: State<'_, ClipboardState
     emit(&app, &state);
 }
 
+/// "Clear all" keeps pinned entries; each pin can be removed individually.
 #[tauri::command]
 pub fn clipboard_clear(app: AppHandle, state: State<'_, ClipboardState>) {
-    state.entries.lock().unwrap().clear();
-    emit(&app, &state);
+    let mut entries = state.entries.lock().unwrap();
+    let before = entries.len();
+    entries.retain(|e| e.item.pinned);
+    let changed = entries.len() != before;
+    drop(entries);
+    if changed {
+        emit(&app, &state);
+    }
 }
 
 /// Large preview of an image entry (copied image or first image file).
@@ -367,12 +395,16 @@ fn is_url(text: &str) -> bool {
 fn add(state: &ClipboardState, content: Content) {
     let mut entries = state.entries.lock().unwrap();
 
-    // Same text copied again: move the existing entry to the top.
+    // Same text copied again: refresh it and move it below the pins.
     if let Content::Text(new) = &content {
         if let Some(i) = entries.iter().position(|e| matches!(&e.content, Content::Text(t) if t == new)) {
+            if entries[i].item.pinned {
+                entries[i].item.copied_at = now_ms();
+                return;
+            }
             let mut entry = entries.remove(i);
             entry.item.copied_at = now_ms();
-            entries.insert(0, entry);
+            insert_entry(&mut entries, entry);
             return;
         }
     }
@@ -383,10 +415,19 @@ fn add(state: &ClipboardState, content: Content) {
         *next
     };
     let Some(item) = describe(id, &content) else { return };
-    entries.insert(0, Entry { id, content, item });
+    insert_entry(&mut entries, Entry { id, content, item });
 
+    // Pinned entries are favorites: they never age out and don't count toward the limits.
     let mut images = 0;
+    let mut unpinned = 0;
     entries.retain(|e| {
+        if e.item.pinned {
+            return true;
+        }
+        unpinned += 1;
+        if unpinned > MAX_ITEMS {
+            return false;
+        }
         if matches!(e.content, Content::Image(_)) {
             images += 1;
             images <= MAX_IMAGES
@@ -394,7 +435,16 @@ fn add(state: &ClipboardState, content: Content) {
             true
         }
     });
-    entries.truncate(MAX_ITEMS);
+}
+
+/// Newest entries go below the pinned block, so pins always stay on top.
+fn insert_entry(entries: &mut Vec<Entry>, entry: Entry) {
+    let at = if entry.item.pinned {
+        0
+    } else {
+        entries.iter().position(|e| !e.item.pinned).unwrap_or(entries.len())
+    };
+    entries.insert(at, entry);
 }
 
 fn describe(id: u64, content: &Content) -> Option<ClipItem> {
@@ -409,6 +459,7 @@ fn describe(id: u64, content: &Content) -> Option<ClipItem> {
                 thumbnail: None,
                 folders: 0,
                 copied_at,
+                pinned: false,
             }
         }
         Content::Image(img) => {
@@ -419,6 +470,7 @@ fn describe(id: u64, content: &Content) -> Option<ClipItem> {
                 thumbnail: Some(img.thumbnail.clone()),
                 folders: 0,
                 copied_at,
+                pinned: false,
             }
         }
         Content::Files(files) => {
@@ -429,7 +481,7 @@ fn describe(id: u64, content: &Content) -> Option<ClipItem> {
             // First image file as preview, so copied photos look like photos.
             let thumbnail = files.iter().find(|p| is_image_file(p)).and_then(|p| file_thumbnail(p));
             let folders = files.iter().filter(|p| p.is_dir()).count();
-            ClipItem { id, kind: "files", text: names.join("\n"), thumbnail, folders, copied_at }
+            ClipItem { id, kind: "files", text: names.join("\n"), thumbnail, folders, copied_at, pinned: false }
         }
     })
 }

@@ -1,5 +1,47 @@
 [
   {
+    "version": "1.7.0",
+    "date": "2026-10-25",
+    "items": [
+      {
+        "de": "Windows „Nicht stören“ ist jetzt echt: Mond-Button, Notch-Dreifachklick, Übersicht, Einstellungen und Tray schalten den systemweiten Modus (PriorityOnly/Unrestricted)",
+        "en": "Windows Do Not Disturb is now real: the moon button, triple-clicking the notch, Overview, Settings and the tray switch the system-wide mode (PriorityOnly/Unrestricted)"
+      },
+      {
+        "de": "Neue Notch-Seite bündelt Idle-Stil, Länge und Breite mit Live-Vorschau, Theme, Material, Ecken, Sichtbarkeit und Interaktion an einem Ort",
+        "en": "New Notch page gathers idle style, length and width with a live preview, theme, material, corners, visibility and interaction in one place"
+      },
+      {
+        "de": "Zwischenablage-Karten im neuen Glas-Layout: kleinere, transparente Buttons für Kopieren, Anheften und Entfernen, Bildvorschau in der Mitte und eine große Ask-AI-Pille; angeheftete Einträge bleiben beim Leeren erhalten",
+        "en": "Clipboard cards in the new glass layout: smaller transparent buttons for copy, pin and remove, an image preview in the middle and a large Ask AI pill; pinned entries survive clearing"
+      },
+      {
+        "de": "Shelf übernimmt das Clipboard-Layout: Kopieren oben links, Explorer und Entfernen oben rechts, Bildvorschau in der Mitte und die große Ask-AI-Pille; das neue Chat-Icon ersetzt den alten Funkel-Stern überall, wo AI vorkommt",
+        "en": "Shelf adopts the clipboard layout: copy top-left, Explorer and remove top-right, image preview in the middle and the large Ask AI pill; the new chat icon replaces the old sparkle everywhere AI appears"
+      },
+      {
+        "de": "Kopieren zeigt statt des grünen Punkts eine animierte Häkchen-Pop-Animation mit kurzem Ring; alle Karten-Buttons federn beim Hover sanft",
+        "en": "Copy now shows an animated check-pop with a short ring instead of the green dot; all card buttons spring smoothly on hover"
+      },
+      {
+        "de": "Lyric-Pille in Kompakt, Normal oder Lang; der Wechsel läuft mit einem weichen Width-Spring ohne Ruckeln, Wort-für-Wort-Lyrics bekommen einen sanften Bounce",
+        "en": "Lyric pill in Compact, Normal or Long; width changes run on a smooth width spring without jitter, and word-by-word lyrics get a gentle bounce"
+      },
+      {
+        "de": "Die Uhr betont im geschlossenen Modus und in der Übersicht beide Stundenstellen gleich groß und fett (12 statt 1 + 2)",
+        "en": "The clock emphasizes both hour digits at the same size and weight in the closed notch and in Overview (12 instead of 1 + 2)"
+      },
+      {
+        "de": "FPS-Freischaltung merkt sich den laufenden Helper; die Einstellung zeigt nach dem Öffnen nicht mehr fälschlich „gesperrt“",
+        "en": "FPS unlock remembers a running helper; Settings no longer shows it as locked after reopening"
+      },
+      {
+        "de": "„Verbindungen“ heißt jetzt „Discord“; Hover-Hilfetexte am Power-Menü sind entfernt",
+        "en": "Connections is now called Discord; removed hover helper texts from the power menu"
+      }
+    ]
+  },
+  {
     "version": "1.6.8",
     "date": "2026-10-24",
     "items": [

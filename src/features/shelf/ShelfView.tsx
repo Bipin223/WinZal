@@ -1,14 +1,17 @@
 ﻿import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowSquareOut, ClipboardText, Copy, File, FileAudio, FileText, FileVideo, FolderOpen, ImageSquare, Sparkle, Table, Trash, Tray, X, type Icon } from "@phosphor-icons/react";
+import { ArrowsOutSimple, ClipboardText, Copy, File, FileAudio, FileText, FileVideo, FolderOpen, ImageSquare, Table, Trash, Tray, X, type Icon } from "@phosphor-icons/react";
 import { fade, springs } from "../../design/motion";
 import { createStore } from "../../lib/store";
 import { formatBytes } from "../../lib/format";
 import { drop, pasteFiles, takeDropped, usePasteFiles } from "../../platform/drop";
 import { HeaderActions, HeaderButton } from "../../notch/header";
-import { copyFiles, filePreview, fileText, openFile, probeFiles, revealFile, type DroppedFile, type FileKind } from "../../platform/services";
+import { MAX_SIZE, requestSize } from "../../notch/size";
+import { findTab } from "../../notch/tabs";
+import { copyFiles, filePreview, filePreviewLarge, fileText, openFile, probeFiles, revealFile, type DroppedFile, type FileKind } from "../../platform/services";
 import { askAI } from "../ask/handoff";
-import { SelectedDot } from "../../ui/SelectedDot";
+import { AskAIPill, CardButton, CopyCheck } from "../../ui/CardActions";
+import { ImagePreviewPane, type LoadedImagePreview } from "../../ui/ImagePreview";
 import { t } from "../../i18n";
 
 /*
@@ -25,6 +28,10 @@ interface ShelfItem extends DroppedFile {
 
 const shelf = createStore<ShelfItem[]>([], { persist: "shelf" });
 const MAX_ITEMS = 30;
+const ROW_H = 146;
+const PREVIEW_MAX_H = 250;
+/** Gap + controls below the image. */
+const PREVIEW_CHROME = 46;
 
 const kindIcon: Record<FileKind, Icon> = { image: ImageSquare, audio: FileAudio, video: FileVideo, document: FileText, table: Table, other: File };
 
@@ -33,6 +40,7 @@ export function ShelfView() {
   const { dragging, dropped } = drop.use();
   const [copied, setCopied] = useState<string | null>(null);
   const [nothing, setNothing] = useState(false);
+  const [preview, setPreview] = useState<(LoadedImagePreview & { path: string }) | null>(null);
   usePasteFiles(() => flash(setNothing));
 
   useEffect(() => {
@@ -51,6 +59,23 @@ export function ShelfView() {
     await copyFiles(paths);
     setCopied(key);
     setTimeout(() => setCopied((c) => (c === key ? null : c)), 1200);
+  };
+
+  // The preview grows the closed tab downward; leaving Shelf always resets it.
+  useEffect(() => () => requestSize("shelf", null), []);
+
+  const closePreview = () => {
+    setPreview(null);
+    requestSize("shelf", null);
+  };
+
+  const openPreview = async (item: ShelfItem) => {
+    const data = await filePreviewLarge(item.path).catch(() => null);
+    if (!data || !data.width || !data.height) return;
+    const base = findTab("shelf")!.size;
+    const h = Math.min(PREVIEW_MAX_H, MAX_SIZE.h - base.h - PREVIEW_CHROME, ((base.w - 32) * data.height) / data.width);
+    setPreview({ ...data, path: item.path, w: (h * data.width) / data.height, h });
+    requestSize("shelf", { w: base.w, h: base.h + h + PREVIEW_CHROME });
   };
 
   if (items.length === 0) {
@@ -78,13 +103,19 @@ export function ShelfView() {
           {items.length} {items.length === 1 ? t("Datei") : t("Dateien")}
         </span>
         <HeaderButton label={copied === "all" ? t("Kopiert") : t("Alle kopieren")} onClick={() => void copyAll(items.map((i) => i.path), "all")}>
-          {copied === "all" ? <SelectedDot size={6} /> : <Copy size={14} weight="bold" />}
+          {copied === "all" ? <CopyCheck size={14} /> : <Copy size={14} weight="bold" />}
         </HeaderButton>
-        <HeaderButton label={t("Ablage leeren")} onClick={() => shelf.set([])}>
+        <HeaderButton
+          label={t("Ablage leeren")}
+          onClick={() => {
+            closePreview();
+            shelf.set([]);
+          }}
+        >
           <Trash size={14} weight="bold" />
         </HeaderButton>
       </HeaderActions>
-      <div className="flex min-h-0 flex-1 gap-2 overflow-x-auto [scrollbar-width:none]">
+      <div className="flex shrink-0 gap-2 overflow-x-auto [scrollbar-width:none]" style={{ height: ROW_H }}>
         <AnimatePresence initial={false} mode="popLayout">
           {items.map((item) => (
             <motion.div
@@ -94,20 +125,32 @@ export function ShelfView() {
               initial={{ opacity: 0, transform: "scale(0.94)" }}
               animate={{ opacity: 1, transform: "scale(1)" }}
               exit={{ opacity: 0, transform: "scale(0.94)", transition: fade }}
-              className="group relative h-full w-[112px] shrink-0"
+              className="group relative h-full w-[160px] shrink-0"
             >
-              <Card item={item} copied={copied === item.path} onCopy={() => void copyAll([item.path], item.path)} />
-              <button
-                aria-label={t("Entfernen")}
-                onClick={() => shelf.set((l) => l.filter((x) => x.path !== item.path))}
-                className="pressable absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full bg-fill-3 text-label-2 opacity-0 backdrop-blur-md group-hover:opacity-100 hover:text-label"
-              >
-                <X size={10} weight="bold" />
-              </button>
+              <Card
+                item={item}
+                copied={copied === item.path}
+                onCopy={() => void copyAll([item.path], item.path)}
+                onPreview={() => void openPreview(item)}
+                onRemove={() => {
+                  if (preview?.path === item.path) closePreview();
+                  shelf.set((l) => l.filter((x) => x.path !== item.path));
+                }}
+              />
             </motion.div>
           ))}
         </AnimatePresence>
       </div>
+      <AnimatePresence>
+        {preview && (
+          <ImagePreviewPane
+            key="preview"
+            preview={preview}
+            onCopy={() => void copyAll([preview.path], "preview")}
+            onClose={closePreview}
+          />
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {dragging && (
           <motion.div
@@ -125,7 +168,7 @@ export function ShelfView() {
   );
 }
 
-function Card({ item, copied, onCopy }: { item: ShelfItem; copied: boolean; onCopy: () => void }) {
+function Card({ item, copied, onCopy, onPreview, onRemove }: { item: ShelfItem; copied: boolean; onCopy: () => void; onPreview: () => void; onRemove: () => void }) {
   const [preview, setPreview] = useState<string | null>(null);
   const I = kindIcon[item.kind];
   useEffect(() => {
@@ -157,9 +200,10 @@ function Card({ item, copied, onCopy }: { item: ShelfItem; copied: boolean; onCo
   };
 
   return (
-    <div className="relative flex size-full flex-col overflow-hidden rounded-[14px] bg-fill-1">
+    <div className="group relative flex size-full flex-col overflow-hidden rounded-[14px] bg-fill-1">
       <button
         onClick={() => void openFile(item.path)}
+        aria-label={t("{name} öffnen", { name: item.name })}
         title={t("{name} öffnen", { name: item.name })}
         className="pressable relative flex min-h-0 flex-1 items-center justify-center overflow-hidden"
       >
@@ -169,18 +213,30 @@ function Card({ item, copied, onCopy }: { item: ShelfItem; copied: boolean; onCo
           <I size={30} weight="duotone" className="text-label-2" />
         )}
       </button>
-      <div className="px-2 pt-1.5 pb-1">
+      <div className="px-2 pt-1.5 pb-2 transition-opacity duration-150 group-hover:opacity-0">
         <p className="truncate text-caption font-medium text-label" title={item.name}>{item.name}</p>
-        <div className="flex items-center justify-between">
-          <span className="tabular text-caption text-label-3">{formatBytes(item.size, 0)}</span>
-          <span className="flex opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-            <IconBtn label={t("Ask AI")} icon={Sparkle} onClick={() => void ask()} />
-            <IconBtn label={t("Im Explorer zeigen")} icon={FolderOpen} onClick={() => revealFile(item.path)} />
-            <IconBtn label={copied ? t("Kopiert") : t("Kopieren")} icon={Copy} dot={copied} onClick={onCopy} />
-            <IconBtn label={t("Öffnen")} icon={ArrowSquareOut} onClick={() => void openFile(item.path)} />
-          </span>
-        </div>
+        <span className="tabular text-caption text-label-3">{formatBytes(item.size, 0)}</span>
       </div>
+      <CardButton
+        label={copied ? t("Kopiert") : t("Kopieren")}
+        icon={Copy}
+        copied={copied}
+        className="absolute top-2 left-2 opacity-0 group-hover:opacity-100"
+        onClick={onCopy}
+      />
+      {item.kind === "image" && (
+        <CardButton
+          label={t("Vorschau")}
+          icon={ArrowsOutSimple}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100"
+          onClick={onPreview}
+        />
+      )}
+      <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+        <CardButton label={t("Im Explorer zeigen")} icon={FolderOpen} onClick={() => revealFile(item.path)} />
+        <CardButton label={t("Entfernen")} icon={X} onClick={onRemove} />
+      </div>
+      <AskAIPill className="absolute inset-x-2 bottom-2 opacity-0 group-hover:opacity-100" onClick={() => void ask()} />
     </div>
   );
 }
@@ -198,12 +254,4 @@ export function PasteHint({ nothing }: { nothing: boolean }) {
 function flash(set: (v: boolean) => void) {
   set(true);
   setTimeout(() => set(false), 1600);
-}
-
-function IconBtn({ label, icon: I, dot = false, onClick }: { label: string; icon: Icon; dot?: boolean; onClick: () => void }) {
-  return (
-    <button aria-label={label} title={label} onClick={onClick} className="pressable flex size-5 items-center justify-center text-label-3 hover:text-label">
-      {dot ? <SelectedDot size={5} /> : <I size={12} weight="bold" />}
-    </button>
-  );
 }

@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowsOutSimple,
@@ -15,19 +15,20 @@ import {
   Folder,
   ImageSquare,
   LinkSimple,
-  Sparkle,
+  PushPin,
   TextAa,
   Trash,
   X,
   type Icon,
 } from "@phosphor-icons/react";
-import { content, fade, springs } from "../../design/motion";
+import { fade, springs } from "../../design/motion";
 import { HeaderActions, HeaderButton } from "../../notch/header";
 import { MAX_SIZE, requestSize } from "../../notch/size";
 import { findTab } from "../../notch/tabs";
-import { clipboard, useClipboard, type ClipItem, type ClipPreview } from "../../platform/clipboard";
+import { clipboard, useClipboard, type ClipItem } from "../../platform/clipboard";
 import { Redacted, Segmented } from "../../ui/controls";
-import { SelectedDot } from "../../ui/SelectedDot";
+import { AskAIPill, CardButton, CopyCheck } from "../../ui/CardActions";
+import { ImagePreviewPane, type LoadedImagePreview } from "../../ui/ImagePreview";
 import { usePresenting } from "../privacy/store";
 import { askAI } from "../ask/handoff";
 import { t } from "../../i18n";
@@ -54,11 +55,11 @@ const PREVIEW_MAX_H = 290;
 /** Gap + row below the image (size, buttons). */
 const PREVIEW_CHROME = 46;
 
-type LoadedPreview = ClipPreview & { w: number; h: number };
+type LoadedPreview = LoadedImagePreview;
 
 /**
  * History as a horizontal card row, newest on the left. The wheel scrolls sideways,
- * edges fade out. Click copies back, Ã— removes.
+ * edges fade out. Click copies back, × removes.
  * Images: click opens a large preview; the notch grows down smoothly for it.
  */
 export function ClipboardView() {
@@ -77,7 +78,7 @@ export function ClipboardView() {
     if (previewId !== null && (hidden || !all.some((i) => i.id === previewId))) setPreviewId(null);
   }, [all, previewId, hidden]);
 
-  // Vertical wheel â†’ horizontal scroll.
+  // Vertical wheel → horizontal scroll.
   useEffect(() => {
     const el = scroller.current;
     if (!el) return;
@@ -142,7 +143,8 @@ export function ClipboardView() {
       <HeaderActions>
         <Segmented id="clip-filter" size="sm" value={filter} onChange={setFilter} options={filters.map((f) => ({ ...f, label: t(f.label) }))} />
         <HeaderButton
-          label={t("Alle löschen")}
+          label={t("Alle außer Pins löschen")}
+          disabled={all.every((i) => i.pinned)}
           onClick={() => {
             setPreviewId(null);
             clipboard.clear();
@@ -177,11 +179,32 @@ export function ClipboardView() {
                 selected={previewId === item.id}
                 onClick={() => (item.thumbnail && !hidden ? setPreviewId((p) => (p === item.id ? null : item.id)) : void copy(item.id))}
               />
-              <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                {!hidden && <CardButton label={t("Ask AI")} icon={Sparkle} onClick={() => void askAbout(item)} />}
-                {item.thumbnail && !hidden && <CardButton label={t("Kopieren")} icon={Copy} onClick={() => void copy(item.id)} />}
+              <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                <CardButton label={t("Kopieren")} icon={Copy} copied={copied === item.id} onClick={() => void copy(item.id)} />
                 <CardButton label={t("Entfernen")} icon={X} onClick={() => clipboard.remove(item.id)} />
               </div>
+              {!hidden && item.thumbnail && (
+                <CardButton
+                  label={t("Vorschau")}
+                  icon={ArrowsOutSimple}
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100"
+                  onClick={() => setPreviewId((p) => (p === item.id ? null : item.id))}
+                />
+              )}
+              {!hidden && (
+                <AskAIPill
+                  className="absolute inset-x-2 bottom-2 opacity-0 group-hover:opacity-100"
+                  onClick={() => void askAbout(item)}
+                />
+              )}
+              <CardButton
+                label={item.pinned ? t("Lösen") : t("Anheften")}
+                icon={PushPin}
+                weight={item.pinned ? "fill" : "bold"}
+                active={item.pinned}
+                className={`absolute top-2 left-2 ${item.pinned ? "" : "opacity-0 group-hover:opacity-100"}`}
+                onClick={() => clipboard.pin(item.id, !item.pinned)}
+              />
             </motion.div>
           ))}
         </AnimatePresence>
@@ -189,23 +212,10 @@ export function ClipboardView() {
 
       <AnimatePresence>
         {previewId !== null && preview && (
-          <PreviewPane key="preview" preview={preview} onCopy={() => void copy(previewId)} onClose={() => setPreviewId(null)} />
+          <ImagePreviewPane key="preview" preview={preview} onCopy={() => void copy(previewId)} onClose={() => setPreviewId(null)} />
         )}
       </AnimatePresence>
     </div>
-  );
-}
-
-function CardButton({ label, icon: I, onClick }: { label: string; icon: Icon; onClick: () => void }) {
-  return (
-    <button
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      className="pressable flex size-5 items-center justify-center rounded-full bg-fill-3 text-label-2 backdrop-blur-md hover:text-label"
-    >
-      <I size={10} weight="bold" />
-    </button>
   );
 }
 
@@ -238,46 +248,6 @@ function usePreview(id: number | null): LoadedPreview | null {
   return data;
 }
 
-function PreviewPane({ preview, onCopy, onClose }: { preview: LoadedPreview; onCopy: () => void; onClose: () => void }) {
-  return (
-    <motion.div
-      className="flex min-h-0 flex-1 flex-col items-center gap-1.5 px-4 pt-2.5"
-      initial={{ opacity: 0, filter: "blur(6px)", transform: "translateY(-6px)" }}
-      animate={{ opacity: 1, filter: "blur(0px)", transform: "translateY(0px)", transition: { ...content.enter, delay: 0.08 } }}
-      exit={{ opacity: 0, filter: "blur(4px)", transition: content.exit }}
-    >
-      {/* Image change: crossfade on top of each other, the area itself stays put. */}
-      <div className="relative" style={{ width: preview.w, height: preview.h }}>
-        <AnimatePresence initial={false}>
-          <motion.img
-            key={preview.src}
-            src={preview.src}
-            alt=""
-            draggable={false}
-            className="absolute inset-0 size-full rounded-[12px] object-contain"
-            initial={{ opacity: 0, filter: "blur(4px)" }}
-            animate={{ opacity: 1, filter: "blur(0px)", transition: content.enter }}
-            exit={{ opacity: 0, filter: "blur(4px)", transition: content.exit }}
-          />
-        </AnimatePresence>
-      </div>
-      <div className="flex w-full items-center justify-between" style={{ maxWidth: Math.max(preview.w, 240) }}>
-        <span className="tabular flex items-center gap-1 text-caption text-label-3">
-          <ArrowsOutSimple size={11} weight="bold" /> {preview.width} Ã— {preview.height}
-        </span>
-        <div className="flex gap-0.5">
-          <HeaderButton label={t("Kopieren")} onClick={onCopy}>
-            <Copy size={13} weight="bold" />
-          </HeaderButton>
-          <HeaderButton label={t("Vorschau schließen")} onClick={onClose}>
-            <X size={13} weight="bold" />
-          </HeaderButton>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 function Card(props: { item: ClipItem; now: number; hidden: boolean; copied: boolean; selected: boolean; onClick: () => void }) {
   const { item, now, copied, hidden } = props;
   const KindIcon = kindIcon[item.kind];
@@ -289,7 +259,7 @@ function Card(props: { item: ClipItem; now: number; hidden: boolean; copied: boo
       onClick={props.onClick}
       title={hidden ? t("Ausgeblendet") : isImage ? t("Vorschau") : item.text}
       className={`pressable pressable-fill relative flex size-full flex-col justify-between overflow-hidden rounded-[14px] bg-fill-1 p-3 text-left ${
-        props.selected ? "ring-2 ring-label ring-inset" : ""
+        props.selected ? "ring-2 ring-label ring-inset" : item.pinned ? "ring-1 ring-white/25 ring-inset" : ""
       }`}
     >
       {isImage && (
@@ -301,7 +271,11 @@ function Card(props: { item: ClipItem; now: number; hidden: boolean; copied: boo
       )}
 
       <div className="relative flex items-center justify-between text-label-3">
-        <KindIcon size={14} weight="bold" className={isImage ? "text-label" : undefined} />
+        <KindIcon
+          size={14}
+          weight="bold"
+          className={`transition-opacity duration-150 ${isImage ? "text-label" : ""} ${item.pinned ? "opacity-0" : "group-hover:opacity-0"}`}
+        />
         <span className={`text-caption transition-opacity duration-150 group-hover:opacity-0 ${isImage ? "text-label-2" : ""}`}>
           {relative(item.copiedAt, now)}
         </span>
@@ -318,7 +292,7 @@ function Card(props: { item: ClipItem; now: number; hidden: boolean; copied: boo
             exit={{ opacity: 0 }}
             transition={fade}
           >
-            <SelectedDot size={6} /> {t("Kopiert")}
+            <CopyCheck size={14} /> {t("Kopiert")}
           </motion.div>
         )}
       </AnimatePresence>
@@ -370,7 +344,7 @@ function fileIcon(name: string): Icon {
   return fileTypes.find(([re]) => re.test(name))?.[1] ?? File;
 }
 
-/** "https://www.github.com/a/b?x" â†’ host "github.com", rest "/a/b?x". */
+/** "https://www.github.com/a/b?x" → host "github.com", rest "/a/b?x". */
 function splitUrl(url: string): { host: string; rest: string } {
   try {
     const u = new URL(url.startsWith("www.") ? `https://${url}` : url);
@@ -379,7 +353,7 @@ function splitUrl(url: string): { host: string; rest: string } {
     try {
       decoded = decodeURI(rest);
     } catch {
-      // Invalid %-sequence â†’ show it raw.
+      // Invalid %-sequence → show it raw.
     }
     return { host: u.hostname.replace(/^www\./, ""), rest: decoded };
   } catch {

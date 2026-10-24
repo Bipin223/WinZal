@@ -1,4 +1,4 @@
-﻿pub mod ai;
+pub mod ai;
 mod ambient;
 mod ask_history;
 mod audio;
@@ -125,6 +125,7 @@ pub fn run() {
             clipboard::clipboard_list,
             clipboard::clipboard_mode,
             clipboard::clipboard_copy,
+            clipboard::clipboard_pin,
             clipboard::clipboard_delete,
             clipboard::clipboard_clear,
             clipboard::clipboard_preview,
@@ -151,11 +152,13 @@ pub fn run() {
             files::open_path,
             files::copy_files,
             files::file_preview,
+            files::file_preview_large,
             display::display_monitors,
             display::display_apply,
             display::apps_visible,
             fps::gaming_fps,
             fps::fps_unlock,
+            fps::fps_helper_ready,
             controls::volume_get,
             controls::volume_set,
             mixer::mixer_list,
@@ -250,8 +253,8 @@ pub fn run() {
 #[derive(Default)]
 struct FocusState(Mutex<isize>);
 
-/// Opened via shortcut â†’ take focus (for Esc/typing).
-/// Closed â†’ give focus back to the previous app, otherwise typing goes nowhere.
+/// Opened via shortcut → take focus (for Esc/typing).
+/// Closed → give focus back to the previous app, otherwise typing goes nowhere.
 #[tauri::command]
 fn keyboard_focus(focus: bool, window: WebviewWindow, state: State<'_, FocusState>) {
     let Ok(own) = window.hwnd() else { return };
@@ -310,9 +313,9 @@ struct TrayItems(Mutex<Option<Tray>>);
 fn tray_texts(lang: &str) -> [String; 5] {
     if lang == "en" {
         let keys = SHORTCUT_LABEL.replace("Strg", "Ctrl").replace("Leertaste", "Space");
-        [format!("Open WinZal\t{keys}"), "Settings â€¦".into(), "Focus mode".into(), "Start with Windows".into(), "Quit WinZal".into()]
+        [format!("Open WinZal\t{keys}"), "Settings …".into(), "Do not disturb".into(), "Start with Windows".into(), "Quit WinZal".into()]
     } else {
-        [format!("WinZal Ã¶ffnen\t{SHORTCUT_LABEL}"), "Einstellungen â€¦".into(), "Fokus-Modus".into(), "Mit Windows starten".into(), "WinZal beenden".into()]
+        [format!("WinZal öffnen\t{SHORTCUT_LABEL}"), "Einstellungen …".into(), "Nicht stören".into(), "Mit Windows starten".into(), "WinZal beenden".into()]
     }
 }
 

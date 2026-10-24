@@ -25,7 +25,6 @@ import {
   type BluetoothState,
   type BrightnessState,
   type EnergyState,
-  type FocusState,
   type GlimState,
   type NetworkState,
   type PowerMode,
@@ -34,6 +33,7 @@ import {
 } from "../../platform/services";
 import { BatteryIcon, BluetoothOffIcon, BluetoothOnIcon, WifiOffIcon, WifiOnIcon } from "../../ui/glyphs";
 import { SelectedDot } from "../../ui/SelectedDot";
+import { focusMode, refreshFocusMode, setFocusMode } from "../../notch/focus";
 import { t } from "../../i18n";
 
 type TileIcon = React.ComponentType<{ size?: number; weight?: IconWeight; className?: string }>;
@@ -184,20 +184,17 @@ function ToggleTile(props: {
 /* ── Focus / Do not disturb ─────────────────────────────────────────────────── */
 
 function FocusTile() {
-  const [focus, setFocus] = useState<FocusState | null>(null);
+  const active = focusMode.use();
 
   useEffect(() => {
-    const load = () => void systemControls.focus().then(setFocus).catch(() => setFocus(null));
-    load();
-    const id = setInterval(load, 2000);
+    void refreshFocusMode();
+    const id = setInterval(() => void refreshFocusMode(), 2000);
     return () => clearInterval(id);
   }, []);
 
-  const active = !!focus?.active;
-
   return (
     <ToggleTile
-      label={t("Fokus")}
+      label={t("Nicht stören")}
       state={active ? t("An") : t("Aus")}
       active={active}
       onIcon={Moon}
@@ -205,13 +202,7 @@ function FocusTile() {
       straight
       bareIcon
       iconSize={22}
-      onClick={() => {
-        setFocus((f) => f && { ...f, active: !active });
-        void systemControls
-          .setFocus(!active)
-          .then(setFocus)
-          .catch(() => systemControls.focus().then(setFocus));
-      }}
+      onClick={() => setFocusMode(!active)}
       title={t("Nicht stören")}
     />
   );
@@ -706,15 +697,7 @@ function PowerTile() {
               </button>
             ))}
           </div>
-          <div className="border-t border-separator px-2.5 py-1.5 text-[9px] leading-[12px] text-label-4">
-            {!plugged ? t("Plug in for Max and Custom.") : t("Right-click for Windows power settings.")}
-          </div>
-          {plugged && customSupported && (
-            <div className="px-2.5 pb-1.5 text-[9px] leading-[12px] text-label-4">
-              {t("Custom: WinZal plan with active cooling.")}
-            </div>
-          )}
-          {error && <div className="px-2.5 pb-1 text-[9px] leading-[12px] text-[#ff9f0a]">{error}</div>}
+          {error && <div className="px-2.5 py-1 text-[9px] leading-[12px] text-[#ff9f0a]">{error}</div>}
         </div>
       )}
     </div>

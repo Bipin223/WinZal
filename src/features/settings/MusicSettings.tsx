@@ -78,6 +78,22 @@ export function MusicSettings() {
                 <span className="tabular w-11 shrink-0 text-right text-caption text-label-3">{a.lyricsTextSize.toFixed(1)} px</span>
               </div>
             </Row>
+            <Row
+              label={t("Pillenbreite")}
+              hint={t("Kompakt kürzt lange Zeilen, Normal passt sich dem Text an, Lang lässt mehr Luft")}
+            >
+              <Segmented
+                id="lyrics-pill-width"
+                size="sm"
+                value={a.lyricsPillWidth}
+                onChange={(lyricsPillWidth) => set({ lyricsPillWidth })}
+                options={[
+                  { value: "compact", label: t("Kompakt") },
+                  { value: "normal", label: t("Normal") },
+                  { value: "long", label: t("Lang") },
+                ]}
+              />
+            </Row>
             <Row label={t("Visualisierung")} hint={t("Im Songtext, in der Akzentfarbe des Covers")}>
               <Switch label={t("Visualisierung")} checked={a.lyricsVisualizer} onChange={(lyricsVisualizer) => set({ lyricsVisualizer })} />
             </Row>

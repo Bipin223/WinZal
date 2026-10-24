@@ -31,8 +31,6 @@ export interface Settings {
     visibility: "always" | "hide-fullscreen";
     monitor: string | null;
     offset: number;
-    /** Focus mode look: half transparent (as before) or shrunk to a thin line at the edge. */
-    focusStyle: "dim" | "line";
     /**
      * Closed look outside focus mode: the notch, or a thin line (no music etc.; only a
      * finished timer opens it into the notch until dismissed). Hover and click work as usual.
@@ -54,6 +52,10 @@ export interface Settings {
     themeColor: string;
     /** Dynamic = attached notch, Windows = floating island with a rim. */
     style: "dynamic" | "windows";
+    /** Extra width in px for the closed island (including music). */
+    islandWidth: number;
+    /** Closed island height in px (music and live activities included). */
+    islandHeight: number;
     /** Squeeze/bounce while dragging the notch. */
     dragAnimation: boolean;
     /** Show time + weather in the closed island. */
@@ -72,6 +74,8 @@ export interface Settings {
     lyricsLayout: "inline" | "lines";
     /** Continuous lyric font size in px; the pill and visualizer grow with it. */
     lyricsTextSize: number;
+    /** How much room the closed lyric pill uses: compact, exact fit, or long. */
+    lyricsPillWidth: "compact" | "normal" | "long";
     /** Subtle waveform behind the lyric, in the cover's accent color. */
     lyricsVisualizer: boolean;
     /** Visualizer style inside the lyrics pill. */
@@ -131,7 +135,7 @@ const defaults: Settings = {
     saveHistory: true,
   },
   weather: null,
-  display: { visibility: "always", monitor: null, offset: 0, focusStyle: "dim", idleStyle: "notch" },
+  display: { visibility: "always", monitor: null, offset: 0, idleStyle: "notch" },
   gaming: { mode: "off", apps: ["GenshinImpact.exe", "YuanShen.exe"] },
   privacyDots: true,
   appearance: {
@@ -141,6 +145,8 @@ const defaults: Settings = {
     theme: "dark",
     themeColor: "#141416",
     style: "dynamic",
+    islandWidth: 0,
+    islandHeight: 30,
     dragAnimation: true,
     clockWeather: true,
     musicInPill: true,
@@ -150,6 +156,7 @@ const defaults: Settings = {
     lyricsInPill: false,
     lyricsLayout: "inline",
     lyricsTextSize: 12,
+    lyricsPillWidth: "normal",
     lyricsVisualizer: true,
     lyricsVisualizerStyle: "wave",
     lyricsAnimation: "apple",
@@ -235,9 +242,22 @@ settings.set((s) => {
         return 12;
       })(),
       lyricsVisualizer: s.appearance?.lyricsVisualizer ?? defaults.appearance.lyricsVisualizer,
+      lyricsPillWidth: (() => {
+        const stored = (s.appearance as { lyricsPillWidth?: string } | undefined)?.lyricsPillWidth;
+        return stored === "compact" || stored === "long" ? stored : "normal";
+      })(),
       lyricsVisualizerStyle: s.appearance?.lyricsVisualizerStyle ?? defaults.appearance.lyricsVisualizerStyle,
       // The experimental RGB accent was removed; fall back to auto.
       accent: s.appearance?.accent === "rgb" ? defaults.appearance.accent : s.appearance?.accent ?? defaults.appearance.accent,
+      // The island width/height sliders are additive; clamp values from older/corrupt files.
+      islandWidth: (() => {
+        const value = (s.appearance as { islandWidth?: number } | undefined)?.islandWidth;
+        return typeof value === "number" ? Math.min(214, Math.max(-46, Math.round(value))) : defaults.appearance.islandWidth;
+      })(),
+      islandHeight: (() => {
+        const value = (s.appearance as { islandHeight?: number } | undefined)?.islandHeight;
+        return typeof value === "number" ? Math.min(40, Math.max(26, Math.round(value))) : defaults.appearance.islandHeight;
+      })(),
     },
     discord: { ...defaults.discord, ...s.discord },
     alarm: { ...defaults.alarm, ...s.alarm },

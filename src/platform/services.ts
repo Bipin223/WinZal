@@ -177,6 +177,17 @@ export function filePreview(path: string): Promise<string | null> {
   return isNative ? invoke<string | null>("file_preview", { path }) : Promise.resolve(null);
 }
 
+export interface FileImagePreview {
+  src: string;
+  width: number;
+  height: number;
+}
+
+/** Large in-notch image preview for Shelf files. */
+export function filePreviewLarge(path: string): Promise<FileImagePreview | null> {
+  return isNative ? invoke<FileImagePreview | null>("file_preview_large", { path }) : Promise.resolve(null);
+}
+
 /** Extract text from documents/spreadsheets for Ask AI. */
 export function fileText(path: string): Promise<string> {
   return isNative ? invoke<string>("file_text", { path }) : Promise.resolve("");
@@ -333,6 +344,11 @@ export function fetchLyrics(title: string, artist: string, duration: number): Pr
 export function unlockFps(): Promise<"ok" | "relogin" | "cancelled" | "failed"> {
   if (isNative) return invoke("fps_unlock");
   return new Promise((r) => setTimeout(() => r("relogin"), 600));
+}
+
+/** Is the elevated helper already alive from an earlier unlock in this session? */
+export function fpsHelperReady(): Promise<boolean> {
+  return isNative ? invoke<boolean>("fps_helper_ready") : Promise.resolve(false);
 }
 
 export function fetchFps(): Promise<{ fps: number | null; error: string | null }> {

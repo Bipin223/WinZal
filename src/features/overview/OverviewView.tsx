@@ -66,7 +66,7 @@ function Header() {
             appearance.clockBold ? "font-bold" : "font-semibold"
           }`}
         >
-          <ClockTime time={time} />
+          <ClockTime time={time} emphasizeHour />
           {period && <span className="ml-1 text-title font-semibold tracking-normal text-label-3">{period}</span>}
         </div>
         <div className="mt-1 text-footnote text-label-3">{date}</div>

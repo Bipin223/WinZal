@@ -6,13 +6,11 @@ import {
   DotsSixVertical,
   Keyboard,
   LockSimple,
-  Monitor,
   MusicNotesSimple,
   Palette,
   Play,
   Plugs,
   SlidersHorizontal,
-  Sparkle,
   SquaresFour,
   Stop,
   Timer,
@@ -25,9 +23,10 @@ import { alarmSounds, playAlarm, stopAlarm, type AlarmDuration } from "../../lib
 import { nav } from "../../notch/nav";
 import { requestSize } from "../../notch/size";
 import { tabs } from "../../notch/tabs";
-import { autostart, display, fetchFps, secrets, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName, type UsageId } from "../../platform/services";
+import { autostart, display, fetchFps, fpsHelperReady, secrets, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName, type UsageId } from "../../platform/services";
 import { settings, updateAsk, updateSettings, type AskProvider } from "../../settings/store";
 import { BrandLogo, brandName } from "../../ui/brands";
+import { ChatBubbleIcon } from "../../ui/ChatBubbleIcon";
 import { Button, Group, Row, Segmented, Select, Slider, Switch, TextField } from "../../ui/controls";
 import { SelectedDot } from "../../ui/SelectedDot";
 import { effortLevels, listModels, providerInfo } from "../ask/providers";
@@ -39,23 +38,22 @@ import { MusicSettings } from "./MusicSettings";
 import { AboutView } from "./AboutView";
 import { VaultSettings } from "../vault/VaultSettings";
 import { detectPlace } from "../weather/store";
-import { focusMode, setFocusMode } from "../../notch/focus";
+import { focusMode, refreshFocusMode, setFocusMode } from "../../notch/focus";
 import { checkForUpdate, installUpdate, update } from "../../lib/update";
 import { between, changelog, itemText, markSeen, useUnseen } from "../../lib/changelog";
 import { privacy, togglePresentation, usePresenting } from "../privacy/store";
 import { locale, t, tBackend } from "../../i18n";
 
-type PageId = "general" | "display" | "appearance" | "music" | "tools" | "timer" | "ai" | "accounts" | "about";
+type PageId = "general" | "notch" | "music" | "tools" | "timer" | "ai" | "discord" | "about";
 
 const pages: { id: PageId; label: string; icon: Icon }[] = [
   { id: "general", label: "Allgemein", icon: SlidersHorizontal },
-  { id: "display", label: "Darstellung", icon: Monitor },
-  { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "notch", label: "Notch", icon: Palette },
   { id: "music", label: "Musik", icon: MusicNotesSimple },
   { id: "tools", label: "Tools", icon: SquaresFour },
   { id: "timer", label: "Timer", icon: Timer },
-  { id: "ai", label: "AI", icon: Sparkle },
-  { id: "accounts", label: "Verbindungen", icon: Plugs },
+  { id: "ai", label: "AI", icon: ChatBubbleIcon as unknown as Icon },
+  { id: "discord", label: "Discord", icon: Plugs },
   { id: "about", label: "About", icon: UserCircle },
 ];
 
@@ -63,15 +61,16 @@ const pages: { id: PageId; label: string; icon: Icon }[] = [
 const sectionPage: Record<string, PageId> = {
   weather: "general",
   updates: "general",
-  display: "display",
-  appearance: "appearance",
+  display: "notch",
+  appearance: "notch",
+  notch: "notch",
   music: "music",
   lyrics: "music",
-  presentation: "display",
+  presentation: "notch",
   alarm: "timer",
   ask: "ai",
   usage: "ai",
-  discord: "accounts",
+  discord: "discord",
   vault: "tools",
   about: "about",
 };
@@ -82,13 +81,12 @@ let savedPage: PageId = "general";
 /** Trim the settings window to the page so short pages don't leave a blank area. */
 const PAGE_HEIGHT: Record<PageId, number> = {
   general: 460,
-  display: 460,
-  appearance: 460,
+  notch: 460,
   music: 460,
   tools: 460,
   timer: 460,
   ai: 460,
-  accounts: 460,
+  discord: 460,
   about: 410,
 };
 
@@ -160,13 +158,13 @@ export function SettingsView() {
                 <Updates />
               </>
             )}
-            {page === "display" && (
+            {page === "notch" && (
               <>
+                <AppearanceView />
                 <Display />
                 <Presentation />
               </>
             )}
-            {page === "appearance" && <AppearanceView />}
             {page === "music" && <MusicSettings />}
             {page === "tools" && (
               <>
@@ -182,7 +180,7 @@ export function SettingsView() {
                 <KeysNote />
               </>
             )}
-            {page === "accounts" && (
+            {page === "discord" && (
               <>
                 <Discord />
                 <KeysNote />
@@ -535,6 +533,9 @@ function Display() {
   const s = settings.use();
   const d = s.display;
   const focus = focusMode.use();
+  useEffect(() => {
+    void refreshFocusMode();
+  }, []);
   const [monitors, setMonitors] = useState<MonitorInfo[]>([]);
   useEffect(() => {
     void display.monitors().then(setMonitors);
@@ -588,42 +589,8 @@ function Display() {
           </Button>
         </Row>
       )}
-      <Row
-        label={t("Geschlossen")}
-        hint={
-          d.idleStyle === "line"
-            ? t("Nur eine dünne Linie – Musik und Co. bleiben verborgen, ein abgelaufener Timer klappt trotzdem auf")
-            : t("Die Notch zeigt Musik, Timer und Co.")
-        }
-      >
-        <Segmented
-          id="idle-style"
-          size="sm"
-          value={d.idleStyle}
-          onChange={(idleStyle) => updateSettings((cur) => ({ display: { ...cur.display, idleStyle } }))}
-          options={[
-            { value: "notch", label: t("Notch") },
-            { value: "line", label: t("Linie") },
-          ]}
-        />
-      </Row>
-      <Row label={t("Fokus-Modus")} hint={t("Klicks gehen durch. 3× schnell auf die Notch klicken schaltet um – oder im Tray-Menü.")}>
-        <Switch label={t("Fokus-Modus")} checked={focus} onChange={setFocusMode} />
-      </Row>
-      <Row
-        label={t("Fokus-Darstellung")}
-        hint={d.focusStyle === "line" ? t("Nur eine dünne Linie am Rand, ohne Musik und Co.") : t("Halb durchsichtig, Musik und Co. bleiben sichtbar")}
-      >
-        <Segmented
-          id="focus-style"
-          size="sm"
-          value={d.focusStyle}
-          onChange={(focusStyle) => updateSettings((cur) => ({ display: { ...cur.display, focusStyle } }))}
-          options={[
-            { value: "dim", label: t("Durchsichtig") },
-            { value: "line", label: t("Linie") },
-          ]}
-        />
+      <Row label={t("Nicht stören")} hint={t("Schaltet Windows' Do Not Disturb. 3× schnell auf die Notch klicken schaltet ebenfalls um.")}>
+        <Switch label={t("Nicht stören")} checked={focus} onChange={setFocusMode} />
       </Row>
       <Row
         label={t("Gaming-Overlay")}
@@ -914,6 +881,16 @@ function UsageProviders() {
 /** FPS without admin: a tiny elevated helper owns the ETW session. */
 function FpsUnlockRow() {
   const [state, setState] = useState<"idle" | "busy" | "ok" | "relogin" | "cancelled" | "failed">("idle");
+  // Keep the row unlocked after closing Settings while the helper is still alive.
+  useEffect(() => {
+    let alive = true;
+    void fpsHelperReady().then((ready) => {
+      if (alive && ready) setState("ok");
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
   const hint = {
     idle: t("Einmalige Windows-Abfrage – schaltet FPS und CPU-Temperatur frei"),
     busy: t("Bitte die Windows-Abfrage bestätigen …"),

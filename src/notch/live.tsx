@@ -35,7 +35,7 @@ export function useLiveActivity(): { id: string | null } {
  * sides (LiveEdge) follow the shape's edges by transform as it opens, closes or peeks.
  * Pinned to the edges by layout instead, they crept in pixel steps (issue #3).
  */
-export function LiveSlot({ id, recording = false, extra = 0 }: { id: string | null; recording?: boolean; extra?: number }) {
+export function LiveSlot({ id, recording = false, extra = 0, widthExtra = 0, height }: { id: string | null; recording?: boolean; extra?: number; widthExtra?: number; height?: number }) {
   const np = useNowPlaying();
   const call = useDiscordCall();
   // Keep the last size while an activity fades out (id is null when the notch opens).
@@ -44,7 +44,7 @@ export function LiveSlot({ id, recording = false, extra = 0 }: { id: string | nu
   const box = last.current === "system" ? geometry.gaming : geometry.live;
   // The recording chip and a long lyric line both live at the edges; give the
   // live content the same extra width as the shape so text can use it.
-  const width = box.w + (recording ? RECORDING_EXTRA : 0) + (last.current === "media" ? extra : 0);
+  const width = box.w + (recording ? RECORDING_EXTRA : 0) + widthExtra + (last.current === "media" ? extra : 0);
   const boxW = useRef(width);
   boxW.current = width;
   const spread = useTransform(useContext(ShapeWidth), (w) =>
@@ -56,11 +56,8 @@ export function LiveSlot({ id, recording = false, extra = 0 }: { id: string | nu
         className="absolute top-0 left-1/2"
         style={{
           width,
-          height: box.h,
+          height: height ?? box.h,
           marginLeft: -width / 2,
-          // The width only changes when the recording chip appears/disappears; let
-          // the live content breathe into the extra space instead of jumping.
-          transition: "width 240ms cubic-bezier(0.23, 1, 0.32, 1), margin-left 240ms cubic-bezier(0.23, 1, 0.32, 1)",
         }}
       >
         <AnimatePresence initial={false}>
