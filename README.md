@@ -129,7 +129,7 @@ If you are on **1.6.1 or older**, install **1.6.3 manually once**; after that, f
 
 Updates are in-place upgrades: only the app files are replaced. Settings, vault, notes, to-dos and saved Ask chats live in the Windows app-data folder, outside the installation directory, and are never removed by an update.
 
-Saved Ask conversations live in the app data folder as one small JSON file per chat, keeping the **latest 3** chats. Only the open conversation is loaded into the webview, so history does not sit in RAM. Chat saving can be switched off in **Settings → AI** or the history menu; this stops new writes without deleting existing chats. **Delete all saved chats** in the history menu is the explicit way to remove them.
+Saved Ask conversations live in the app data folder as one small JSON file per chat, keeping the **latest 3** chats. Only the open conversation is loaded into the webview, so history does not sit in RAM. Chat saving is on by default and can be switched off in **Settings → AI** or the history menu; this stops new writes without deleting existing chats. **Delete all saved chats** in the history menu is the explicit way to remove them.
 
 ## Using WinZal
 
