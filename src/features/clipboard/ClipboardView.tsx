@@ -142,7 +142,7 @@ export function ClipboardView() {
       <HeaderActions>
         <Segmented id="clip-filter" size="sm" value={filter} onChange={setFilter} options={filters.map((f) => ({ ...f, label: t(f.label) }))} />
         <HeaderButton
-          label={t("Alle lÃ¶schen")}
+          label={t("Alle löschen")}
           onClick={() => {
             setPreviewId(null);
             clipboard.clear();
@@ -269,7 +269,7 @@ function PreviewPane({ preview, onCopy, onClose }: { preview: LoadedPreview; onC
           <HeaderButton label={t("Kopieren")} onClick={onCopy}>
             <Copy size={13} weight="bold" />
           </HeaderButton>
-          <HeaderButton label={t("Vorschau schlieÃŸen")} onClick={onClose}>
+          <HeaderButton label={t("Vorschau schließen")} onClick={onClose}>
             <X size={13} weight="bold" />
           </HeaderButton>
         </div>

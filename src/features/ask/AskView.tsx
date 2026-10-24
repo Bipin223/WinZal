@@ -19,16 +19,16 @@ localStorage.removeItem("notch:ask-chat");
 const quick: { icon: Icon; label: string; prompt: (text: string) => string }[] = [
   { icon: TextAlignLeft, label: "Zusammenfassen", prompt: (text) => t("Fasse kurz zusammen: {x}", { x: text }) },
   { icon: NotePencil, label: "Umformulieren", prompt: (text) => t("Formuliere klarer um: {x}", { x: text }) },
-  { icon: Translate, label: "Ins Englische", prompt: (text) => t("Ãœbersetze ins Englische: {x}", { x: text }) },
+  { icon: Translate, label: "Ins Englische", prompt: (text) => t("Übersetze ins Englische: {x}", { x: text }) },
 ];
 
 /*
  *   Ask                                    grok-4.7  [Ã—] [ðŸ“Œ]
- *   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
- *   â”‚                         What time is it in NY? â”‚
- *   â”‚ The answer â€¦â–                                 â”‚
- *   â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
- *   [ Ask anything â€¦                           (â†‘) ]
+ *   ┌───────────────────────────────────────────────â”
+ *   │                         What time is it in NY? │
+ *   │ The answer …â–                                 │
+ *   └───────────────────────────────────────────────┘
+ *   [ Ask anything …                           (â†‘) ]
  *
  * Provider, model and effort are only set in the settings.
  */
@@ -96,7 +96,7 @@ export function AskView() {
       }, abort.current.signal);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setError(msg === "no-key" ? t("Kein API-SchlÃ¼ssel fÃ¼r {p} â€“ in den Einstellungen eintragen.", { p: providerInfo[provider].label }) : tBackend(msg));
+      setError(msg === "no-key" ? t("Kein API-Schlüssel für {p} – in den Einstellungen eintragen.", { p: providerInfo[provider].label }) : tBackend(msg));
       // Remove the empty reply bubble again.
       chat.set((m) => (m.at(-1)?.content === "" ? m.slice(0, -1) : m));
     } finally {
@@ -107,7 +107,7 @@ export function AskView() {
   const runQuick = (q: (typeof quick)[number]) => {
     const latest = clipboard.get().find((c) => c.kind === "text" || c.kind === "link");
     if (!latest) {
-      setError(t("Zuerst einen Text kopieren â€“ die Schnellaktionen arbeiten mit der Zwischenablage."));
+      setError(t("Zuerst einen Text kopieren – die Schnellaktionen arbeiten mit der Zwischenablage."));
       return;
     }
     void send(q.prompt(latest.text));
@@ -118,7 +118,7 @@ export function AskView() {
       <HeaderActions>
         <button
           onClick={() => navigate("settings", "ask")}
-          title={t("Modell in den Einstellungen Ã¤ndern")}
+          title={t("Modell in den Einstellungen ändern")}
           className="mr-1 max-w-40 truncate text-caption text-label-3 hover:text-label-2"
         >
           {config.model || providerInfo[provider].label}
@@ -223,7 +223,7 @@ export function AskView() {
           ref={input}
           value={draft}
           rows={1}
-          placeholder={t("Frag etwas â€¦")}
+          placeholder={t("Frag etwas …")}
           onChange={(e) => {
             setDraft(e.target.value);
             // Grows up to 3 lines.

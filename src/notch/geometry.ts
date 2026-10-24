@@ -24,10 +24,10 @@ export const DOCK_HEIGHT = 46;
 export const PADDING = 16;
 
 export const geometry = {
-  /** Idle: MacBook notch proportions plus room for the date. */
-  closed: { w: 252, h: 30, r: 10, ear: 6 },
+  /** Idle: compact notch with room for time, short date and weather. */
+  closed: { w: 206, h: 30, r: 10, ear: 6 },
   /** Hover: slightly larger, as feedback. */
-  peek: { w: 268, h: 34, r: 12, ear: 7 },
+  peek: { w: 222, h: 34, r: 12, ear: 7 },
   /** Closed with a live activity (music): side slots for cover + equalizer. */
   live: { w: 284, h: 30, r: 10, ear: 6 },
   /** Gaming mode: wider slots for FPS/CPU on the left and GPU/RAM on the right. */

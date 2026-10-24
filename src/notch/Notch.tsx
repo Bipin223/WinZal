@@ -118,7 +118,7 @@ export function Notch() {
         // Keep the resting island tight: just the clock and the weather.
         w:
           floating && clockPill && status !== "open" && !tightHit
-            ? Math.min(shape.w, status === "peek" ? 268 : 252)
+            ? Math.min(shape.w, status === "peek" ? 222 : 206)
             : shape.w,
       }
     : shape;
@@ -367,7 +367,7 @@ function Header({ title, onDragStart }: { title: string; onDragStart: (e: React.
         <HeaderButton label={t("Fokus-Modus (3Ã— klicken zum Beenden)")} onClick={() => setFocusMode(true)}>
           <Selection size={14} weight="bold" />
         </HeaderButton>
-        <HeaderButton label={isPinned ? t("LÃ¶sen") : t("Offen halten")} active={isPinned} onClick={togglePin}>
+        <HeaderButton label={isPinned ? t("Lösen") : t("Offen halten")} active={isPinned} onClick={togglePin}>
           <PushPin size={14} weight={isPinned ? "fill" : "bold"} />
         </HeaderButton>
       </div>

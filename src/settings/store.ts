@@ -7,7 +7,7 @@ export type AskEffort = "low" | "medium" | "high" | "xhigh";
 export interface AskProviderConfig {
   model: string;
   effort: AskEffort;
-  /** Only for "custom": OpenAI-compatible base, e.g. https://â€¦/v1 */
+  /** Only for "custom": OpenAI-compatible base, e.g. https://…/v1 */
   baseUrl: string;
 }
 
@@ -55,7 +55,7 @@ export interface Settings {
     dragAnimation: boolean;
     /** 0..100 brightness of inactive dock icons. */
     dockIconBrightness: number;
-    /** 0..100 brightness of dimmed subtext (Off, 3 devices, â€¦). */
+    /** 0..100 brightness of dimmed subtext (Off, 3 devices, …). */
     subtextBrightness: number;
     /** Show time + weather in the closed island. */
     clockWeather: boolean;
@@ -138,7 +138,7 @@ const defaults: Settings = {
   updates: { auto: true },
 };
 
-/** Â°F and 12 h where the Windows region uses them (US & co.), otherwise Â°C and 24 h. */
+/** °F and 12 h where the Windows region uses them (US & co.), otherwise °C and 24 h. */
 function regionUnits(): Settings["units"] {
   const loc = navigator.language || "en-US";
   let cycle: string | undefined;

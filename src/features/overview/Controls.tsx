@@ -38,10 +38,10 @@ import { t } from "../../i18n";
 
 type TileIcon = React.ComponentType<{ size?: number; weight?: IconWeight; className?: string }>;
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/* ────────────────────────────────────────────────────────────────────────────
  * A compact toggle tile: icon in a soft circle, two lines of text, and a
  * springy state change (fill, icon swap, halo, status dot).
- * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+ * ──────────────────────────────────────────────────────────────────────────── */
 
 function ToggleTile(props: {
   label: string;
@@ -184,7 +184,7 @@ function ToggleTile(props: {
   );
 }
 
-/* â”€â”€ Focus / Do not disturb â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Focus / Do not disturb ─────────────────────────────────────────────────── */
 
 function FocusTile() {
   const [focus, setFocus] = useState<FocusState | null>(null);
@@ -215,12 +215,12 @@ function FocusTile() {
           .then(setFocus)
           .catch(() => systemControls.focus().then(setFocus));
       }}
-      title={t("Nicht stÃ¶ren")}
+      title={t("Nicht stören")}
     />
   );
 }
 
-/* â”€â”€ Wi-Fi â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Wi-Fi ──────────────────────────────────────────────────────────────────── */
 
 type AmbientMenuProps = {
   menuOpen: boolean;
@@ -411,7 +411,7 @@ function WifiTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
   );
 }
 
-/* â”€â”€ Bluetooth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Bluetooth ──────────────────────────────────────────────────────────────── */
 
 function BluetoothTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
   const [bt, setBt] = useState<BluetoothState | null>(null);
@@ -589,7 +589,7 @@ function BluetoothTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
 }
 
 
-/* â”€â”€ Power: cycles the three Windows power modes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Power: cycles the three Windows power modes ────────────────────────────── */
 
 function PowerTile() {
   const [energy, setEnergy] = useState<EnergyState | null>(null);
@@ -694,7 +694,7 @@ function PowerTile() {
   );
 }
 
-/* â”€â”€ Glim (custom night light) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Glim (custom night light) ──────────────────────────────────────────────── */
 
 function GlimTile() {
   const [glim, setGlim] = useState<GlimState | null>(null);
@@ -708,7 +708,7 @@ function GlimTile() {
 
   const active = !!glim?.on;
   const supported = !!glim?.supported;
-  const state = supported ? (active ? t("An") : t("Aus")) : t("Nicht verfÃ¼gbar");
+  const state = supported ? (active ? t("An") : t("Aus")) : t("Nicht verfügbar");
 
   return (
     <ToggleTile
@@ -742,7 +742,7 @@ function GlimTile() {
   );
 }
 
-/* â”€â”€ Volume + brightness â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Volume + brightness ────────────────────────────────────────────────────── */
 
 function VolumeTile() {
   const [vol, setVol] = useState<VolumeState | null>(null);
@@ -781,7 +781,7 @@ function VolumeTile() {
         ref={track}
         role="slider"
         tabIndex={0}
-        aria-label={t("LautstÃ¤rke")}
+        aria-label={t("Lautstärke")}
         aria-valuenow={Math.round(level * 100)}
         aria-valuemin={0}
         aria-valuemax={100}
@@ -816,7 +816,7 @@ function VolumeTile() {
         />
       </div>
       <span className="tabular w-6 shrink-0 text-right text-[10px] font-semibold text-label-2">
-        {vol ? Math.round(level * 100) : "â€“"}
+        {vol ? Math.round(level * 100) : "–"}
       </span>
     </div>
   );
@@ -909,13 +909,13 @@ function BrightnessTile() {
         />
       </div>
       <span className="tabular w-6 shrink-0 text-right text-[10px] font-semibold text-label-2">
-        {supported ? Math.round(level * 100) : "â€“"}
+        {supported ? Math.round(level * 100) : "–"}
       </span>
     </div>
   );
 }
 
-/* â”€â”€ Rows â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Rows ───────────────────────────────────────────────────────────────────── */
 
 export function QuickControls() {
   return (

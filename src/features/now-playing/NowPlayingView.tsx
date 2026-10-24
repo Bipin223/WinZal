@@ -78,7 +78,7 @@ export function NowPlayingView() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => void media.openSource()}
-            title={source ? t("In {app} Ã¶ffnen", { app: source }) : t("App Ã¶ffnen")}
+            title={source ? t("In {app} öffnen", { app: source }) : t("App öffnen")}
             className="group/source pressable flex min-w-0 flex-1 items-center gap-3 rounded-[12px] text-left"
           >
             <Artwork np={np} />
@@ -130,7 +130,7 @@ export function NowPlayingView() {
                           {session.title || appLabel(session.appId)}
                         </div>
                         <div className="truncate text-[9px] leading-[11px] text-label-3">
-                          {[session.artist, appLabel(session.appId)].filter(Boolean).join(" Â· ")}
+                          {[session.artist, appLabel(session.appId)].filter(Boolean).join(" · ")}
                         </div>
                       </div>
                       {np.appId === session.appId && <Check size={10} weight="bold" className="shrink-0 text-green" />}
@@ -324,7 +324,7 @@ function Progress({ np }: { np: NowPlaying }) {
 function Controls({ playing }: { playing: boolean }) {
   return (
     <div className="flex items-center justify-center gap-6">
-      <IconButton label={t("ZurÃ¼ck")} onClick={media.previous}>
+      <IconButton label={t("Zurück")} onClick={media.previous}>
         <SkipBack size={20} weight="fill" />
       </IconButton>
       <IconButton label={playing ? t("Pause") : t("Abspielen")} onClick={media.toggle}>
@@ -372,7 +372,7 @@ function appLabel(appId: string): string {
 
 function Empty() {
   return (
-    <div className="flex h-full items-center justify-center text-body text-label-3">{t("Gerade lÃ¤uft nichts")}</div>
+    <div className="flex h-full items-center justify-center text-body text-label-3">{t("Gerade läuft nichts")}</div>
   );
 }
 

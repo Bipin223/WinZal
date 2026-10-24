@@ -149,7 +149,7 @@ function Card({ item, copied, onCopy }: { item: ShelfItem; copied: boolean; onCo
       id: `shelf-${item.path}`,
       kind: text ? "text" : "file",
       title: item.name,
-      detail: `${item.kind} Â· ${formatBytes(item.size, 0)}`,
+      detail: `${item.kind} · ${formatBytes(item.size, 0)}`,
       text,
       path: item.path,
     });
@@ -159,7 +159,7 @@ function Card({ item, copied, onCopy }: { item: ShelfItem; copied: boolean; onCo
     <div className="relative flex size-full flex-col overflow-hidden rounded-[14px] bg-fill-1">
       <button
         onClick={() => void openFile(item.path)}
-        title={t("{name} Ã¶ffnen", { name: item.name })}
+        title={t("{name} öffnen", { name: item.name })}
         className="pressable relative flex min-h-0 flex-1 items-center justify-center overflow-hidden"
       >
         {preview ? (
@@ -176,7 +176,7 @@ function Card({ item, copied, onCopy }: { item: ShelfItem; copied: boolean; onCo
             <IconBtn label={t("Ask AI")} icon={Sparkle} onClick={() => void ask()} />
             <IconBtn label={t("Im Explorer zeigen")} icon={FolderOpen} onClick={() => revealFile(item.path)} />
             <IconBtn label={copied ? t("Kopiert") : t("Kopieren")} icon={copied ? Check : Copy} onClick={onCopy} />
-            <IconBtn label={t("Ã–ffnen")} icon={ArrowSquareOut} onClick={() => void openFile(item.path)} />
+            <IconBtn label={t("Öffnen")} icon={ArrowSquareOut} onClick={() => void openFile(item.path)} />
           </span>
         </div>
       </div>
@@ -189,7 +189,7 @@ export function PasteHint({ nothing }: { nothing: boolean }) {
   return (
     <button onClick={() => void pasteFiles()} className="pressable flex items-center gap-1 text-caption text-label-3 hover:text-label-2">
       <ClipboardText size={12} weight="bold" />
-      {nothing ? t("Keine Dateien in der Zwischenablage") : t("oder Strg+V zum EinfÃ¼gen")}
+      {nothing ? t("Keine Dateien in der Zwischenablage") : t("oder Strg+V zum Einfügen")}
     </button>
   );
 }

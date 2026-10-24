@@ -91,13 +91,6 @@ pub fn reveal_file(path: String) -> Result<(), String> {
     Command::new("explorer").arg(format!("/select,{path}")).spawn().map(|_| ()).map_err(|e| e.to_string())
 }
 
-const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-
-pub(crate) fn hide_console(cmd: &mut Command) {
-    use std::os::windows::process::CommandExt;
-    cmd.creation_flags(CREATE_NO_WINDOW);
-}
-
 fn extension(path: &Path) -> String {
     path.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default()
 }
