@@ -39,7 +39,7 @@ export interface Settings {
     idleStyle: "notch" | "line";
   };
   /** Gaming mode: FPS + load in the closed notch: off, for chosen games/apps, or always. */
-  gaming: { mode: "off" | "games" | "always"; apps: string[] };
+  gaming: { mode: "off" | "games"; apps: string[] };
   /** Dots like on iPhone: mic/camera (green) or screen recording (red) in use. */
   privacyDots: boolean;
   /** Notch colours and shape. `accent: "auto"` follows the album art. */
@@ -49,6 +49,8 @@ export interface Settings {
     expanded: string;
     material: "solid" | "dark" | "glass";
     corners: "rounded" | "squared";
+    /** Dark, light, or follow the Windows app theme. */
+    theme: "dark" | "light" | "system";
     /** Dynamic = attached notch, Windows = floating island with a rim. */
     style: "dynamic" | "windows";
     /** Squeeze/bounce while dragging the notch. */
@@ -71,10 +73,14 @@ export interface Settings {
     lyricsInPill: boolean;
     /** One line (inline) or the current + next line. */
     lyricsLayout: "inline" | "lines";
-    /** Keep the normal closed pill width or grow it so more of the line fits. */
-    lyricsSize: "default" | "large";
-    /** Line change animation: fade/blur (current), Apple Music-style scroll, or word-by-word blur reveal. */
-    lyricsAnimation: "current" | "apple" | "word";
+    /** Continuous lyric font size in px; the pill and visualizer grow with it. */
+    lyricsTextSize: number;
+    /** Subtle waveform behind the lyric, in the cover's accent color. */
+    lyricsVisualizer: boolean;
+    /** Visualizer style inside the lyrics pill. */
+    lyricsVisualizerStyle: "wave" | "pulse" | "dots" | "ripple" | "aurora";
+    /** Line change animation: Apple Music-style scale/slide, word reveal, or line reveal. */
+    lyricsAnimation: "apple" | "word" | "reveal";
     /** true = hardware acceleration (smoother, more RAM); false = software/CPU (less RAM, more CPU). */
     gpuAcceleration: boolean;
   };
@@ -91,7 +97,7 @@ export interface Settings {
    */
   presentation: { manual: boolean; auto: boolean };
   /** Check for a new version once a day, anonymously (installs only on click). */
-  updates: { auto: boolean };
+  updates: { auto: boolean; install: boolean };
 }
 
 /** All tool IDs in default order. Must match `src/notch/tabs.ts`. */
@@ -128,7 +134,7 @@ const defaults: Settings = {
   },
   weather: null,
   display: { visibility: "always", monitor: null, offset: 0, focusStyle: "dim", idleStyle: "notch" },
-  gaming: { mode: "off", apps: [] },
+  gaming: { mode: "off", apps: ["GenshinImpact.exe", "YuanShen.exe"] },
   privacyDots: true,
   appearance: {
     accent: "auto",
@@ -136,6 +142,7 @@ const defaults: Settings = {
     expanded: "#000000",
     material: "solid",
     corners: "rounded",
+    theme: "dark",
     style: "dynamic",
     dragAnimation: true,
     dockIconBrightness: 100,
@@ -147,8 +154,10 @@ const defaults: Settings = {
     clockBold: true,
     lyricsInPill: false,
     lyricsLayout: "inline",
-    lyricsSize: "default",
-    lyricsAnimation: "current",
+    lyricsTextSize: 12,
+    lyricsVisualizer: true,
+    lyricsVisualizerStyle: "wave",
+    lyricsAnimation: "apple",
     gpuAcceleration: false,
   },
   discord: { clientId: "", presence: true, appName: "Bipin Rizal’s WinZal app", statusLine: "title" },
@@ -156,7 +165,7 @@ const defaults: Settings = {
   language: "en",
   units: regionUnits(),
   presentation: { manual: false, auto: true },
-  updates: { auto: true },
+  updates: { auto: true, install: true },
 };
 
 /** °F and 12 h where the Windows region uses them (US & co.), otherwise °C and 24 h. */
@@ -207,11 +216,24 @@ settings.set((s) => {
     appearance: {
       ...defaults.appearance,
       ...s.appearance,
-      // The old "blur" line option is now the word-by-word reveal.
-      lyricsAnimation:
-        (s.appearance as { lyricsAnimation?: string } | undefined)?.lyricsAnimation === "blur"
-          ? "word"
-          : s.appearance?.lyricsAnimation ?? defaults.appearance.lyricsAnimation,
+      theme: (s.appearance as { theme?: "dark" | "light" | "system" } | undefined)?.theme ?? "dark",
+      // The old "blur" line option is now the word-by-word reveal. Removed
+      // Current / Slide / Scale variants fall back to the Apple transition.
+      lyricsAnimation: (() => {
+        const stored = (s.appearance as { lyricsAnimation?: string } | undefined)?.lyricsAnimation;
+        if (stored === "word" || stored === "blur") return "word" as const;
+        if (stored === "reveal") return "reveal" as const;
+        return "apple" as const;
+      })(),
+      // Old Default / Large / Small / Big / Biggest become one continuous size.
+      lyricsTextSize: (() => {
+        const legacy = s.appearance as { lyricsTextSize?: number; lyricsSize?: string } | undefined;
+        if (typeof legacy?.lyricsTextSize === "number") return Math.min(15, Math.max(10, legacy.lyricsTextSize));
+        if (legacy?.lyricsSize === "biggest") return 14;
+        return 12;
+      })(),
+      lyricsVisualizer: s.appearance?.lyricsVisualizer ?? defaults.appearance.lyricsVisualizer,
+      lyricsVisualizerStyle: s.appearance?.lyricsVisualizerStyle ?? defaults.appearance.lyricsVisualizerStyle,
       // The experimental RGB accent was removed; fall back to auto.
       accent: s.appearance?.accent === "rgb" ? defaults.appearance.accent : s.appearance?.accent ?? defaults.appearance.accent,
     },
@@ -260,9 +282,22 @@ try {
 /** Old gaming modes were off / fullscreen / always; now off / games / always. */
 function migrateGaming(old: unknown): Settings["gaming"] {
   const legacy = (old ?? {}) as { mode?: string; apps?: unknown };
-  const mode = legacy.mode === "on" || legacy.mode === "always" ? "always" : legacy.mode === "fullscreen" || legacy.mode === "games" ? "games" : "off";
-  const apps = Array.isArray(legacy.apps) ? legacy.apps.filter((id): id is string => typeof id === "string" && id.length > 0) : [];
-  return { mode, apps };
+  const mode = legacy.mode === "off" ? "off" : "games";
+  let apps = Array.isArray(legacy.apps) ? legacy.apps.filter((id): id is string => typeof id === "string" && id.length > 0) : [];
+  // One-time cleanup for the old "pick any running app" list: keep Genshin and
+  // let the user add custom exe names again from the new field.
+  try {
+    if (localStorage.getItem("winzal:gaming-genshin-only") === null) {
+      apps = ["GenshinImpact.exe", "YuanShen.exe"];
+      localStorage.setItem("winzal:gaming-genshin-only", "1");
+    }
+  } catch {
+    // localStorage unavailable: fall back to the current list.
+  }
+  const genshin = ["genshinimpact.exe", "yuanshen.exe"];
+  const normalized = [...new Set(apps.map((id) => id.trim().replace(/^.*[\\/]/, "").toLowerCase()).filter((id) => id.endsWith(".exe")))];
+  for (const id of genshin) if (!normalized.includes(id)) normalized.push(id);
+  return { mode, apps: normalized };
 }
 
 /** Migrates the old shape ({ provider: "demo", model }) and adds missing providers. */

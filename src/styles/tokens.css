@@ -19,6 +19,9 @@
   --color-separator: rgb(255 255 255 / 0.08);
   /* Floating surfaces above the notch (menus, popovers). */
   --color-elevated: #1c1c1e;
+  /* Text on a `bg-label` button, and the active Overview tile. */
+  --color-on-label: #000;
+  --color-tile-active: rgb(255 255 255 / 0.96);
 
   /* System colors (dark mode variants). */
   --color-green: #30d158;
@@ -63,6 +66,69 @@
    "inline" so the variable resolves on the element instead of :root. */
 @theme inline {
   --color-accent: var(--accent);
+}
+
+/* Light theme: the whole notch and its panels become a soft white surface.
+   The island body itself follows `themedSurface` in Notch.tsx, so custom
+   island colors still win. */
+:root[data-theme="light"] {
+  --color-notch: #f5f5f7;
+  --color-label: rgb(0 0 0 / 0.96);
+  --color-label-2: rgb(0 0 0 / 0.62);
+  --color-label-3: rgb(0 0 0 / 0.4);
+  --color-label-4: rgb(0 0 0 / 0.24);
+  --color-fill-1: rgb(0 0 0 / 0.045);
+  --color-fill-2: rgb(0 0 0 / 0.075);
+  --color-fill-3: rgb(0 0 0 / 0.13);
+  --color-separator: rgb(0 0 0 / 0.1);
+  --color-elevated: #ffffff;
+  --color-on-label: #fff;
+  --color-tile-active: rgb(20 20 22 / 0.92);
+  --color-green: #1f9d45;
+  --color-red: #ff3b30;
+  --color-orange: #ff9500;
+  --color-yellow: #e5a800;
+  --color-link: #007aff;
+}
+
+/* The island's own surface decides text and panel contrast, so custom island
+   colors stay readable in either app theme. */
+:root [data-surface="dark"] {
+  --color-label: rgb(255 255 255 / 0.96);
+  --color-label-2: rgb(255 255 255 / 0.58);
+  --color-label-3: rgb(255 255 255 / 0.34);
+  --color-label-4: rgb(255 255 255 / 0.18);
+  --color-fill-1: rgb(255 255 255 / 0.06);
+  --color-fill-2: rgb(255 255 255 / 0.1);
+  --color-fill-3: rgb(255 255 255 / 0.16);
+  --color-separator: rgb(255 255 255 / 0.08);
+  --color-elevated: #1c1c1e;
+  --color-on-label: #000;
+  --color-tile-active: rgb(255 255 255 / 0.96);
+  --color-green: #30d158;
+  --color-red: #ff453a;
+  --color-orange: #ff9f0a;
+  --color-yellow: #ffd60a;
+  --color-link: #419cff;
+}
+
+:root [data-surface="light"] {
+  --color-label: rgb(0 0 0 / 0.96);
+  --color-label-2: rgb(0 0 0 / 0.62);
+  --color-label-3: rgb(0 0 0 / 0.4);
+  --color-label-4: rgb(0 0 0 / 0.24);
+  --color-fill-1: rgb(0 0 0 / 0.045);
+  --color-fill-2: rgb(0 0 0 / 0.075);
+  --color-fill-3: rgb(0 0 0 / 0.13);
+  --color-separator: rgb(0 0 0 / 0.1);
+  --color-elevated: #ffffff;
+  --color-on-label: #fff;
+  --color-tile-active: rgb(20 20 22 / 0.92);
+  --color-green: #1f9d45;
+  --color-red: #ff3b30;
+  --color-orange: #ff9500;
+  --color-yellow: #e5a800;
+  --color-link: #007aff;
 }
 
 

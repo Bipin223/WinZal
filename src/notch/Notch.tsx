@@ -16,6 +16,7 @@ import { LiveRightInset } from "./liveEdges";
 import { RECORDING_EXTRA, RECORDING_INSET, RecordingBadge, useRecording } from "./recording";
 import { sizeOverride } from "./size";
 import { lyricsTextWidth } from "../features/now-playing/lyricsWidth";
+import { isLightColor, themedSurface, useThemeLight } from "../features/appearance/theme";
 import { NotchShape } from "./NotchShape";
 import { drop } from "../platform/drop";
 import { settings } from "../settings/store";
@@ -48,6 +49,7 @@ export function Notch() {
   const { status, open, close, dismiss, toggle, onPointerEnter, onPointerLeave } = useNotchState();
   const focus = focusMode.use();
   const { tools: toolSettings, display: displaySettings, appearance } = settings.use();
+  const light = useThemeLight();
   const floating = appearance.style === "windows";
   // Focus mode as a line: no live activity, no dots, only the thin strip at the edge.
   const line = focus && displaySettings.focusStyle === "line";
@@ -133,10 +135,12 @@ export function Notch() {
   const lyricWidth = lyricsTextWidth.use();
   const clockExtra = appearance.clockText === "large" && clockPill && !line && !idleLine && status !== "open" ? 10 : 0;
   // Grow only enough for the current lyric (up to a sane cap); a title keeps the
-  // normal width and its right-edge fade.
+  // normal width and its right-edge fade. The text-size slider sets both the
+  // minimum breathing room and the measured line.
+  const lyricsMin = Math.max(0, Math.round((appearance.lyricsTextSize - 10) * 45));
   const lyricsExtra =
     appearance.lyricsInPill && pillLive === "media" && !line && !idleLine && status !== "open"
-      ? Math.min(320, Math.max(appearance.lyricsSize === "large" ? 84 : 0, lyricWidth + 12 - 214))
+      ? Math.min(360, Math.max(lyricsMin, lyricWidth + 12 - 214))
       : 0;
   const displayShape = {
     ...finalShape,
@@ -145,6 +149,8 @@ export function Notch() {
   // Gaming stats own the pill; a playing track gets its own little island instead.
   const gamingSatellite =
     pillLive === "system" && !!np?.isPlaying && appearance.musicInPill && !line && !idleLine && status !== "open";
+  const surface = themedSurface(status === "open" ? appearance.expanded : appearance.resting, light);
+  const surfaceLight = isLightColor(surface);
   const transition = useTransitionFor(status, displayShape);
 
   // Click outside closes (in the browser the fake desktop, in Tauri the window blur).
@@ -236,12 +242,13 @@ export function Notch() {
   return (
     <div
       className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center transition-opacity duration-200"
+      data-surface={surfaceLight ? "light" : "dark"}
       // In the browser the notch moves inside the window; natively the whole window moves (display.rs).
       style={{
         ["--accent" as string]: appearance.accent === "auto" ? np?.accent : appearance.accent,
         ["--color-notch" as string]:
           fillWithAlpha(
-            status === "open" ? appearance.expanded : appearance.resting,
+            surface,
             appearance.material === "glass" ? 0.62 : appearance.material === "dark" ? 0.82 : 1,
           ),
         ["--subtext-opacity" as string]: appearance.subtextBrightness / 100,
@@ -337,7 +344,7 @@ function ClosedClock() {
   const date = now.toLocaleDateString(locale(), { weekday: "short", day: "numeric", month: "short" });
   const wx = forecast && forecast !== "error" ? describe(forecast.current.code, forecast.current.day) : null;
   const temp = forecast && forecast !== "error" ? formatTemp(forecast.current.temp) : null;
-  const timeClass = large ? "text-[14px] font-bold" : "text-[12px] font-semibold";
+  const timeClass = large ? "text-[15px] font-extrabold" : "text-[13px] font-bold";
   const smallClass = large ? "text-[10px] font-semibold" : "text-[9px] font-medium";
   const tempClass = large ? "text-[12px] font-bold" : "text-[11px] font-semibold";
   const iconSize = large ? 14 : 12;
@@ -353,7 +360,7 @@ function ClosedClock() {
           <span
             aria-hidden
             className={`mx-3 ${large ? "h-4" : "h-3.5"} w-[2px] shrink-0 rounded-full`}
-            style={{ background: "#ffffff", boxShadow: "0 0 6px rgb(255 255 255 / 0.35)" }}
+            style={{ background: "var(--color-label-2)", boxShadow: "0 0 6px var(--color-label-4)" }}
           />
           <div className="flex items-center gap-1.5">
             <wx.icon size={iconSize} weight="fill" className="text-label-2" />

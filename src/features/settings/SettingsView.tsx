@@ -3,7 +3,6 @@ import { AnimatePresence, motion, Reorder } from "motion/react";
 import {
   ArrowClockwise,
   ArrowsInLineHorizontal,
-  CheckCircle,
   DotsSixVertical,
   Keyboard,
   LockSimple,
@@ -18,16 +17,18 @@ import {
   Stop,
   Timer,
   UserCircle,
+  X,
   type Icon,
 } from "@phosphor-icons/react";
 import { content, fade, springs } from "../../design/motion";
 import { alarmSounds, playAlarm, stopAlarm, type AlarmDuration } from "../../lib/sound";
 import { nav } from "../../notch/nav";
 import { tabs } from "../../notch/tabs";
-import { autostart, display, fetchFps, secrets, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName, type UsageId, type VisibleApp } from "../../platform/services";
+import { autostart, display, fetchFps, secrets, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName, type UsageId } from "../../platform/services";
 import { settings, updateAsk, updateSettings, type AskProvider } from "../../settings/store";
 import { BrandLogo, brandName } from "../../ui/brands";
 import { Button, Group, Row, Segmented, Select, Slider, Switch, TextField } from "../../ui/controls";
+import { SelectedDot } from "../../ui/SelectedDot";
 import { effortLevels, listModels, providerInfo } from "../ask/providers";
 import { discordState, reconnectDiscord } from "../discord/store";
 import { fps } from "../system/gaming";
@@ -176,9 +177,11 @@ export function SettingsView() {
   );
 }
 
-/** Version, update check and install on click. Nothing downloads unasked. */
+/** Version, update check and (optionally) automatic install. */
 function Updates() {
-  const auto = settings.use().updates.auto;
+  const updates = settings.use().updates;
+  const auto = updates.auto;
+  const install = updates.install;
   const u = update.use();
   const unseen = useUnseen();
   // Remember what was new when the section opened, so the labels stay while reading.
@@ -245,8 +248,11 @@ function Updates() {
           </motion.div>
         )}
       </AnimatePresence>
-      <Row label={t("Automatisch suchen")} hint={t("Einmal täglich, anonym bei GitHub – ohne deine Daten")}>
-        <Switch label={t("Automatisch suchen")} checked={auto} onChange={(on) => updateSettings({ updates: { auto: on } })} />
+      <Row label={t("Automatisch suchen")} hint={t("Beim Start und einmal täglich, anonym bei GitHub – ohne deine Daten")}>
+        <Switch label={t("Automatisch suchen")} checked={auto} onChange={(on) => updateSettings({ updates: { ...updates, auto: on } })} />
+      </Row>
+      <Row label={t("Automatisch installieren")} hint={t("Signierte Updates im Hintergrund installieren; WinZal startet danach neu.")}>
+        <Switch label={t("Automatisch installieren")} checked={install} onChange={(on) => updateSettings({ updates: { ...updates, install: on } })} />
       </Row>
     </Group>
   );
@@ -591,19 +597,13 @@ function Display() {
         />
       </Row>
       <Row
-        label={t("Gaming-Modus")}
-        hint={t("FPS und Auslastung in der geschlossenen Notch")}
+        label={t("Gaming-Overlay")}
+        hint={t("FPS und Auslastung nur für Genshin Impact oder eine eigene .exe")}
       >
-        <Segmented
-          id="gaming-mode"
-          size="sm"
-          value={s.gaming.mode}
-          onChange={(mode) => updateSettings((cur) => ({ gaming: { ...cur.gaming, mode } }))}
-          options={[
-            { value: "off", label: t("Aus") },
-            { value: "games", label: t("Spiele") },
-            { value: "always", label: t("Immer") },
-          ]}
+        <Switch
+          label={t("Gaming-Overlay")}
+          checked={s.gaming.mode === "games"}
+          onChange={(on) => updateSettings((cur) => ({ gaming: { ...cur.gaming, mode: on ? "games" : "off" } }))}
         />
       </Row>
       {s.gaming.mode === "games" && <GamingApps />}
@@ -615,65 +615,46 @@ function Display() {
   );
 }
 
-/** Pick the games/apps that should trigger the FPS overlay. */function GamingApps() {
+/** Genshin is always included; the input adds a custom .exe. */
+function GamingApps() {
   const gaming = settings.use().gaming;
-  const [apps, setApps] = useState<VisibleApp[]>([]);
-  const [loading, setLoading] = useState(false);
   const [manual, setManual] = useState("");
-  const load = () => {
-    setLoading(true);
-    void display
-      .apps()
-      .then(setApps)
-      .catch(() => setApps([]))
-      .finally(() => setLoading(false));
-  };
-  useEffect(() => {
-    load();
-  }, []);
-  const selected = new Set(gaming.apps);
-  const extras = gaming.apps.filter((id) => !apps.some((app) => app.id === id));
-  const toggle = (id: string) => {
-    updateSettings((cur) => ({
-      gaming: {
-        ...cur.gaming,
-        apps: cur.gaming.apps.includes(id) ? cur.gaming.apps.filter((item) => item !== id) : [...cur.gaming.apps, id],
-      },
-    }));
-  };
+  const genshin = ["genshinimpact.exe", "yuanshen.exe"];
+  const custom = gaming.apps.filter((id) => !genshin.includes(id.toLowerCase()));
   const addManual = () => {
-    const raw = manual.trim().toLowerCase();
-    if (!raw) return;
-    const id = raw.endsWith(".exe") ? raw : `${raw}.exe`;
-    if (!gaming.apps.includes(id)) toggle(id);
+    const name = manual.trim().replace(/^.*[\\/]/, "").toLowerCase();
+    if (!name) return;
+    const id = name.endsWith(".exe") ? name : `${name}.exe`;
+    if (!genshin.includes(id) && !gaming.apps.some((item) => item.toLowerCase() === id)) {
+      updateSettings((cur) => ({ gaming: { ...cur.gaming, apps: [...cur.gaming.apps, id] } }));
+    }
     setManual("");
   };
+  const remove = (id: string) => updateSettings((cur) => ({ gaming: { ...cur.gaming, apps: cur.gaming.apps.filter((item) => item !== id) } }));
+
   return (
-    <Group title={t("Spiele & Apps")} id="settings-gaming-apps">
-      <div className="px-3 py-2 text-caption text-label-3">
-        {t("FPS erscheint nur, wenn eine dieser Apps im Vordergrund ist.")}
-      </div>
-      {apps.map((app) => (
-        <Row key={app.id} label={app.name} hint={app.title}>
-          <Switch label={app.name} checked={selected.has(app.id)} onChange={() => toggle(app.id)} />
+    <Group title={t("FPS-Spiel")} id="settings-gaming-apps">
+      <div className="px-3 py-2 text-caption text-label-3">{t("FPS erscheint nur für Genshin Impact oder eine eigene .exe.")}</div>
+      <Row label="Genshin Impact" hint={t("Immer enthalten")}>
+        <SelectedDot />
+      </Row>
+      {custom.map((id) => (
+        <Row key={id} label={friendlyAppName(id)} hint={id}>
+          <button
+            type="button"
+            aria-label={t("Entfernen")}
+            onClick={() => remove(id)}
+            className="pressable flex size-6 items-center justify-center rounded-full bg-fill-2 text-label-3 hover:text-label"
+          >
+            <X size={12} weight="bold" />
+          </button>
         </Row>
       ))}
-      {extras.map((id) => (
-        <Row key={id} label={friendlyAppName(id)} hint={t("Nicht geöffnet")}>
-          <Switch label={id} checked onChange={() => toggle(id)} />
-        </Row>
-      ))}
-      {apps.length === 0 && extras.length === 0 && <Row label={loading ? t("Suche …") : t("Keine offenen Apps gefunden")} />}
-      <Row label={t("App hinzufügen")} hint={t("Exe-Name, z. B. genshinimpact.exe")}>
+      <Row label={t("Eigene .exe")} hint={t("Name oder Pfad, z. B. C:\\Games\\game.exe")}>
         <div className="flex items-center gap-1.5">
           <TextField value={manual} onChange={setManual} onSubmit={addManual} placeholder="game.exe" width="w-32" />
           <Button onClick={addManual}>{t("Hinzufügen")}</Button>
         </div>
-      </Row>
-      <Row label={t("Aktualisieren")}>
-        <Button disabled={loading} onClick={load}>
-          {t("Neu laden")}
-        </Button>
       </Row>
     </Group>
   );
@@ -915,7 +896,7 @@ function FpsUnlockRow() {
   return (
     <Row label={t("FPS & CPU-Temperatur")} hint={hint}>
       {state === "ok" || state === "relogin" ? (
-        <CheckCircle size={18} weight="fill" className="text-green" />
+        <SelectedDot size={8} />
       ) : (
         <Button
           disabled={state === "busy"}
@@ -1061,7 +1042,7 @@ function SecretRow({ name, label, hint, onSaved }: { name: SecretName; label: st
         <AnimatePresence>
           {(saved || (stored && !value)) && (
             <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={fade}>
-              <CheckCircle size={14} weight="fill" className="text-green" />
+              <SelectedDot size={7} />
             </motion.span>
           )}
         </AnimatePresence>

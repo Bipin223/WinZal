@@ -1,6 +1,6 @@
 ﻿import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useAnimationFrame, useMotionValue, useTransform } from "motion/react";
-import { ArrowUpRight, CaretDown, Check, MusicNoteSimple, Pause, Play, SkipBack, SkipForward } from "@phosphor-icons/react";
+import { ArrowUpRight, CaretDown, MusicNoteSimple, Pause, Play, SkipBack, SkipForward } from "@phosphor-icons/react";
 import { artwork as artworkSwap, content, springs } from "../../design/motion";
 import { useSmoothArtwork } from "./artwork";
 import { livePosition, media, useNowPlaying, type MediaSession, type NowPlaying } from "../../platform/media";
@@ -9,6 +9,7 @@ import { requestSize } from "../../notch/size";
 import { findTab } from "../../notch/tabs";
 import { MIXER_MAX_ROWS, MIXER_ROW, MixerList, MixerToggle, useMixer } from "./Mixer";
 import { Equalizer } from "./Equalizer";
+import { SelectedDot } from "../../ui/SelectedDot";
 import { t } from "../../i18n";
 
 /*
@@ -115,11 +116,11 @@ export function NowPlayingView() {
           </button>
         </div>
         {sessionsOpen && (
-          <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[12px] bg-[#1b1b1d] p-1">
+          <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[12px] bg-elevated p-1">
             <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {sessions?.length ? (
                 sessions.map((session) => (
-                  <div key={session.appId} className="flex items-center gap-0.5 rounded-[8px] hover:bg-white/6">
+                  <div key={session.appId} className="flex items-center gap-0.5 rounded-[8px] hover:bg-fill-2">
                     <button
                       type="button"
                       onClick={() => chooseSession(session.appId)}
@@ -133,7 +134,7 @@ export function NowPlayingView() {
                           {[session.artist, appLabel(session.appId)].filter(Boolean).join(" · ")}
                         </div>
                       </div>
-                      {np.appId === session.appId && <Check size={10} weight="bold" className="shrink-0 text-green" />}
+                      {np.appId === session.appId && <SelectedDot />}
                     </button>
                     <button
                       type="button"
@@ -224,7 +225,7 @@ function Artwork({ np }: { np: NowPlaying }) {
           transition={{ duration: 0.25 }}
         />
         {/* Hover: hint that a click opens the app. */}
-        <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-[12px] bg-black/45 text-label opacity-0 transition-opacity duration-150 group-hover/source:opacity-100">
+        <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-[12px] bg-black/45 text-white opacity-0 transition-opacity duration-150 group-hover/source:opacity-100">
           <ArrowUpRight size={20} weight="bold" />
         </span>
       </motion.div>

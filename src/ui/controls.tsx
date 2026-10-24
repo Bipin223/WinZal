@@ -195,7 +195,7 @@ export function Button(props: {
       disabled={props.disabled}
       className={`pressable flex h-7 shrink-0 items-center gap-1.5 rounded-full px-3 text-footnote font-medium disabled:opacity-35 ${
         props.primary
-          ? "bg-label text-black"
+          ? "bg-label text-on-label"
           : "pressable-fill bg-fill-2 text-label"
       }`}
     >
@@ -321,7 +321,7 @@ export function Slider(props: {
         />
       </div>
       <span
-        className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_1px_3px_rgb(0_0_0/0.5)]"
+        className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-label shadow-[0_1px_3px_rgb(0_0_0/0.5)]"
         style={{ left: `${ratio * 100}%` }}
       />
     </div>

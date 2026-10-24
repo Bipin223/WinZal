@@ -9,16 +9,16 @@ import { t } from "../../i18n";
  * that are useful when someone wants to follow the project.
  */
 export function AboutView() {
-  const version = update.use().current ?? "1.6.1";
+  const version = update.use().current ?? "1.6.2";
   const open = (url: string) => void systemControls.openUri(url);
 
   return (
     <div className="flex flex-col gap-2.5 pb-2">
       <div className="relative overflow-hidden rounded-[18px] bg-fill-1">
         <div aria-hidden className="absolute -top-24 -right-16 size-56 rounded-full bg-accent/20 blur-3xl" />
-        <div aria-hidden className="absolute -bottom-24 -left-20 size-52 rounded-full bg-white/[0.04] blur-3xl" />
+        <div aria-hidden className="absolute -bottom-24 -left-20 size-52 rounded-full bg-label/[0.04] blur-3xl" />
         <div className="relative flex flex-col items-center px-6 py-7 text-center">
-          <div className="absolute top-4 right-4 rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-medium tabular text-label-3">
+          <div className="absolute top-4 right-4 rounded-full bg-fill-2 px-2.5 py-1 text-[10px] font-medium tabular text-label-3">
             {version}
           </div>
           <div className="mb-3 text-[10px] font-medium tracking-[0.12em] text-label-3">{t("Developed By")}</div>

@@ -1,10 +1,11 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowUpRight, MusicNoteSimple } from "@phosphor-icons/react";
 import { artwork as artworkSwap, content, springs } from "../../design/motion";
 import { useSmoothArtwork } from "./artwork";
 import { media, type NowPlaying } from "../../platform/media";
 import { Equalizer } from "./Equalizer";
+import { LyricVisualizer } from "./LyricVisualizer";
 import { useLyrics } from "./lyrics";
 import { lyricsTextWidth } from "./lyricsWidth";
 import { LiveEdge } from "../../notch/liveEdges";
@@ -29,15 +30,15 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
     const ctx = document.createElement("canvas").getContext("2d");
     if (!ctx) return;
     const family = getComputedStyle(document.body).fontFamily;
-    const large = appearance.lyricsSize === "large";
-    ctx.font = `600 ${large ? 12 : 11}px ${family}`;
+    const size = appearance.lyricsTextSize;
+    ctx.font = `600 ${size}px ${family}`;
     let width = ctx.measureText(current).width;
     if (appearance.lyricsLayout === "lines" && next) {
-      ctx.font = `500 ${large ? 10 : 9}px ${family}`;
+      ctx.font = `500 ${Math.max(8, size - 3)}px ${family}`;
       width = Math.max(width, ctx.measureText(next).width);
     }
     lyricsTextWidth.set(Math.ceil(width));
-  }, [appearance.lyricsInPill, appearance.lyricsLayout, appearance.lyricsSize, current, next]);
+  }, [appearance.lyricsInPill, appearance.lyricsLayout, appearance.lyricsTextSize, current, next]);
   return (
     <motion.div
       className="absolute inset-0 flex items-center gap-2 px-[9px]"
@@ -57,18 +58,21 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
           className="group/cover pressable relative flex size-5 shrink-0 items-center justify-center rounded-[5px]"
         >
           <LiveArtwork artwork={np.artwork} />
-          <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-[5px] bg-black/55 text-label opacity-0 transition-opacity duration-150 group-hover/cover:opacity-100">
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-[5px] bg-black/55 text-white opacity-0 transition-opacity duration-150 group-hover/cover:opacity-100">
             <ArrowUpRight size={9} weight="bold" />
           </span>
         </button>
       </LiveEdge>
       <FadeBox fade={!appearance.lyricsInPill || !current}>
+        {appearance.lyricsInPill && current && appearance.lyricsVisualizer && (
+          <LyricVisualizer style={appearance.lyricsVisualizerStyle} playing={np.isPlaying} />
+        )}
         {appearance.lyricsInPill && current ? (
           <LyricLine
             current={current}
             next={next}
             layout={appearance.lyricsLayout}
-            large={appearance.lyricsSize === "large"}
+            size={appearance.lyricsTextSize}
             animation={appearance.lyricsAnimation}
             index={index}
             start={start}
@@ -131,7 +135,7 @@ function FadeBox({ children, fade = true }: { children: ReactNode; fade?: boolea
   return (
     <div
       ref={box}
-      className="relative flex min-w-0 flex-1 justify-center overflow-hidden"
+      className="relative flex h-full min-w-0 flex-1 items-center justify-center overflow-hidden"
       style={
         fade && over
           ? {
@@ -156,7 +160,7 @@ function LyricLine({
   current,
   next,
   layout,
-  large,
+  size,
   animation,
   index,
   start,
@@ -165,56 +169,50 @@ function LyricLine({
   current: string;
   next: string | null;
   layout: "inline" | "lines";
-  large: boolean;
-  animation: "current" | "apple" | "word";
+  size: number;
+  animation: "apple" | "word" | "reveal";
   index: number;
   start: number;
   end: number;
 }) {
   const inline = layout === "inline";
   const wordMode = animation === "word";
-  const enter =
-    animation === "apple"
-      ? { opacity: 0, y: 9 }
-      : wordMode
-        ? { opacity: 0 }
-        : { opacity: 0, y: 3, filter: "blur(3px)" };
-  const active =
-    animation === "apple"
-      ? { opacity: 1, y: 0 }
-      : wordMode
-        ? { opacity: 1 }
-        : { opacity: 1, y: 0, filter: "blur(0px)" };
-  const leave =
-    animation === "apple"
-      ? { opacity: 0, y: -9 }
-      : wordMode
-        ? { opacity: 0 }
-        : { opacity: 0, y: -3, filter: "blur(3px)" };
-  const transition = animation === "apple" ? springs.snappy : content.enter;
+  const motions = {
+    apple: {
+      enter: { opacity: 0, y: 10, scale: 0.94 },
+      active: { opacity: 1, y: 0, scale: 1 },
+      leave: { opacity: 0, y: -8, scale: 0.97 },
+    },
+    word: {
+      enter: { opacity: 0 },
+      active: { opacity: 1 },
+      leave: { opacity: 0 },
+    },
+    reveal: {
+      enter: { opacity: 0, clipPath: "inset(0 100% 0 0)" },
+      active: { opacity: 1, clipPath: "inset(0 0% 0 0)" },
+      leave: { opacity: 0, clipPath: "inset(0 0 0 100%)" },
+    },
+  }[animation];
+  const { enter, active, leave } = motions;
+  const transition = animation === "apple" ? springs.lyrics : content.enter;
   const words = current.split(/\s+/).filter(Boolean);
   const stagger = words.length > 1 ? Math.min(0.36, Math.max(0.04, ((end - start) * 0.75) / (words.length - 1))) : 0;
+  const nextSize = Math.max(8, size - 3);
   return (
     <AnimatePresence mode="popLayout" initial={false}>
       <motion.div
         key={index}
-        className="flex min-w-0 max-w-full flex-col items-center justify-center"
+        className="relative z-10 flex min-w-0 max-w-full flex-col items-center justify-center"
         initial={enter}
         animate={active}
         exit={leave}
         transition={transition}
       >
         <LyricText
-          className={`font-semibold text-label ${
-            inline
-              ? large
-                ? "text-[12px] leading-none"
-                : "text-[11px] leading-none"
-              : large
-                ? "text-[12px] leading-[14px]"
-                : "text-[11px] leading-[13px]"
-          }`}
-          resetKey={`${index}-${inline}-${large}`}
+          className="font-semibold text-label"
+          resetKey={`${index}-${inline}-${size}`}
+          style={{ fontSize: `${size}px`, lineHeight: inline ? `${Math.round(size + 2)}px` : `${Math.round(size + 1)}px` }}
         >
           {wordMode && words.length > 1
             ? words.map((word, i) => (
@@ -234,9 +232,8 @@ function LyricLine({
         {!inline && next && (
           <span
             data-fade-text
-            className={`max-w-full truncate font-medium text-label-4 ${
-              large ? "text-[10px] leading-[11px]" : "text-[9px] leading-[10px]"
-            }`}
+            className="max-w-full truncate font-medium text-label-4"
+            style={{ fontSize: `${nextSize}px`, lineHeight: `${Math.max(9, size - 2)}px` }}
           >
             {next}
           </span>
@@ -251,7 +248,17 @@ function LyricLine({
  * the line; if the line is still wider than the maximum pill, it scrolls
  * slowly to the end and back instead of replacing the end with a blur.
  */
-function LyricText({ children, className, resetKey }: { children: ReactNode; className: string; resetKey: string }) {
+function LyricText({
+  children,
+  className,
+  resetKey,
+  style,
+}: {
+  children: ReactNode;
+  className: string;
+  resetKey: string;
+  style?: CSSProperties;
+}) {
   const box = useRef<HTMLSpanElement>(null);
   const [shift, setShift] = useState(0);
   useLayoutEffect(() => {
@@ -273,7 +280,14 @@ function LyricText({ children, className, resetKey }: { children: ReactNode; cla
     };
   }, [resetKey]);
   return (
-    <span ref={box} data-fade-text className={`block max-w-full overflow-hidden ${className}`}>
+    <span
+      ref={box}
+      data-fade-text
+      className={`block max-w-full ${className}`}
+      // Clip horizontally for the marquee, but leave room for descenders (g, y)
+      // above and below the line box so the glyphs are never sliced.
+      style={{ ...style, clipPath: "inset(-12px 0px)" }}
+    >
       <motion.span
         className="inline-block whitespace-nowrap"
         animate={shift > 1 ? { x: [0, -shift, -shift, 0] } : { x: 0 }}

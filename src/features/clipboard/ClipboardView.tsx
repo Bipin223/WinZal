@@ -312,7 +312,7 @@ function Card(props: { item: ClipItem; now: number; hidden: boolean; copied: boo
       <AnimatePresence>
         {copied && (
           <motion.div
-            className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/55 text-footnote font-medium text-label backdrop-blur-md"
+            className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/55 text-footnote font-medium text-white backdrop-blur-md"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

@@ -40,7 +40,8 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 - **Large clock by default**, with a separately selectable **Compact** clock. The first digit uses a red accent by default.
 - The expanded clock is **bold by default** and can be switched to Regular in Appearance.
 - **Live music**: cover, title and a real audio-driven equalizer in the closed pill. The first app that starts playing keeps the pill; if it pauses or stops, the next playing app takes over automatically.
-- **Synced lyrics** from LRCLIB, optional. One line or current + next line, **Default** or **Large**, and **Current / Apple / Word-by-word** animations. The pill grows to fit the line (up to 320 px) instead of fading readable text; extremely long lines scroll slowly.
+- **Synced lyrics** from LRCLIB, optional. One line or current + next line, **Apple Music (default) / Word by word / Reveal** animations, and a continuous **10–15 px text-size slider**. The pill grows to the measured line (up to 360 px) instead of fading readable text; extremely long lines scroll slowly. Choose **Wave**, **Pulse**, **Dots**, **Ripple** or **Aurora** as a visualizer, each with a live preview in Settings → Music; Wave is the default and every style follows the cover accent.
+- **Appearance**: **Dark**, **Light** or **System** theme applied throughout the notch, menus and settings; accent, island style, material, corners, clock weight, dock/subtext brightness and custom island colors.
 - **Privacy dots** for microphone and camera (green) and screen recording (red), plus a recording badge.
 - **Gaming + music**: when the FPS pill is visible and music is playing, the equalizer moves into its own **circular satellite island** to the left of the FPS pill. It works in both the Dynamic and Windows island styles.
 - **Focus mode**: triple-click the notch to dim it or turn it into a thin line at the screen edge.
@@ -55,7 +56,7 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 
 ### Gaming
 
-- FPS, CPU, GPU and RAM in the closed notch. Choose **Off**, **Games** or **Always**, and pick the games/apps that should trigger the overlay.
+- FPS, CPU, GPU and RAM in the closed notch. The overlay triggers only for **Genshin Impact** (global `GenshinImpact.exe` or CN `YuanShen.exe`) and any custom `.exe` you add — no other app list.
 - A separate circular equalizer satellite appears next to the FPS pill when music is playing.
 - FPS comes from a real ETW trace. Windows only allows that for administrators, so WinZal starts a tiny elevated helper with **one UAC prompt per run**. The app itself stays non-admin.
 - CPU/GPU temperatures come from Lenovo's GameZone sensors through the same helper when available.
@@ -83,7 +84,7 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 - **Vault** with passwords and live 2FA codes, a 4-digit PIN, optional **Windows Hello**, DPAPI + TPM-backed encryption and no back door.
 - **Timer** with focus/break presets, six alarm sounds and a running countdown in the closed notch.
 - **To-dos** and **Notes**, stored locally.
-- **Ask**: chat with Gemini, Groq or any OpenAI-compatible endpoint. API keys stay in the backend.
+- **Ask**: chat with Gemini, Groq or any OpenAI-compatible endpoint. API keys stay in the backend. Conversations are saved locally and can be reopened from the chat history button in the Ask header; only the open chat is held in memory.
 - **AI usage**: limits for Claude, ChatGPT, Gemini and Cursor from the CLIs you are already signed in to.
 - **Weather** through Open-Meteo, with a city picker and automatic IP-based location.
 - **Hardware**: live CPU, RAM, GPU, VRAM and ping, with history while the notch is closed.
@@ -112,7 +113,7 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 
 ## Install
 
-1. Download **WinZal_1.6.1_x64-setup.exe** from the [latest release](https://github.com/Bipin223/WinZal/releases/latest).
+1. Download **WinZal_1.6.2_x64-setup.exe** from the [latest release](https://github.com/Bipin223/WinZal/releases/latest).
 2. Run it. It installs for your user only; Node, Rust or administrator rights are not needed.
 3. WinZal starts with Windows. The notch appears at the top of the screen and the tray icon keeps it reachable.
 
@@ -122,9 +123,13 @@ The installer is not code-signed, so Windows SmartScreen may warn on first launc
 
 ### Updates
 
-WinZal **1.6.1 and newer** check a signed `latest.json` from GitHub shortly after startup and once a day. Nothing downloads until you click **Install** under **Settings → Updates**.
+WinZal **1.6.2 and newer** check a signed `latest.json` from GitHub shortly after startup and once a day. By default they also **install a found update automatically** after a short pause and restart. Turn either behavior off under **Settings → Updates**; a manual check always lets you read the changelog and click **Install** yourself.
 
-If you are on **1.6.0 or older**, the old update endpoint no longer exists. Install **1.6.1 manually once**; after that, future signed updates can arrive through the app. Settings and local data are preserved because the app ID stays the same.
+If you are on **1.6.1 or older**, install **1.6.2 manually once**; after that, future signed updates can install themselves. Settings and local data are preserved because the app ID stays the same.
+
+Updates are in-place upgrades: only the app files are replaced. Settings, vault, notes, to-dos and saved Ask chats live in the Windows app-data folder, outside the installation directory, and are never removed by an update.
+
+Saved Ask conversations live in the app data folder as one small JSON file per chat, keeping the **latest 3** chats. Only the open conversation is loaded into the webview, so history does not sit in RAM.
 
 ## Using WinZal
 
@@ -138,11 +143,11 @@ If you are on **1.6.0 or older**, the old update endpoint no longer exists. Inst
 | Focus mode | Triple-click the notch; triple-click again to leave |
 | Add files | Drag files onto the notch, or paste with **Ctrl + V** |
 | Power mode | Click the battery tile in Overview, or right-click it for Windows settings |
-| Lyrics | **Settings → Music** for layout, size and animation |
+| Lyrics | **Settings → Music** for layout, the 10-15 px text-size slider, one of three previewed animations (Apple Music default, Word by word, Reveal) and one of five previewed visualizer styles |
 
 ## Settings and integrations
 
-Settings are grouped into General, Display, Tools, Timer, AI, Connections, Music and Updates. You can reorder or hide tools, choose the monitor, hide the notch in fullscreen apps, enable autostart and switch the language.
+Settings are grouped into General, Display, Tools, Timer, AI, Connections, Music and Updates. The Appearance page also has a **Dark / Light / System** theme switch; System follows the Windows app theme. You can reorder or hide tools, choose the monitor, hide the notch in fullscreen apps, enable autostart and switch the language.
 
 **Discord.** Create an application at [discord.com/developers](https://discord.com/developers), copy its **Client ID** and **Client Secret** into **Connections → Discord**, add `http://localhost` as an OAuth2 redirect, then join a call. Discord asks for confirmation once.
 
@@ -154,13 +159,13 @@ Settings are grouped into General, Display, Tools, Timer, AI, Connections, Music
 
 **FPS and temperatures.** Open **Settings → Display → FPS & CPU temperature** and approve the one UAC prompt. The helper stops with WinZal, so the prompt is needed again on the next run.
 
-**Updates.** Automatic checks can be switched off under **Settings → Updates**. Manual **Check** and **Install** live there too.
+**Updates.** Automatic checks and automatic installation can be switched off under **Settings → Updates**. Manual **Check** and **Install** live there too.
 
 ## Privacy
 
 WinZal has no account, no server of its own, no analytics and no tracking.
 
-- Settings, to-dos, notes and timer presets live on your PC. Clipboard history is memory-only.
+- Settings, to-dos, notes and timer presets live on your PC. Clipboard history is memory-only. Saved Ask conversations are local JSON files under the app data folder and can be deleted from the chat history menu.
 - API keys are kept in Windows Credential Manager, never in a plain settings file.
 - The vault is encrypted with Windows DPAPI and bound to your Windows account. With Windows Hello, secrets are additionally sealed with a TPM-backed key. Forgot the PIN? Reset the vault; there is no recovery back door.
 - Integrations talk directly to the service you configured: Discord to your local desktop app and discord.com, AI to your provider, weather to Open-Meteo. Unconfigured integrations make no requests.

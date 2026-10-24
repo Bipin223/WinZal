@@ -1,5 +1,47 @@
 [
   {
+    "version": "1.6.2",
+    "date": "2026-10-24",
+    "items": [
+      {
+        "de": "Ask speichert Unterhaltungen lokal – der Verlauf öffnet die letzte oder eine frühere Unterhaltung",
+        "en": "Ask saves conversations locally — history reopens the latest chat or an earlier one"
+      },
+      {
+        "de": "Jede Unterhaltung liegt als kleine Datei auf der Platte; nur der offene Chat ist im Arbeitsspeicher",
+        "en": "Each conversation is a small file on disk; only the open chat is kept in memory"
+      },
+      {
+        "de": "Signierte Updates werden im Hintergrund automatisch installiert; abschaltbar unter Einstellungen → Updates",
+        "en": "Signed updates install automatically in the background; switch it off under Settings → Updates"
+      },
+      {
+        "de": "Stufenloser Songtext-Regler (10–15 px); Pille und Visualisierung wachsen mit",
+        "en": "Continuous 10–15 px lyric slider; the pill and visualizer grow with it"
+      },
+      {
+        "de": "Fünf Visualizer mit Live-Vorschau: Wave, Pulse, Dots, Ripple und Aurora – im Akzent des Covers",
+        "en": "Five visualizers with live previews: Wave, Pulse, Dots, Ripple and Aurora — in the cover accent"
+      },
+      {
+        "de": "Dark-, Light- und System-Theme für die gesamte Oberfläche",
+        "en": "Dark, Light and System themes across the whole UI"
+      },
+      {
+        "de": "FPS-Overlay nur für Genshin Impact oder eine eigene .exe",
+        "en": "FPS overlay only for Genshin Impact or a custom .exe"
+      },
+      {
+        "de": "Apple Music als Standard-Animation, plus Wort-für-Wort und Aufdecken mit Vorschau",
+        "en": "Apple Music is the default animation, plus Word by word and Reveal with previews"
+      },
+      {
+        "de": "GPU- und RAM-Werte im Gaming-Pill klar getrennt",
+        "en": "GPU and RAM values in the gaming pill are clearly separated"
+      }
+    ]
+  },
+  {
     "version": "1.6.1",
     "date": "2026-10-24",
     "items": [

@@ -1,5 +1,6 @@
 ﻿pub mod ai;
 mod ambient;
+mod ask_history;
 mod audio;
 mod clipboard;
 mod controls;
@@ -134,6 +135,10 @@ pub fn run() {
             ai::ai_chat,
             ai::ai_cancel,
             ai::ai_models,
+            ask_history::ask_history_list,
+            ask_history::ask_history_load,
+            ask_history::ask_history_save,
+            ask_history::ask_history_delete,
             secrets::secret_set,
             secrets::secret_delete,
             secrets::secret_has,

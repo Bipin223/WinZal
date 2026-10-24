@@ -29,6 +29,8 @@ export const springs = {
   morph: spring(0.36, 0.14),
   /** Small elements inside (tab pill, toggles). */
   snappy: spring(0.24, 0.12),
+  /** Apple Music lyric line: soft scale/slide, never overshoots. */
+  lyrics: spring(0.46, 0),
 } as const;
 
 const easeOut = [0.23, 1, 0.32, 1] as const;

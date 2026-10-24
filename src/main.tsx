@@ -18,9 +18,11 @@ import { startDiscordPresence } from "./features/discord/presence";
 import { startUpdateWatch } from "./lib/update";
 import { showcase } from "./dev/showcase-data";
 import { startShowcase } from "./dev/showcase";
+import { startTheme } from "./features/appearance/theme";
 
 if (showcase) startShowcase();
 
+startTheme();
 startDropListener();
 startFocusMode();
 startSystemPolling();

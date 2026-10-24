@@ -1,19 +1,21 @@
 import { useId, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowCounterClockwise, Check } from "@phosphor-icons/react";
+import { ArrowCounterClockwise } from "@phosphor-icons/react";
 import { invoke } from "@tauri-apps/api/core";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { springs } from "../../design/motion";
 import { isNative } from "../../platform/native";
 import { settings, updateSettings, type Settings } from "../../settings/store";
 import { Slider, Switch } from "../../ui/controls";
+import { SelectedDot } from "../../ui/SelectedDot";
 import { t } from "../../i18n";
+import { DARK_SURFACE, LIGHT_SURFACE, isLightTheme, systemLight, themedSurface, useThemeLight } from "./theme";
 
 type Appearance = Settings["appearance"];
 
 const ACCENTS = ["auto", "#0a84ff", "#30d158", "#ffd60a", "#ff9f0a", "#ff453a", "#bf5af2", "#ffffff"];
 const CLOCK_ACCENTS = ["#ff453a", "#ff9f0a", "#ffd60a", "#30d158", "#0a84ff", "#bf5af2", "#ffffff"];
-const NOTCH_COLORS = ["#000000", "#0b0b0f", "#111827", "#0f1a14", "#1a0f1a", "#1a0f0f", "#101418", "#1c1c1e"];
+const NOTCH_COLORS = ["#000000", "#f5f5f7", "#ffffff", "#0b0b0f", "#111827", "#0f1a14", "#1a0f1a", "#1c1c1e"];
 
 const DEFAULTS: Appearance = {
   accent: "auto",
@@ -21,6 +23,7 @@ const DEFAULTS: Appearance = {
   expanded: "#000000",
   material: "solid",
   corners: "rounded",
+  theme: "dark",
   style: "dynamic",
   dragAnimation: true,
   dockIconBrightness: 100,
@@ -32,8 +35,10 @@ const DEFAULTS: Appearance = {
   clockBold: true,
   lyricsInPill: false,
   lyricsLayout: "inline",
-  lyricsSize: "default",
-  lyricsAnimation: "current",
+  lyricsTextSize: 12,
+  lyricsVisualizer: true,
+  lyricsVisualizerStyle: "wave",
+  lyricsAnimation: "apple",
   gpuAcceleration: false,
 };
 
@@ -47,8 +52,21 @@ function fillWithAlpha(hex: string, alpha: number): string {
 
 export function AppearanceView() {
   const a = settings.use().appearance;
+  const themeLight = useThemeLight();
   const set = (patch: Partial<Appearance>) => updateSettings({ appearance: { ...a, ...patch } });
   const [restarting, setRestarting] = useState(false);
+
+  const setTheme = (theme: Appearance["theme"]) => {
+    const light = isLightTheme(theme, systemLight.get());
+    const surface = light ? LIGHT_SURFACE : DARK_SURFACE;
+    const defaultResting = a.resting === DARK_SURFACE || a.resting === LIGHT_SURFACE;
+    const defaultExpanded = a.expanded === DARK_SURFACE || a.expanded === LIGHT_SURFACE;
+    set({
+      theme,
+      ...(defaultResting ? { resting: surface } : {}),
+      ...(defaultExpanded ? { expanded: surface } : {}),
+    });
+  };
 
   const setRenderMode = async (gpu: boolean) => {
     if (restarting) return;
@@ -67,12 +85,24 @@ export function AppearanceView() {
   };
 
   const alpha = a.material === "glass" ? 0.62 : a.material === "dark" ? 0.82 : 1;
-  const previewFill = fillWithAlpha(a.resting, alpha);
+  const previewFill = fillWithAlpha(themedSurface(a.resting, themeLight), alpha);
   const accent = a.accent === "auto" ? "#0a84ff" : a.accent;
 
   return (
     <div className="flex flex-col gap-1.5 pb-2">
       <Preview fill={previewFill} accent={accent} corners={a.corners} islandStyle={a.style} />
+      <Section label={t("Theme")}>
+        <Choice
+          label={t("Modus")}
+          value={a.theme}
+          options={[
+            ["dark", t("Dark")],
+            ["light", t("Light")],
+            ["system", t("System")],
+          ]}
+          onChange={(theme) => setTheme(theme as Appearance["theme"])}
+        />
+      </Section>
       <Section label={t("Style")}>
         <div className="grid grid-cols-2 gap-1.5">
           <StyleCard active={a.style === "dynamic"} label={t("Dynamic Island")} onClick={() => set({ style: "dynamic" })} />
@@ -189,7 +219,9 @@ export function AppearanceView() {
               musicInPill: a.musicInPill,
               lyricsInPill: a.lyricsInPill,
               lyricsLayout: a.lyricsLayout,
-              lyricsSize: a.lyricsSize,
+              lyricsTextSize: a.lyricsTextSize,
+              lyricsVisualizer: a.lyricsVisualizer,
+              lyricsVisualizerStyle: a.lyricsVisualizerStyle,
               lyricsAnimation: a.lyricsAnimation,
             },
           })
@@ -227,7 +259,7 @@ function Preview({
           boxShadow: floating ? "0 8px 22px rgb(0 0 0 / 0.55)" : undefined,
         }}
       >
-        <span className="text-[10px] font-semibold text-white">9:44</span>
+        <span className="text-[10px] font-semibold text-label">9:44</span>
         <div className="flex items-end gap-[2px]" style={{ color: accent }}>
           {[3, 6, 9, 7, 4].map((h, i) => (
             <motion.span
@@ -319,7 +351,7 @@ function Swatches({ value, colors, onChange }: { value: string; colors: string[]
                   : color,
             }}
           >
-            {active && <Check size={9} weight="bold" className="absolute inset-0 m-auto text-white mix-blend-difference" />}
+            {active && <SelectedDot size={5} className="absolute inset-0 m-auto ring-1 ring-white/80" />}
           </motion.button>
         );
       })}
@@ -355,7 +387,7 @@ function Choice(props: {
                   transition={springs.snappy}
                 />
               )}
-              <span className={`relative block truncate ${active ? "text-black" : "text-label-3 hover:text-label-2"}`}>
+              <span className={`relative block truncate ${active ? "text-on-label" : "text-label-3 hover:text-label-2"}`}>
                 {label}
               </span>
             </button>

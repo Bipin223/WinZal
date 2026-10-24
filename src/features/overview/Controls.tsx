@@ -4,7 +4,6 @@ import {
   ArrowClockwise,
   CaretDown,
   CaretRight,
-  Check,
   Lock,
   Moon,
   MoonStars,
@@ -34,6 +33,7 @@ import {
   type WifiNetwork,
 } from "../../platform/services";
 import { BatteryIcon, BluetoothOffIcon, BluetoothOnIcon, WifiOffIcon, WifiOnIcon } from "../../ui/glyphs";
+import { SelectedDot } from "../../ui/SelectedDot";
 import { t } from "../../i18n";
 
 type TileIcon = React.ComponentType<{ size?: number; weight?: IconWeight; className?: string }>;
@@ -84,10 +84,10 @@ function ToggleTile(props: {
       onWheel={props.onWheel}
       title={props.title ?? props.label}
       whileTap={{ scale: 0.955 }}
-      animate={{ backgroundColor: props.active ? "rgba(255,255,255,0.96)" : "rgba(255,255,255,0.06)" }}
+      style={{ backgroundColor: props.active ? "var(--color-tile-active)" : "var(--color-fill-1)" }}
       transition={springs.snappy}
-      className={`relative flex h-10 w-full min-w-0 items-center overflow-hidden rounded-[12px] ${
-        props.active ? "text-black" : "text-label"
+      className={`relative flex h-10 w-full min-w-0 items-center overflow-hidden rounded-[12px] transition-colors duration-200 ${
+        props.active ? "text-on-label" : "text-label"
       }`}
     >
       <motion.button
@@ -97,7 +97,7 @@ function ToggleTile(props: {
       >
         <motion.span
           className={`relative flex size-6 shrink-0 items-center justify-center rounded-full ${
-            props.bareIcon ? "" : props.active ? props.activeIconBgClass ?? "bg-black/10" : "bg-fill-2"
+            props.bareIcon ? "" : props.active ? props.activeIconBgClass ?? "bg-on-label/10" : "bg-fill-2"
           }`}
           animate={{ rotate: props.straight ? 0 : props.active ? 0 : -18, scale: props.active ? 1.06 : 1 }}
           transition={springs.peek}
@@ -135,7 +135,7 @@ function ToggleTile(props: {
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[11px] leading-[13px] font-semibold">{props.label}</span>
           <span
-            className={`block truncate text-[10px] leading-[12px] ${props.active ? "text-black/55" : "text-label-3"}`}
+            className={`block truncate text-[10px] leading-[12px] ${props.active ? "text-on-label/55" : "text-label-3"}`}
             style={{ opacity: "var(--subtext-opacity, 1)" }}
           >
             {props.state}
@@ -143,7 +143,7 @@ function ToggleTile(props: {
         </span>
 
         {props.chevron && (
-          <CaretRight size={9} weight="bold" className={props.active ? "text-black/35" : "text-label-4"} />
+          <CaretRight size={9} weight="bold" className={props.active ? "text-on-label/35" : "text-label-4"} />
         )}
       </motion.button>
 
@@ -153,7 +153,7 @@ function ToggleTile(props: {
           aria-label={props.menuLabel}
           onClick={props.onMenu}
           className={`mr-1 flex size-5 shrink-0 items-center justify-center rounded-[5px] ${
-            props.active ? "text-black/45 hover:text-black/70" : "text-label-4 hover:text-label-2"
+            props.active ? "text-on-label/45 hover:text-on-label/70" : "text-label-4 hover:text-label-2"
           }`}
         >
           <CaretDown size={9} weight="bold" />
@@ -359,7 +359,7 @@ function WifiTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
         title=""
       />
       {menuOpen && (
-        <div className="absolute bottom-full left-0 z-50 mb-2 w-[290px] overflow-hidden rounded-[12px] bg-[#1b1b1d] p-1.5 shadow-2xl">
+        <div className="absolute bottom-full left-0 z-50 mb-2 w-[290px] overflow-hidden rounded-[12px] bg-elevated p-1.5 shadow-2xl">
           <div className="flex items-center justify-between px-2 py-1">
             <span className="text-[10px] font-semibold tracking-wide text-label-3 uppercase">
               {t("Wi-Fi networks")}
@@ -384,10 +384,10 @@ function WifiTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
                   type="button"
                   onClick={() => void connect(network)}
                   disabled={!!connecting}
-                  className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-left hover:bg-white/6 disabled:opacity-50"
+                  className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-left hover:bg-fill-2 disabled:opacity-50"
                 >
                   <span className="min-w-0 flex-1 truncate text-caption text-label">{network.ssid}</span>
-                  {network.connected && <Check size={11} weight="bold" className="shrink-0 text-green" />}
+                  {network.connected && <SelectedDot />}
                   {network.secured && <Lock size={9} weight="bold" className="shrink-0 text-label-4" />}
                   <span className="w-7 shrink-0 text-right text-[9px] tabular text-label-4">{network.signal}%</span>
                   {connecting === network.ssid && (
@@ -401,7 +401,7 @@ function WifiTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
           </div>
           {error && <div className="px-2.5 pt-1 pb-1 text-[9px] leading-[12px] text-[#ff9f0a]">{error}</div>}
           {networks?.some((n) => !n.known) && (
-            <div className="border-t border-white/8 px-2.5 py-1.5 text-[9px] leading-[12px] text-label-4">
+            <div className="border-t border-separator px-2.5 py-1.5 text-[9px] leading-[12px] text-label-4">
               {t("New networks open Windows to enter the password.")}
             </div>
           )}
@@ -536,7 +536,7 @@ function BluetoothTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
         title=""
       />
       {menuOpen && (
-        <div className="absolute bottom-full left-0 z-50 mb-2 w-[290px] overflow-hidden rounded-[12px] bg-[#1b1b1d] p-1.5 shadow-2xl">
+        <div className="absolute bottom-full left-0 z-50 mb-2 w-[290px] overflow-hidden rounded-[12px] bg-elevated p-1.5 shadow-2xl">
           <div className="flex items-center justify-between px-2 py-1">
             <span className="text-[10px] font-semibold tracking-wide text-label-3 uppercase">
               {t("Bluetooth devices")}
@@ -561,11 +561,11 @@ function BluetoothTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
                   type="button"
                   onClick={() => void connect(device)}
                   disabled={connecting !== null || device.connected}
-                  className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-left hover:bg-white/6 disabled:opacity-60"
+                  className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-left hover:bg-fill-2 disabled:opacity-60"
                 >
                   <span className="min-w-0 flex-1 truncate text-caption text-label">{device.name}</span>
                   {device.connected ? (
-                    <Check size={11} weight="bold" className="shrink-0 text-green" />
+                    <SelectedDot />
                   ) : (
                     <span className="shrink-0 text-[9px] text-label-4">{t("Paired")}</span>
                   )}
@@ -579,7 +579,7 @@ function BluetoothTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
             )}
           </div>
           {error && <div className="px-2.5 pt-1 pb-1 text-[9px] leading-[12px] text-[#ff9f0a]">{error}</div>}
-          <div className="border-t border-white/8 px-2.5 py-1.5 text-[9px] leading-[12px] text-label-4">
+          <div className="border-t border-separator px-2.5 py-1.5 text-[9px] leading-[12px] text-label-4">
             {t("Pair new devices from Windows settings (right-click).")}
           </div>
         </div>
@@ -632,7 +632,7 @@ function PowerTile() {
       case "custom":
         return { label: t("Custom"), level: 0.8, tone: "text-[#bf5af2]", dot: "#bf5af2" };
       default:
-        return { label: t("Ausgeglichen"), level: 0.6, tone: "text-white", dot: "#ffffff" };
+        return { label: t("Ausgeglichen"), level: 0.6, tone: "text-label", dot: "var(--color-label)" };
     }
   };
   const current = look(mode);
@@ -693,7 +693,7 @@ function PowerTile() {
         title={t("Power mode")}
       />
       {menuOpen && (
-        <div className="absolute right-0 bottom-full z-50 mb-2 w-[212px] overflow-hidden rounded-[12px] bg-[#1b1b1d] p-1.5 shadow-2xl">
+        <div className="absolute right-0 bottom-full z-50 mb-2 w-[212px] overflow-hidden rounded-[12px] bg-elevated p-1.5 shadow-2xl">
           <div className="px-2 py-1 text-[10px] font-semibold tracking-wide text-label-3 uppercase">{t("Power mode")}</div>
           <div className="grid grid-cols-2 gap-0.5">
             {options.map((option) => (
@@ -701,15 +701,15 @@ function PowerTile() {
                 key={option.mode}
                 type="button"
                 onClick={() => select(option.mode)}
-                className="flex min-w-0 items-center gap-1.5 rounded-[8px] px-2 py-1.5 text-left hover:bg-white/6"
+                className="flex min-w-0 items-center gap-1.5 rounded-[8px] px-2 py-1.5 text-left hover:bg-fill-2"
               >
                 <BatteryIcon level={option.level} size={15} className={option.tone} />
                 <span className="min-w-0 flex-1 truncate text-[11px] text-label">{option.label}</span>
-                {mode === option.mode && <Check size={10} weight="bold" className="shrink-0 text-green" />}
+                {mode === option.mode && <SelectedDot />}
               </button>
             ))}
           </div>
-          <div className="border-t border-white/8 px-2.5 py-1.5 text-[9px] leading-[12px] text-label-4">
+          <div className="border-t border-separator px-2.5 py-1.5 text-[9px] leading-[12px] text-label-4">
             {!plugged ? t("Plug in for Max and Custom.") : t("Right-click for Windows power settings.")}
           </div>
           {plugged && customSupported && (

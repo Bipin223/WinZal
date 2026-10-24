@@ -49,6 +49,7 @@ export function LiveGaming() {
       </LiveEdge>
       <LiveEdge side="right" className="flex items-center gap-3">
         <Stat label="GPU" value={stats?.gpu ?? null} temp={stats?.gpuTemp ?? null} />
+        <span aria-hidden className="h-3 w-px shrink-0 self-center bg-separator" />
         <Stat label="RAM" value={mem} />
       </LiveEdge>
     </motion.div>
@@ -63,12 +64,19 @@ function hint(error: string | null): string | undefined {
 
 function Stat({ label, value, temp = null }: { label: string; value: number | null; temp?: number | null }) {
   return (
-    <span className="flex items-baseline gap-1">
+    <span className="flex items-baseline gap-1.5">
       <span className="text-caption font-medium text-label-3">{label}</span>
-      <span className="tabular w-[30px] text-right text-footnote font-semibold transition-colors duration-300" style={{ color: levelColor(value ?? 0) }}>
+      <span className="tabular w-[34px] text-right text-footnote font-semibold transition-colors duration-300" style={{ color: levelColor(value ?? 0) }}>
         {value === null ? "–" : `${Math.round(value)}%`}
       </span>
-      {temp != null && <span className="tabular text-caption font-medium text-label-3">{temp}°</span>}
+      {temp != null && (
+        <>
+          <span aria-hidden className="text-caption leading-none text-label-4">
+            ·
+          </span>
+          <span className="tabular text-caption font-medium text-label-3">{temp}°</span>
+        </>
+      )}
     </span>
   );
 }
