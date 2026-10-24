@@ -61,8 +61,10 @@ export interface Settings {
     clockWeather: boolean;
     /** Colour of the first clock digit (OnePlus-style accent); red by default. */
     clockAccent: string;
-    /** Closed clock pill: compact (default) or bigger/bolder text. */
+    /** Closed clock pill: compact or bigger/bolder text (large default). */
     clockText: "compact" | "large";
+    /** Show the current synced lyric line in the closed music pill instead of the title. */
+    lyricsInPill: boolean;
     /** true = hardware acceleration (smoother, more RAM); false = software/CPU (less RAM, more CPU). */
     gpuAcceleration: boolean;
   };
@@ -130,7 +132,8 @@ const defaults: Settings = {
     subtextBrightness: 100,
     clockWeather: true,
     clockAccent: "#ff453a",
-    clockText: "compact",
+    clockText: "large",
+    lyricsInPill: false,
     gpuAcceleration: false,
   },
   discord: { clientId: "" },
@@ -201,6 +204,17 @@ settings.set((s) => {
     ask: migrateAsk(s.ask),
   };
 });
+
+// One-time: the large closed clock is the new default. After this marker the
+// user's own Compact/Large choice sticks across restarts.
+try {
+  if (!localStorage.getItem("notch:clock-text-large")) {
+    settings.set((s) => ({ ...s, appearance: { ...s.appearance, clockText: "large" } }));
+    localStorage.setItem("notch:clock-text-large", "1");
+  }
+} catch {
+  // localStorage unavailable: defaults already use large.
+}
 
 /** Migrates the old shape ({ provider: "demo", model }) and adds missing providers. */
 function migrateAsk(old: Partial<Settings["ask"]> | undefined): Settings["ask"] {

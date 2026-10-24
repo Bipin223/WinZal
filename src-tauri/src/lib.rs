@@ -10,6 +10,7 @@ mod documents;
 mod drop;
 mod fps;
 mod hit_test;
+mod lyrics;
 mod media;
 mod memory;
 mod mixer;
@@ -95,6 +96,7 @@ pub fn run() {
         )
         .manage(hit_test::HitState::default())
         .manage(media::MediaState::default())
+        .manage(lyrics::LyricsState::default())
         .manage(mixer::MixerState::default())
         .manage(clipboard::ClipboardState::default())
         .manage(FocusState::default())
@@ -111,6 +113,7 @@ pub fn run() {
             hit_test::set_pinned,
             hit_test::set_passthrough,
             media::media_get,
+            lyrics::lyrics_get,
             media::media_control,
             media::media_control_session,
             media::media_sessions,

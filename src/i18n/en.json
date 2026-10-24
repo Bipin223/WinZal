@@ -511,5 +511,9 @@
   "Nur in der geschlossenen Pille": "Closed pill only",
   "Größe": "Size",
   "Kompakt": "Compact",
-  "Groß": "Large"
+  "Groß": "Large",
+  "Songtext": "Lyrics",
+  "Aktuelle Zeile in der geschlossenen Pille": "Current line in the closed pill",
+  "Lyrics in the closed pill": "Lyrics in the closed pill",
+  "Shows the current synced line instead of the title when available (LRCLIB).": "Shows the current synced line instead of the title when available (LRCLIB)."
 }

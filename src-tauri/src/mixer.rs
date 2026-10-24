@@ -125,7 +125,16 @@ fn matches(app_id: &str, exe: &str) -> bool {
     if id == "308046b0af4a39cb" {
         return stem == "firefox";
     }
-    id == stem || (stem.len() >= 4 && id.contains(&stem))
+    if id == stem || (stem.len() >= 4 && id.contains(&stem)) {
+        return true;
+    }
+    // AUMIDs like com.limusic.desktop-siw vs. limusic-app.exe: no shared prefix,
+    // but the meaningful token "limusic" is in both. Compare tokens of 5+ chars.
+    app_id
+        .split(|c: char| !c.is_alphanumeric())
+        .map(squash)
+        .filter(|token| token.len() >= 5)
+        .any(|token| stem.contains(&token) || token.contains(&stem))
 }
 
 #[tauri::command]
@@ -326,6 +335,7 @@ fn running_exe(app_id: &str) -> Option<std::path::PathBuf> {
 
 struct Search<'a> {
     app_id: &'a str,
+    app_lower: String,
     title: String,
     /// (window, its title contains the track)
     found: Vec<(HWND, bool)>,
@@ -334,7 +344,7 @@ struct Search<'a> {
 /// Visible top-level window of the program, the one showing the track first
 /// (a browser's window title is its active tab). Z-order otherwise: last used first.
 fn find_window(app_id: &str, title: &str) -> Option<HWND> {
-    let mut search = Search { app_id, title: title.to_lowercase(), found: Vec::new() };
+    let mut search = Search { app_id, app_lower: app_id.to_lowercase(), title: title.to_lowercase(), found: Vec::new() };
     unsafe {
         let _ = EnumWindows(Some(collect), LPARAM(&mut search as *mut Search as isize));
     }
@@ -353,12 +363,14 @@ unsafe extern "system" fn collect(hwnd: HWND, lparam: LPARAM) -> BOOL {
     let mut pid = 0u32;
     GetWindowThreadProcessId(hwnd, Some(&mut pid));
     let Some(path) = process_path(pid) else { return TRUE };
-    if !matches(search.app_id, &file_name(&path)) {
-        return TRUE;
-    }
     let mut buf = vec![0u16; len as usize + 1];
     let n = GetWindowTextW(hwnd, &mut buf);
     let text = String::from_utf16_lossy(&buf[..n as usize]).to_lowercase();
+    // Some AUMIDs are also the window title (LI Music: com.limusic.desktop-siw)
+    // while the exe is named differently. Accept either signal.
+    if !matches(search.app_id, &file_name(&path)) && !text.contains(&search.app_lower) {
+        return TRUE;
+    }
     search.found.push((hwnd, !search.title.is_empty() && text.contains(&search.title)));
     TRUE
 }

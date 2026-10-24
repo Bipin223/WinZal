@@ -1,0 +1,85 @@
+import { useEffect, useRef, useState } from "react";
+import { livePosition, type NowPlaying } from "../../platform/media";
+import { fetchLyrics } from "../../platform/services";
+
+interface Line {
+  at: number;
+  text: string;
+}
+
+/**
+ * Current synced lyric line for the closed music pill. Fetches once per track
+ * (LRCLIB, Rust-cached), parses the LRC and only re-renders when the line changes.
+ * The 250 ms timer is tiny; no per-frame React work, no extra animation loop.
+ */
+export function useLyricsLine(np: NowPlaying | null, enabled: boolean): string | null {
+  const [lines, setLines] = useState<Line[]>([]);
+  const [index, setIndex] = useState(-1);
+  const npRef = useRef(np);
+  npRef.current = np;
+  const track = np ? `${np.title}\u0001${np.artist}\u0001${Math.round(np.duration)}` : "";
+
+  useEffect(() => {
+    if (!enabled || !np || !np.title.trim()) {
+      setLines([]);
+      setIndex(-1);
+      return;
+    }
+    let alive = true;
+    setLines([]);
+    setIndex(-1);
+    void fetchLyrics(np.title, np.artist, np.duration)
+      .then((lyrics) => {
+        if (!alive) return;
+        setLines(parseLrc(lyrics.synced));
+      })
+      .catch(() => {
+        if (alive) setLines([]);
+      });
+    return () => {
+      alive = false;
+    };
+    // One fetch per track; position updates come from the timer below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, track]);
+
+  useEffect(() => {
+    if (!enabled || lines.length === 0) return;
+    const update = () => {
+      const now = npRef.current;
+      if (!now) return;
+      const position = livePosition(now);
+      let next = -1;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].at <= position) next = i;
+        else break;
+      }
+      setIndex((prev) => (prev === next ? prev : next));
+    };
+    update();
+    const id = window.setInterval(update, 250);
+    return () => window.clearInterval(id);
+  }, [enabled, lines]);
+
+  return index >= 0 ? lines[index]?.text ?? null : null;
+}
+
+/** "[00:12.34] text" (and multiple timestamps per line) → sorted lines. */
+function parseLrc(synced: string | null): Line[] {
+  if (!synced) return [];
+  const out: Line[] = [];
+  for (const row of synced.split(/\r?\n/)) {
+    const stamps = [...row.matchAll(/\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]/g)];
+    if (stamps.length === 0) continue;
+    const text = row.replace(/\[[^\]]+\]/g, "").trim();
+    if (!text) continue;
+    for (const stamp of stamps) {
+      const minutes = Number(stamp[1]);
+      const seconds = Number(stamp[2]);
+      const fraction = stamp[3] ? Number(stamp[3].padEnd(3, "0").slice(0, 3)) / 1000 : 0;
+      out.push({ at: minutes * 60 + seconds + fraction, text });
+    }
+  }
+  out.sort((a, b) => a.at - b.at);
+  return out;
+}

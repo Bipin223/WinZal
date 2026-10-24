@@ -27,7 +27,8 @@ const DEFAULTS: Appearance = {
   subtextBrightness: 100,
   clockWeather: true,
   clockAccent: "#ff453a",
-  clockText: "compact",
+  clockText: "large",
+  lyricsInPill: false,
   gpuAcceleration: false,
 };
 
@@ -100,6 +101,17 @@ export function AppearanceView() {
           ]}
           onChange={(clockText) => set({ clockText: clockText as Appearance["clockText"] })}
         />
+      </Section>
+      <Section label={t("Songtext")} hint={t("Aktuelle Zeile in der geschlossenen Pille")}>
+        <div className="flex items-center justify-between gap-3 py-0.5">
+          <div className="min-w-0">
+            <div className="text-caption font-semibold text-label-2">{t("Lyrics in the closed pill")}</div>
+            <div className="text-[9px] leading-[11px] text-label-4">
+              {t("Shows the current synced line instead of the title when available (LRCLIB).")}
+            </div>
+          </div>
+          <Switch checked={a.lyricsInPill} onChange={(lyricsInPill) => set({ lyricsInPill })} label={t("Lyrics in the closed pill")} />
+        </div>
       </Section>
       <Section label={t("Ruhende Notch")} hint={t("Geschlossen")}>
         <Swatches value={a.resting} colors={NOTCH_COLORS} onChange={(resting) => set({ resting })} />

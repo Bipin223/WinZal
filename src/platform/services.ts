@@ -293,6 +293,19 @@ export const display = {
   },
 };
 
+// ---------- Lyrics ----------
+
+export interface Lyrics {
+  synced: string | null;
+  plain: string | null;
+}
+
+/** LRCLIB lookup through Rust (no CORS, in-memory cache). */
+export function fetchLyrics(title: string, artist: string, duration: number): Promise<Lyrics> {
+  if (isNative) return invoke<Lyrics>("lyrics_get", { title, artist, duration }).catch(() => ({ synced: null, plain: null }));
+  return Promise.resolve({ synced: null, plain: null });
+}
+
 // ---------- Gaming mode ----------
 
 /** FPS of the foreground process (ETW). error: no-admin | failed. */

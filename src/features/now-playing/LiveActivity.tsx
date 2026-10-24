@@ -4,13 +4,18 @@ import { artwork as artworkSwap, content } from "../../design/motion";
 import { useSmoothArtwork } from "./artwork";
 import type { NowPlaying } from "../../platform/media";
 import { Equalizer } from "./Equalizer";
+import { useLyricsLine } from "./lyrics";
 import { LiveEdge } from "../../notch/liveEdges";
+import { settings } from "../../settings/store";
 
 /**
  * Closed notch while music plays: cover on the left, equalizer on the right,
  * the middle stays empty like a real notch.
  */
 export function LiveActivity({ np }: { np: NowPlaying }) {
+  const lyricsOn = settings.use().appearance.lyricsInPill;
+  const lyric = useLyricsLine(np, lyricsOn);
+  const shown = lyric ?? np.title;
   return (
     <motion.div
       className="absolute inset-0 flex items-center gap-2 px-[9px]"
@@ -30,14 +35,14 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
       >
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
-            key={np.title}
+            key={shown}
             className="max-w-full overflow-hidden whitespace-nowrap text-[11px] leading-none font-semibold text-label"
             initial={{ opacity: 0, transform: "translateY(3px)", filter: "blur(3px)" }}
             animate={{ opacity: 1, transform: "translateY(0px)", filter: "blur(0px)", transition: content.enter }}
             exit={{ opacity: 0, transform: "translateY(-3px)", filter: "blur(3px)", transition: content.exit }}
             title={np.title}
           >
-            {np.title}
+            {shown}
           </motion.div>
         </AnimatePresence>
       </div>
