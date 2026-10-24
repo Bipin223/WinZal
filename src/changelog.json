@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.6.5",
+    "date": "2026-10-24",
+    "items": [
+      {
+        "de": "Bilder lassen sich mit Strg+V direkt in den offenen AI-Chat einfügen; sie erscheinen als Anhang und gehen mit der nächsten Nachricht an das Modell",
+        "en": "Paste images straight into the open AI chat with Ctrl+V; they appear as an attachment and go to the model with your next message"
+      },
+      {
+        "de": "Große Screenshots werden auf 1600 px verkleinert, damit Arbeitsspeicher und gespeicherte Chats klein bleiben",
+        "en": "Large screenshots are scaled down to 1600 px to keep memory use and saved chats small"
+      }
+    ]
+  },
+  {
     "version": "1.6.4",
     "date": "2026-10-24",
     "items": [

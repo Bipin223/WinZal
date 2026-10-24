@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState, type ReactNode } from "react";
+﻿import { useEffect, useRef, useState, type ClipboardEvent, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowUp, Chats, Copy, Check, FileText, ImageSquare, NotePencil, Plus, Sparkle, Stop, Translate, TextAlignLeft, Trash, X, type Icon } from "@phosphor-icons/react";
 import { content, fade } from "../../design/motion";
@@ -90,6 +90,42 @@ function when(updatedAt: number): string {
     return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   }
   return date.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
+
+function readFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Clipboard images can be 4K screenshots. Keep text crisp but cap the longest
+ * side so the pending attachment and the saved chat stay light on memory.
+ */
+async function imageFromClipboard(file: File): Promise<string> {
+  if (typeof createImageBitmap !== "function") return readFile(file);
+  const bitmap = await createImageBitmap(file);
+  try {
+    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+    if (scale === 1 && file.size <= 2.5 * 1024 * 1024) return await readFile(file);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) return readFile(file);
+    const png = file.type === "image/png";
+    if (!png) {
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL(png ? "image/png" : "image/jpeg", 0.88);
+  } finally {
+    bitmap.close();
+  }
 }
 
 
@@ -263,6 +299,38 @@ export function AskView() {
     if (!on) setConfirmClear(false);
   };
 
+  const attachPastedImage = async (file: File) => {
+    if (streaming) return;
+    try {
+      const image = await imageFromClipboard(file);
+      if (!image) return;
+      askAttachment.set({
+        id: crypto.randomUUID?.() ?? `paste-${Date.now()}`,
+        kind: "image",
+        title: t("Eingefügtes Bild"),
+        detail: t("Aus der Zwischenablage"),
+        image,
+      });
+      setError(null);
+      input.current?.focus({ preventScroll: true });
+    } catch {
+      setError(t("Bild konnte nicht gelesen werden"));
+    }
+  };
+
+  /** Ctrl+V anywhere in the open Ask view turns an image on the clipboard into an attachment. */
+  const handlePaste = (event: ClipboardEvent<HTMLDivElement>) => {
+    const data = event.clipboardData;
+    if (!data) return;
+    const fromItems = Array.from(data.items).find(
+      (item) => item.kind === "file" && item.type.startsWith("image/"),
+    )?.getAsFile();
+    const file = fromItems ?? Array.from(data.files).find((candidate) => candidate.type.startsWith("image/"));
+    if (!file) return;
+    event.preventDefault();
+    void attachPastedImage(file);
+  };
+
   const send = async (text: string) => {
     const prompt = text.trim();
     const attached = askAttachment.get();
@@ -319,7 +387,7 @@ export function AskView() {
   };
 
   return (
-    <div className="relative flex h-full flex-col px-4 pt-1 pb-2">
+    <div className="relative flex h-full flex-col px-4 pt-1 pb-2" onPaste={handlePaste}>
       <div ref={list} className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none]">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
@@ -335,6 +403,7 @@ export function AskView() {
                 </button>
               ))}
             </div>
+            <span className="text-[10px] leading-[12px] text-label-3">{t("Bild mit Strg+V einfügen")}</span>
           </div>
         ) : (
           <div className="flex flex-col gap-2 pb-1">
