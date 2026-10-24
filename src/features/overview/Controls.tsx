@@ -595,6 +595,7 @@ function PowerTile() {
   const [energy, setEnergy] = useState<EnergyState | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const busyRef = useRef(false);
   const settle = useRef(0);
@@ -619,30 +620,48 @@ function PowerTile() {
     return () => window.removeEventListener("pointerdown", outside);
   }, [menuOpen]);
 
-  const scheme = energy?.scheme;
-  const mode: PowerMode = scheme === "saver" ? "saver" : scheme === "high" ? "high" : "balanced";
-  const level = mode === "saver" ? 0.28 : mode === "high" ? 0.92 : 0.6;
-  const state = mode === "saver" ? t("Sparmodus") : mode === "high" ? t("Hoch") : t("Ausgeglichen");
-  const tone = mode === "saver" ? "text-[#0a84ff]" : mode === "high" ? "text-[#ff453a]" : "text-white";
-  const next: PowerMode = mode === "saver" ? "balanced" : mode === "balanced" ? "high" : "saver";
-  const options: { mode: PowerMode; label: string; level: number; tone: string }[] = [
-    { mode: "saver", label: t("Sparmodus"), level: 0.28, tone: "text-[#0a84ff]" },
-    { mode: "balanced", label: t("Ausgeglichen"), level: 0.6, tone: "text-white" },
-    { mode: "high", label: t("Hoch"), level: 0.92, tone: "text-[#ff453a]" },
-  ];
+  const mode: PowerMode = energy?.scheme ?? "balanced";
+  const plugged = energy?.plugged ?? true;
+  const customSupported = energy?.custom ?? false;
+  const look = (m: PowerMode) => {
+    switch (m) {
+      case "saver":
+        return { label: t("Sparmodus"), level: 0.28, tone: "text-[#0a84ff]", dot: "#0a84ff" };
+      case "max":
+        return { label: t("Max"), level: 0.92, tone: "text-[#ff453a]", dot: "#ff453a" };
+      case "custom":
+        return { label: t("Custom"), level: 0.8, tone: "text-[#bf5af2]", dot: "#bf5af2" };
+      default:
+        return { label: t("Ausgeglichen"), level: 0.6, tone: "text-white", dot: "#ffffff" };
+    }
+  };
+  const current = look(mode);
+  const modes: PowerMode[] = ["saver", "balanced", ...(plugged ? (["max"] as PowerMode[]) : []), ...(plugged && customSupported ? (["custom"] as PowerMode[]) : [])];
+  const options = modes.map((m) => ({ mode: m, ...look(m) }));
+  const activeIndex = options.findIndex((option) => option.mode === mode);
+  const next = options[(Math.max(0, activeIndex) + 1) % options.length] ?? options[0];
 
   const select = (target: PowerMode) => {
     setMenuOpen(false);
     if (busyRef.current) return;
     if (target === mode && energy) return;
+    setError(null);
     busyRef.current = true;
-    settle.current = Date.now() + 3500;
+    settle.current = Date.now() + 20_000;
     setBusy(true);
     setEnergy((e) => (e ? { ...e, saver: target === "saver", scheme: target } : e));
     void systemControls
       .setEnergy(target)
       .then(setEnergy)
-      .catch(() => systemControls.energy().then(setEnergy).catch(() => setEnergy(null)))
+      .catch(async (raw) => {
+        const message = String(raw);
+        if (message.includes("uac-cancelled")) setError(t("Admin permission is needed for Custom."));
+        else if (message.includes("plugged")) setError(t("Plug in for Max and Custom."));
+        else if (message.includes("lenovo") || message.includes("unsupported")) setError(t("Custom mode is not available on this device."));
+        else if (message.includes("helper")) setError(t("Could not start the elevated helper."));
+        else setError(t("Could not change the power mode."));
+        await systemControls.energy().then(setEnergy).catch(() => setEnergy(null));
+      })
       .finally(() => {
         busyRef.current = false;
         settle.current = Date.now() + 2500;
@@ -654,15 +673,18 @@ function PowerTile() {
     <div ref={box} className="relative min-w-0">
       <ToggleTile
         label="Power"
-        state={busy ? "…" : state}
+        state={busy ? "…" : current.label}
         active={false}
-        statusDot={mode === "saver" ? "#0a84ff" : mode === "high" ? "#ff453a" : "#ffffff"}
-        renderGlyph={() => <BatteryIcon level={level} size={22} className={tone} />}
+        statusDot={current.dot}
+        renderGlyph={() => <BatteryIcon level={current.level} size={22} className={current.tone} />}
         glyphKey={mode}
         straight
         bareIcon
-        onClick={() => select(next)}
-        onMenu={() => setMenuOpen((open) => !open)}
+        onClick={() => select(next.mode)}
+        onMenu={() => {
+          setMenuOpen((open) => !open);
+          setError(null);
+        }}
         menuLabel={t("Power mode")}
         onContextMenu={(e) => {
           e.preventDefault();
@@ -671,23 +693,31 @@ function PowerTile() {
         title={t("Power mode")}
       />
       {menuOpen && (
-        <div className="absolute right-0 bottom-full z-50 mb-2 w-[190px] overflow-hidden rounded-[12px] bg-[#1b1b1d] p-1.5 shadow-2xl">
+        <div className="absolute right-0 bottom-full z-50 mb-2 w-[212px] overflow-hidden rounded-[12px] bg-[#1b1b1d] p-1.5 shadow-2xl">
           <div className="px-2 py-1 text-[10px] font-semibold tracking-wide text-label-3 uppercase">{t("Power mode")}</div>
-          {options.map((option) => (
-            <button
-              key={option.mode}
-              type="button"
-              onClick={() => select(option.mode)}
-              className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-left hover:bg-white/6"
-            >
-              <BatteryIcon level={option.level} size={16} className={option.tone} />
-              <span className="min-w-0 flex-1 truncate text-caption text-label">{option.label}</span>
-              {mode === option.mode && <Check size={11} weight="bold" className="shrink-0 text-green" />}
-            </button>
-          ))}
-          <div className="border-t border-white/8 px-2.5 py-1.5 text-[9px] leading-[12px] text-label-4">
-            {t("Windows power mode; right-click for Windows settings.")}
+          <div className="grid grid-cols-2 gap-0.5">
+            {options.map((option) => (
+              <button
+                key={option.mode}
+                type="button"
+                onClick={() => select(option.mode)}
+                className="flex min-w-0 items-center gap-1.5 rounded-[8px] px-2 py-1.5 text-left hover:bg-white/6"
+              >
+                <BatteryIcon level={option.level} size={15} className={option.tone} />
+                <span className="min-w-0 flex-1 truncate text-[11px] text-label">{option.label}</span>
+                {mode === option.mode && <Check size={10} weight="bold" className="shrink-0 text-green" />}
+              </button>
+            ))}
           </div>
+          <div className="border-t border-white/8 px-2.5 py-1.5 text-[9px] leading-[12px] text-label-4">
+            {!plugged ? t("Plug in for Max and Custom.") : t("Right-click for Windows power settings.")}
+          </div>
+          {plugged && customSupported && (
+            <div className="px-2.5 pb-1.5 text-[9px] leading-[12px] text-label-4">
+              {t("Custom: WinZal plan with active cooling.")}
+            </div>
+          )}
+          {error && <div className="px-2.5 pb-1 text-[9px] leading-[12px] text-[#ff9f0a]">{error}</div>}
         </div>
       )}
     </div>

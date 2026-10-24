@@ -506,11 +506,15 @@ export interface BluetoothPeer {
   connected: boolean;
 }
 
-export type PowerMode = "saver" | "balanced" | "high";
+export type PowerMode = "saver" | "balanced" | "max" | "custom";
 
 export interface EnergyState {
   saver: boolean;
-  scheme: PowerMode | "custom";
+  scheme: PowerMode;
+  /** AC adapter connected: Max and Custom are hidden on battery. */
+  plugged: boolean;
+  /** The fourth, purple Custom mode is available. */
+  custom: boolean;
 }
 
 export interface GlimState {
@@ -532,7 +536,7 @@ const mockBluetoothPeers: BluetoothPeer[] = [
   { name: "WH-1000XM5", address: 1, connected: false },
   { name: "Phone", address: 2, connected: false },
 ];
-const mockEnergy: EnergyState = { saver: false, scheme: "balanced" };
+const mockEnergy: EnergyState = { saver: false, scheme: "balanced", plugged: true, custom: false };
 const mockGlim: GlimState = { supported: true, on: false };
 
 /** One program in the volume mixer (all its audio sessions together). */

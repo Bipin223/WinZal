@@ -6,6 +6,7 @@ import { useSmoothArtwork } from "./artwork";
 import { media, type NowPlaying } from "../../platform/media";
 import { Equalizer } from "./Equalizer";
 import { useLyrics } from "./lyrics";
+import { lyricsTextWidth } from "./lyricsWidth";
 import { LiveEdge } from "../../notch/liveEdges";
 import { settings } from "../../settings/store";
 import { t } from "../../i18n";
@@ -17,6 +18,26 @@ import { t } from "../../i18n";
 export function LiveActivity({ np }: { np: NowPlaying }) {
   const appearance = settings.use().appearance;
   const { current, next, index, start, end } = useLyrics(np, appearance.lyricsInPill);
+
+  // Measure the line at its real font size. The notch uses this to expand only
+  // as far as the lyric needs, so readable text is not hidden behind the fade.
+  useLayoutEffect(() => {
+    if (!appearance.lyricsInPill || !current) {
+      lyricsTextWidth.set(0);
+      return;
+    }
+    const ctx = document.createElement("canvas").getContext("2d");
+    if (!ctx) return;
+    const family = getComputedStyle(document.body).fontFamily;
+    const large = appearance.lyricsSize === "large";
+    ctx.font = `600 ${large ? 12 : 11}px ${family}`;
+    let width = ctx.measureText(current).width;
+    if (appearance.lyricsLayout === "lines" && next) {
+      ctx.font = `500 ${large ? 10 : 9}px ${family}`;
+      width = Math.max(width, ctx.measureText(next).width);
+    }
+    lyricsTextWidth.set(Math.ceil(width));
+  }, [appearance.lyricsInPill, appearance.lyricsLayout, appearance.lyricsSize, current, next]);
   return (
     <motion.div
       className="absolute inset-0 flex items-center gap-2 px-[9px]"
@@ -41,7 +62,7 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
           </span>
         </button>
       </LiveEdge>
-      <FadeBox>
+      <FadeBox fade={!appearance.lyricsInPill || !current}>
         {appearance.lyricsInPill && current ? (
           <LyricLine
             current={current}
@@ -77,23 +98,23 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
 }
 
 /**
- * The middle text slot. The soft right-edge fade is only applied when a line is
- * actually wider than the slot, so a short lyric in the larger pill stays crisp
- * instead of ending in an unnecessary blur.
+ * The middle text slot. The soft right-edge fade is only applied to a title,
+ * and only when it is actually wider than the slot. Lyrics are never faded:
+ * they widen the pill instead, and a line beyond the maximum scrolls slowly.
  */
-function FadeBox({ children }: { children: ReactNode }) {
+function FadeBox({ children, fade = true }: { children: ReactNode; fade?: boolean }) {
   const box = useRef<HTMLDivElement>(null);
-  const [fade, setFade] = useState(false);
+  const [over, setOver] = useState(false);
   useLayoutEffect(() => {
     const el = box.current;
     if (!el) return;
     let alive = true;
     const check = () => {
       if (!alive) return;
-      const over = Array.from(el.querySelectorAll<HTMLElement>("[data-fade-text]")).some(
+      const next = Array.from(el.querySelectorAll<HTMLElement>("[data-fade-text]")).some(
         (node) => node.scrollWidth > node.clientWidth + 1,
       );
-      setFade((prev) => (prev === over ? prev : over));
+      setOver((prev) => (prev === next ? prev : next));
     };
     check();
     const resize = new ResizeObserver(check);
@@ -112,7 +133,7 @@ function FadeBox({ children }: { children: ReactNode }) {
       ref={box}
       className="relative flex min-w-0 flex-1 justify-center overflow-hidden"
       style={
-        fade
+        fade && over
           ? {
               maskImage: "linear-gradient(90deg, #000 calc(100% - 22px), transparent)",
               WebkitMaskImage: "linear-gradient(90deg, #000 calc(100% - 22px), transparent)",
@@ -183,9 +204,8 @@ function LyricLine({
         exit={leave}
         transition={transition}
       >
-        <span
-          data-fade-text
-          className={`max-w-full truncate font-semibold text-label ${
+        <LyricText
+          className={`font-semibold text-label ${
             inline
               ? large
                 ? "text-[12px] leading-none"
@@ -194,6 +214,7 @@ function LyricLine({
                 ? "text-[12px] leading-[14px]"
                 : "text-[11px] leading-[13px]"
           }`}
+          resetKey={`${index}-${inline}-${large}`}
         >
           {wordMode && words.length > 1
             ? words.map((word, i) => (
@@ -209,7 +230,7 @@ function LyricLine({
                 </motion.span>
               ))
             : current}
-        </span>
+        </LyricText>
         {!inline && next && (
           <span
             data-fade-text
@@ -222,6 +243,56 @@ function LyricLine({
         )}
       </motion.div>
     </AnimatePresence>
+  );
+}
+
+/**
+ * One lyric line that never hides text behind a fade. The notch widens to fit
+ * the line; if the line is still wider than the maximum pill, it scrolls
+ * slowly to the end and back instead of replacing the end with a blur.
+ */
+function LyricText({ children, className, resetKey }: { children: ReactNode; className: string; resetKey: string }) {
+  const box = useRef<HTMLSpanElement>(null);
+  const [shift, setShift] = useState(0);
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    let alive = true;
+    const measure = () => {
+      if (!alive) return;
+      const over = Math.max(0, el.scrollWidth - el.clientWidth);
+      setShift((prev) => (Math.abs(prev - over) > 1 ? over : prev));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    void document.fonts?.ready.then(measure);
+    return () => {
+      alive = false;
+      ro.disconnect();
+    };
+  }, [resetKey]);
+  return (
+    <span ref={box} data-fade-text className={`block max-w-full overflow-hidden ${className}`}>
+      <motion.span
+        className="inline-block whitespace-nowrap"
+        animate={shift > 1 ? { x: [0, -shift, -shift, 0] } : { x: 0 }}
+        transition={
+          shift > 1
+            ? {
+                duration: Math.min(36, Math.max(9, shift / 22 + 5)),
+                times: [0, 0.14, 0.86, 1],
+                repeat: Infinity,
+                repeatDelay: 1.6,
+                delay: 0.7,
+                ease: "easeInOut",
+              }
+            : { duration: 0.2 }
+        }
+      >
+        {children}
+      </motion.span>
+    </span>
   );
 }
 

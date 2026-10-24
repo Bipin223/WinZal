@@ -3,6 +3,8 @@
 
 use std::os::windows::process::CommandExt;
 use std::process::Command;
+use std::sync::OnceLock;
+use std::time::Duration;
 
 use serde::Serialize;
 use windows::core::GUID;
@@ -14,8 +16,10 @@ use windows::Win32::Devices::Bluetooth::{
     BLUETOOTH_ADDRESS, BLUETOOTH_ADDRESS_0, BLUETOOTH_DEVICE_INFO, BLUETOOTH_FIND_RADIO_PARAMS,
     BLUETOOTH_SERVICE_ENABLE, BLUETOOTH_SERVICE_DISABLE,
 };
-use windows::Win32::Foundation::{CloseHandle, HANDLE, LPARAM, WPARAM};
-use windows::Win32::System::Power::SetSuspendState;
+use windows::Win32::Foundation::{CloseHandle, LocalFree, ERROR_SUCCESS, HANDLE, HLOCAL, LPARAM, WPARAM};
+use windows::Win32::System::Power::{
+    GetSystemPowerStatus, PowerGetActiveScheme, PowerSetActiveScheme, SetSuspendState, SYSTEM_POWER_STATUS,
+};
 use windows::Win32::System::Shutdown::LockWorkStation;
 use windows::Win32::System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED};
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -427,6 +431,10 @@ fn connect_bluetooth(address: u64) -> Result<bool, String> {
 const EFFICIENCY: GUID = GUID::from_u128(0x961cc777_2547_4f9d_8174_7d86181b8a7a);
 const BALANCED: GUID = GUID::from_u128(0);
 const PERFORMANCE: GUID = GUID::from_u128(0xded574b5_45a0_4f42_8737_46345c09c238);
+const BALANCED_PLAN: GUID = GUID::from_u128(0x381b4222_f694_41f0_9685_ff5bb260df2e);
+const CUSTOM_PLAN: GUID = GUID::from_u128(0xb6f5e3a1_7c2d_4e8f_9a10_6d5c4b3a2918);
+const BALANCED_PLAN_STR: &str = "381b4222-f694-41f0-9685-ff5bb260df2e";
+const CUSTOM_PLAN_STR: &str = "b6f5e3a1-7c2d-4e8f-9a10-6d5c4b3a2918";
 
 #[link(name = "powrprof", kind = "raw-dylib")]
 extern "system" {
@@ -437,7 +445,12 @@ extern "system" {
 #[derive(Serialize)]
 pub struct Energy {
     saver: bool,
+    /// "saver" | "balanced" | "max" | "custom"
     scheme: &'static str,
+    /// AC adapter connected. Max and Custom are only available while plugged in.
+    plugged: bool,
+    /// The fourth, purple Custom mode (a WinZal power plan) is available.
+    custom: bool,
 }
 
 fn effective_overlay() -> Result<GUID, String> {
@@ -461,17 +474,109 @@ fn overlay_name(guid: &GUID) -> &'static str {
     if *guid == EFFICIENCY {
         "saver"
     } else if *guid == PERFORMANCE {
-        "high"
+        "max"
     } else if *guid == BALANCED {
         "balanced"
     } else {
-        "custom"
+        "max"
     }
+}
+
+fn ac_connected() -> bool {
+    let mut status = SYSTEM_POWER_STATUS::default();
+    let _ = unsafe { GetSystemPowerStatus(&mut status) };
+    // 0 = battery, 1 = AC, 255 = unknown (treat as plugged so no mode disappears).
+    status.ACLineStatus != 0
+}
+
+fn active_plan() -> Option<GUID> {
+    let mut plan: *mut GUID = std::ptr::null_mut();
+    let error = unsafe { PowerGetActiveScheme(None, &mut plan) };
+    if error != ERROR_SUCCESS || plan.is_null() {
+        return None;
+    }
+    let guid = unsafe { *plan };
+    let _ = unsafe { LocalFree(Some(HLOCAL(plan as *mut _))) };
+    Some(guid)
+}
+
+fn activate_plan(plan: &GUID) -> Result<(), String> {
+    let error = unsafe { PowerSetActiveScheme(None, Some(plan)) };
+    if error == ERROR_SUCCESS {
+        Ok(())
+    } else {
+        Err(format!("Could not activate the power plan ({})", error.0))
+    }
+}
+
+fn powercfg(args: &[&str]) -> bool {
+    Command::new("powercfg").args(args).creation_flags(CREATE_NO_WINDOW).status().map(|status| status.success()).unwrap_or(false)
+}
+
+/// Create/refresh WinZal's fourth mode: a copy of Balanced with processor
+/// throttling opened up and active cooling. No admin required; once per run.
+fn ensure_custom_plan() -> Result<(), String> {
+    static ONCE: OnceLock<Result<(), String>> = OnceLock::new();
+    ONCE.get_or_init(|| {
+        let list = Command::new("powercfg")
+            .arg("/list")
+            .creation_flags(CREATE_NO_WINDOW)
+            .output()
+            .map_err(|error| error.to_string())?;
+        let text = String::from_utf8_lossy(&list.stdout).to_lowercase();
+        if !text.contains(CUSTOM_PLAN_STR) {
+            if !powercfg(&["/duplicatescheme", BALANCED_PLAN_STR, CUSTOM_PLAN_STR]) {
+                return Err("Could not create the custom power plan".into());
+            }
+        }
+        let _ = powercfg(&["/changename", CUSTOM_PLAN_STR, "WinZal Custom"]);
+        let processor = "54533251-82be-4824-96c1-47b60b740d00";
+        let min = "893dee8e-2bef-41e0-89c6-b55d0929964c";
+        let max = "bc5038f7-23e0-4960-96da-33abaf5935ec";
+        let cooling = "94d3a615-a899-4ac5-ae2b-e4d8f634367f";
+        for (command, policy) in [("/setacvalueindex", "1"), ("/setdcvalueindex", "0")] {
+            let _ = powercfg(&[command, CUSTOM_PLAN_STR, processor, min, "5"]);
+            let _ = powercfg(&[command, CUSTOM_PLAN_STR, processor, max, "100"]);
+            let _ = powercfg(&[command, CUSTOM_PLAN_STR, processor, cooling, policy]);
+        }
+        Ok(())
+    })
+    .clone()
 }
 
 fn energy_status() -> Result<Energy, String> {
     let guid = effective_overlay()?;
-    Ok(Energy { saver: guid == EFFICIENCY, scheme: overlay_name(&guid) })
+    let plugged = ac_connected();
+    let active = active_plan();
+    let mut scheme = if plugged && active == Some(CUSTOM_PLAN) {
+        "custom"
+    } else {
+        // A Lenovo thermal mode is more specific than the Windows overlay when
+        // the elevated helper is running (e.g. after Fn+Q).
+        match crate::fps::lenovo_mode() {
+            Some(1) => "saver",
+            Some(2) => "balanced",
+            Some(3) => "max",
+            Some(4) => "custom",
+            _ => overlay_name(&guid),
+        }
+    };
+    if !plugged && scheme == "custom" {
+        scheme = "balanced";
+    }
+    Ok(Energy { saver: scheme == "saver", scheme, plugged, custom: true })
+}
+
+/// Keep the promise of only two modes on battery: if the custom plan was left
+/// active when the charger disappeared, glide back to Balanced.
+pub fn spawn_energy_watch() {
+    std::thread::spawn(|| loop {
+        std::thread::sleep(Duration::from_secs(2));
+        if !ac_connected() && active_plan() == Some(CUSTOM_PLAN) {
+            let _ = activate_plan(&BALANCED_PLAN);
+            let _ = set_overlay(&BALANCED);
+        }
+    });
 }
 
 #[tauri::command]
@@ -479,16 +584,48 @@ pub fn energy_get() -> Result<Energy, String> {
     energy_status()
 }
 
-/// Set one of the three Windows power modes directly: saver, balanced or high.
+/// Set a power mode. Saver/Balanced/Max use the Windows overlay (and Lenovo's
+/// fan mode when the helper is already running). Custom is WinZal's own power
+/// plan: Balanced internals with processor throttling open and active cooling.
 #[tauri::command]
-pub fn energy_set(mode: String) -> Result<Energy, String> {
-    let overlay = match mode.as_str() {
+pub async fn energy_set(mode: String) -> Result<Energy, String> {
+    tauri::async_runtime::spawn_blocking(move || apply_energy(&mode)).await.map_err(|error| error.to_string())?
+}
+
+fn apply_energy(mode: &str) -> Result<Energy, String> {
+    let mode = if mode == "high" { "max" } else { mode };
+    let plugged = ac_connected();
+    if !plugged && matches!(mode, "max" | "custom") {
+        return Err("plugged".into());
+    }
+    let overlay = match mode {
         "saver" => EFFICIENCY,
         "balanced" => BALANCED,
-        "high" => PERFORMANCE,
+        "max" => PERFORMANCE,
+        "custom" => PERFORMANCE,
         other => return Err(format!("Unknown power mode: {other}")),
     };
+    if mode == "custom" {
+        ensure_custom_plan()?;
+        activate_plan(&CUSTOM_PLAN)?;
+    } else {
+        activate_plan(&BALANCED_PLAN)?;
+    }
     set_overlay(&overlay)?;
+
+    // Keep Lenovo's fan profile in sync when the helper is already running.
+    // Custom uses Performance cooling as well; it does not pretend to be
+    // Vantage's purple fan curve, it is WinZal's own fourth power plan.
+    let thermal = match mode {
+        "saver" => 1,
+        "balanced" => 2,
+        "max" | "custom" => 3,
+        _ => 0,
+    };
+    if thermal != 0 && crate::fps::helper_ready() {
+        let _ = crate::fps::lenovo_set_mode(thermal);
+    }
+
     energy_status()
 }
 

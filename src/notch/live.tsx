@@ -35,16 +35,16 @@ export function useLiveActivity(): { id: string | null } {
  * sides (LiveEdge) follow the shape's edges by transform as it opens, closes or peeks.
  * Pinned to the edges by layout instead, they crept in pixel steps (issue #3).
  */
-export function LiveSlot({ id, recording = false }: { id: string | null; recording?: boolean }) {
+export function LiveSlot({ id, recording = false, extra = 0 }: { id: string | null; recording?: boolean; extra?: number }) {
   const np = useNowPlaying();
   const call = useDiscordCall();
   // Keep the last size while an activity fades out (id is null when the notch opens).
   const last = useRef(id);
   if (id) last.current = id;
   const box = last.current === "system" ? geometry.gaming : geometry.live;
-  // The recording chip lives at the right end; give the live content the same extra
-  // width so the title and the right controls keep their breathing room.
-  const width = box.w + (recording ? RECORDING_EXTRA : 0);
+  // The recording chip and a long lyric line both live at the edges; give the
+  // live content the same extra width as the shape so text can use it.
+  const width = box.w + (recording ? RECORDING_EXTRA : 0) + (last.current === "media" ? extra : 0);
   const boxW = useRef(width);
   boxW.current = width;
   const spread = useTransform(useContext(ShapeWidth), (w) =>

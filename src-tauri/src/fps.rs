@@ -64,9 +64,9 @@ const RETRY: Duration = Duration::from_secs(5);
 /// All event kinds we count separately. Max of the deltas is the FPS.
 const KINDS: usize = 7;
 const SLOTS: usize = 512;
-const SHARED_NAME: &str = "Local\\WinZalFps-v1";
+const SHARED_NAME: &str = "Local\\WinZalFps-v2";
 const SHARED_MAGIC: u32 = 0x575A_4650; // WZFP
-const SHARED_VERSION: u32 = 1;
+const SHARED_VERSION: u32 = 2;
 const ERR_NO_ADMIN: u32 = 1;
 const ERR_FAILED: u32 = 2;
 
@@ -182,6 +182,13 @@ struct FpsShared {
     cpu_temp: AtomicU32,
     gpu_temp: AtomicU32,
     temp_at: AtomicU64,
+    /// Lenovo thermal mode read by the elevated helper: 1 quiet … 4 custom.
+    lenovo_mode: AtomicU32,
+    lenovo_mode_at: AtomicU64,
+    /// Power-mode request from the notch: seq << 8 | mode (0 = none).
+    power_req: AtomicU32,
+    /// Helper answer: seq << 8 | (1 ok, 2 failed) (0 = idle).
+    power_ack: AtomicU32,
     entries: [FpsEntry; SLOTS],
 }
 
@@ -258,6 +265,60 @@ pub(crate) fn helper_temps() -> (Option<u32>, Option<u32>) {
         let gpu = (*shared).gpu_temp.load(Ordering::Relaxed);
         ((cpu > 0).then_some(cpu), (gpu > 0).then_some(gpu))
     }
+}
+
+/// Is the elevated helper alive (FPS / temperatures / Lenovo thermal modes)?
+pub(crate) fn helper_ready() -> bool {
+    shared().is_some_and(helper_alive)
+}
+
+/// Lenovo thermal mode reported by the helper: 1 quiet, 2 balanced,
+/// 3 performance, 4 custom. `None` when the helper is not running or the
+/// machine does not expose Lenovo's GameZone provider.
+pub(crate) fn lenovo_mode() -> Option<u8> {
+    let shared = shared()?;
+    if !helper_alive(shared) {
+        return None;
+    }
+    unsafe {
+        let at = (*shared).lenovo_mode_at.load(Ordering::Relaxed);
+        if at == 0 || GetTickCount64().saturating_sub(at) > 6000 {
+            return None;
+        }
+        let mode = (*shared).lenovo_mode.load(Ordering::Relaxed);
+        (1..=4).contains(&mode).then_some(mode as u8)
+    }
+}
+
+/// Ask the elevated helper to set Lenovo's thermal mode. Blocks until the
+/// helper answers (custom WMI calls usually take well under a second).
+pub(crate) fn lenovo_set_mode(mode: u8) -> Result<(), String> {
+    let shared = shared().ok_or_else(|| "helper".to_string())?;
+    if !helper_alive(shared) {
+        return Err("helper".into());
+    }
+    static SEQ: AtomicU32 = AtomicU32::new(1);
+    let seq = SEQ.fetch_add(1, Ordering::Relaxed) & 0x00FF_FFFF;
+    let request = (seq << 8) | mode as u32;
+    unsafe {
+        (*shared).power_ack.store(0, Ordering::Relaxed);
+        (*shared).power_req.store(request, Ordering::Relaxed);
+    }
+    let deadline = Instant::now() + Duration::from_secs(4);
+    while Instant::now() < deadline {
+        let ack = unsafe { (*shared).power_ack.load(Ordering::Relaxed) };
+        if ack >> 8 == seq {
+            unsafe {
+                let _ = (*shared).power_req.compare_exchange(request, 0, Ordering::Relaxed, Ordering::Relaxed);
+            }
+            return if ack & 0xFF == 1 { Ok(()) } else { Err("failed".into()) };
+        }
+        thread::sleep(Duration::from_millis(40));
+    }
+    unsafe {
+        let _ = (*shared).power_req.compare_exchange(request, 0, Ordering::Relaxed, Ordering::Relaxed);
+    }
+    Err("timeout".into())
 }
 
 /// Reads the helper counters for the foreground process. `None` means "no helper";
@@ -410,6 +471,10 @@ pub fn run_helper(main_pid: u32) -> ! {
         (*shared).cpu_temp.store(0, Ordering::Relaxed);
         (*shared).gpu_temp.store(0, Ordering::Relaxed);
         (*shared).temp_at.store(0, Ordering::Relaxed);
+        (*shared).lenovo_mode.store(0, Ordering::Relaxed);
+        (*shared).lenovo_mode_at.store(0, Ordering::Relaxed);
+        (*shared).power_req.store(0, Ordering::Relaxed);
+        (*shared).power_ack.store(0, Ordering::Relaxed);
         for entry in (*shared).entries.iter() {
             entry.pid.store(0, Ordering::Relaxed);
             entry.epoch.store(0, Ordering::Relaxed);
@@ -539,34 +604,75 @@ fn event_kind(provider: GUID, id: u16) -> Option<usize> {
     }
 }
 
-/// Elevated thread: Lenovo GameZone WMI temperatures, with nvidia-smi as the GPU
-/// fallback. Publishes °C into the shared block for the normal notch process.
+/// Elevated thread: Lenovo GameZone WMI temperatures and thermal modes, with
+/// nvidia-smi as the GPU fallback. Publishes into the shared block for the
+/// normal notch process and answers thermal-mode requests.
 fn temp_loop(shared_addr: usize) {
     let shared = shared_addr as *mut FpsShared;
     let mut lenovo: Option<crate::temps::Lenovo> = None;
     let mut last_open = Instant::now() - Duration::from_secs(60);
+    let mut last_read = Instant::now() - Duration::from_secs(10);
     loop {
         if unsafe { (*shared).stop.load(Ordering::Relaxed) } != 0 {
             break;
         }
-        if lenovo.is_none() && last_open.elapsed() > Duration::from_secs(10) {
+        let request = unsafe { (*shared).power_req.load(Ordering::Relaxed) };
+        // Open the provider immediately when the notch asks for a thermal mode;
+        // otherwise retry every 10 s.
+        if lenovo.is_none() && (request != 0 || last_open.elapsed() > Duration::from_secs(10)) {
             lenovo = crate::temps::Lenovo::open();
             last_open = Instant::now();
         }
-        let (cpu, mut gpu) = lenovo.as_ref().map(|l| l.temps()).unwrap_or((None, None));
-        if gpu.is_none() {
-            gpu = crate::temps::nvidia_smi();
+
+        if request != 0 {
+            let seq = request >> 8;
+            let mode = (request & 0xFF) as u8;
+            let result = match &lenovo {
+                Some(l) if (1..=4).contains(&mode) && l.set_mode(mode).is_ok() => {
+                    unsafe {
+                        (*shared).lenovo_mode.store(mode as u32, Ordering::Relaxed);
+                        (*shared).lenovo_mode_at.store(GetTickCount64(), Ordering::Relaxed);
+                    }
+                    1
+                }
+                _ => 2,
+            };
+            unsafe {
+                (*shared).power_ack.store((seq << 8) | result, Ordering::Relaxed);
+                let _ = (*shared).power_req.compare_exchange(request, 0, Ordering::Relaxed, Ordering::Relaxed);
+            }
         }
-        if cpu.is_none() && gpu.is_none() && lenovo.is_some() {
-            // The provider answered but has no sensors (e.g. non-Lenovo); retry later.
-            lenovo = None;
+
+        if last_read.elapsed() > Duration::from_secs(2) {
+            last_read = Instant::now();
+            let mut mode = None;
+            let (cpu, mut gpu) = match lenovo.as_ref() {
+                Some(l) => {
+                    mode = l.mode();
+                    l.temps()
+                }
+                None => (None, None),
+            };
+            if let Some(mode) = mode {
+                unsafe {
+                    (*shared).lenovo_mode.store(mode as u32, Ordering::Relaxed);
+                    (*shared).lenovo_mode_at.store(GetTickCount64(), Ordering::Relaxed);
+                }
+            }
+            if gpu.is_none() {
+                gpu = crate::temps::nvidia_smi();
+            }
+            if cpu.is_none() && gpu.is_none() && lenovo.is_some() && mode.is_none() {
+                // The provider answered but has no sensors (e.g. non-Lenovo); retry later.
+                lenovo = None;
+            }
+            unsafe {
+                (*shared).cpu_temp.store(cpu.unwrap_or(0), Ordering::Relaxed);
+                (*shared).gpu_temp.store(gpu.unwrap_or(0), Ordering::Relaxed);
+                (*shared).temp_at.store(GetTickCount64(), Ordering::Relaxed);
+            }
         }
-        unsafe {
-            (*shared).cpu_temp.store(cpu.unwrap_or(0), Ordering::Relaxed);
-            (*shared).gpu_temp.store(gpu.unwrap_or(0), Ordering::Relaxed);
-            (*shared).temp_at.store(GetTickCount64(), Ordering::Relaxed);
-        }
-        thread::sleep(Duration::from_secs(2));
+        thread::sleep(Duration::from_millis(250));
     }
 }
 

@@ -8,12 +8,14 @@ import { PrivacyDots } from "../features/privacy/PrivacyDots";
 import { FOCUS_CLICKS, focusMode, setFocusMode } from "./focus";
 import { useDragToMove } from "./drag";
 import { LiveSlot, useLiveActivity } from "./live";
+import { GamingSatellite } from "./GamingSatellite";
 import { DOCK_HEIGHT, HEADER_HEIGHT, geometry, openGeometry, type NotchGeometry } from "./geometry";
 import { HeaderButton, headerSlot } from "./header";
 import { ClockTime } from "./ClockTime";
 import { LiveRightInset } from "./liveEdges";
 import { RECORDING_EXTRA, RECORDING_INSET, RecordingBadge, useRecording } from "./recording";
 import { sizeOverride } from "./size";
+import { lyricsTextWidth } from "../features/now-playing/lyricsWidth";
 import { NotchShape } from "./NotchShape";
 import { drop } from "../platform/drop";
 import { settings } from "../settings/store";
@@ -128,16 +130,21 @@ export function Notch() {
     : shape;
   const topPad = floating && !tightHit ? 8 : 0;
   const sticky = useStickyHitZone(status, size.h);
+  const lyricWidth = lyricsTextWidth.use();
   const clockExtra = appearance.clockText === "large" && clockPill && !line && !idleLine && status !== "open" ? 10 : 0;
-  // Lyrics need more room than a title; this is opt-in and only affects the closed pill.
+  // Grow only enough for the current lyric (up to a sane cap); a title keeps the
+  // normal width and its right-edge fade.
   const lyricsExtra =
-    appearance.lyricsInPill && appearance.lyricsSize === "large" && pillLive === "media" && !line && !idleLine && status !== "open"
-      ? 84
+    appearance.lyricsInPill && pillLive === "media" && !line && !idleLine && status !== "open"
+      ? Math.min(320, Math.max(appearance.lyricsSize === "large" ? 84 : 0, lyricWidth + 12 - 214))
       : 0;
   const displayShape = {
     ...finalShape,
     w: finalShape.w + (showRecording ? RECORDING_EXTRA : 0) + clockExtra + lyricsExtra,
   };
+  // Gaming stats own the pill; a playing track gets its own little island instead.
+  const gamingSatellite =
+    pillLive === "system" && !!np?.isPlaying && appearance.musicInPill && !line && !idleLine && status !== "open";
   const transition = useTransitionFor(status, displayShape);
 
   // Click outside closes (in the browser the fake desktop, in Tauri the window blur).
@@ -258,6 +265,7 @@ export function Notch() {
         onClick={onClick}
       >
         <motion.div
+          className="relative"
           animate={{
             x: appearance.dragAnimation ? drag.lag : 0,
             scaleX: appearance.dragAnimation ? 1 + Math.abs(drag.lag) / 500 : 1,
@@ -273,7 +281,7 @@ export function Notch() {
           floating={floating}
         >
           <LiveRightInset.Provider value={rightInset}>
-            <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} />
+            <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} />
           </LiveRightInset.Provider>
           {clockWeather && !line && !idleLine && status !== "open" && !pillLive && <ClosedClock />}
           {!line && !idleLine && <PrivacyDots hideScreen={showRecording} />}
@@ -313,6 +321,7 @@ export function Notch() {
             )}
           </AnimatePresence>
         </NotchShape>
+        <GamingSatellite show={gamingSatellite} playing={!!np?.isPlaying} floating={floating} />
         </motion.div>
       </div>
     </div>
