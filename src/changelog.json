@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.6.3",
+    "date": "2026-10-24",
+    "items": [
+      {
+        "de": "Die erste Ziffer der geschlossenen Uhr ist kräftiger und etwas größer",
+        "en": "The first digit of the closed clock is bolder and slightly larger"
+      }
+    ]
+  },
+  {
     "version": "1.6.2",
     "date": "2026-10-24",
     "items": [

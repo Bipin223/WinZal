@@ -351,7 +351,7 @@ function ClosedClock() {
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
       <div className="flex items-center gap-1">
-        <ClockTime time={time} className={`tabular ${timeClass} text-label`} />
+        <ClockTime time={time} className={`tabular ${timeClass} text-label`} emphasizeFirst />
         {period && <span className={`${smallClass} text-label-3`}>{period}</span>}
         <span className={`${smallClass} text-label-3`}>· {date}</span>
       </div>
