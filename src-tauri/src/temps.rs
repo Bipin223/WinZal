@@ -80,7 +80,7 @@ impl Lenovo {
 
     /// (CPU °C, GPU °C)
     pub fn temps(&self) -> (Option<u32>, Option<u32>) {
-        (self.call("GetCPUTemp"), self.call("GetGPUTemp"))
+        (self.call("GetCPUTemp").or_else(|| self.call("GetIRTemp")), self.call("GetGPUTemp"))
     }
 
     /// Lenovo thermal mode: 1 quiet, 2 balanced, 3 performance, 4 custom.
@@ -148,12 +148,35 @@ impl Lenovo {
                         }
                     }
                 }
-                if let Ok(out) = output.into_desr::<LenovoTemp>() {
-                    trace(&format!("{method} data={}", out.Data));
-                    (out.Data > 0 && out.Data < 150).then_some(out.Data)
-                } else {
-                    trace(&format!("{method} output deserialize failed"));
-                    None
+                let data = output
+                    .list_properties()
+                    .ok()
+                    .and_then(|props| {
+                        props.into_iter().find_map(|prop| {
+                            if prop != "Data" {
+                                return None;
+                            }
+                            match output.get_property(&prop) {
+                                Ok(Variant::UI1(value)) => Some(value as u32),
+                                Ok(Variant::UI2(value)) => Some(value as u32),
+                                Ok(Variant::UI4(value)) => Some(value),
+                                Ok(Variant::UI8(value)) => u32::try_from(value).ok(),
+                                Ok(Variant::I4(value)) if value >= 0 => Some(value as u32),
+                                Ok(Variant::String(value)) => value.parse().ok(),
+                                _ => None,
+                            }
+                        })
+                    })
+                    .or_else(|| output.into_desr::<LenovoTemp>().ok().map(|out| out.Data));
+                match data {
+                    Some(data) => {
+                        trace(&format!("{method} data={data}"));
+                        (data > 0 && data < 150).then_some(data)
+                    }
+                    None => {
+                        trace(&format!("{method} output had no numeric Data"));
+                        None
+                    }
                 }
             }
             None => {

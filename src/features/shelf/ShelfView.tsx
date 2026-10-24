@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowSquareOut, Check, ClipboardText, Copy, File, FileAudio, FileText, FileVideo, FolderOpen, ImageSquare, Sparkle, Table, Trash, Tray, X, type Icon } from "@phosphor-icons/react";
+import { ArrowSquareOut, ClipboardText, Copy, File, FileAudio, FileText, FileVideo, FolderOpen, ImageSquare, Sparkle, Table, Trash, Tray, X, type Icon } from "@phosphor-icons/react";
 import { fade, springs } from "../../design/motion";
 import { createStore } from "../../lib/store";
 import { formatBytes } from "../../lib/format";
@@ -8,6 +8,7 @@ import { drop, pasteFiles, takeDropped, usePasteFiles } from "../../platform/dro
 import { HeaderActions, HeaderButton } from "../../notch/header";
 import { copyFiles, filePreview, fileText, openFile, probeFiles, revealFile, type DroppedFile, type FileKind } from "../../platform/services";
 import { askAI } from "../ask/handoff";
+import { SelectedDot } from "../../ui/SelectedDot";
 import { t } from "../../i18n";
 
 /*
@@ -77,7 +78,7 @@ export function ShelfView() {
           {items.length} {items.length === 1 ? t("Datei") : t("Dateien")}
         </span>
         <HeaderButton label={copied === "all" ? t("Kopiert") : t("Alle kopieren")} onClick={() => void copyAll(items.map((i) => i.path), "all")}>
-          {copied === "all" ? <Check size={14} weight="bold" /> : <Copy size={14} weight="bold" />}
+          {copied === "all" ? <SelectedDot size={6} /> : <Copy size={14} weight="bold" />}
         </HeaderButton>
         <HeaderButton label={t("Ablage leeren")} onClick={() => shelf.set([])}>
           <Trash size={14} weight="bold" />
@@ -175,7 +176,7 @@ function Card({ item, copied, onCopy }: { item: ShelfItem; copied: boolean; onCo
           <span className="flex opacity-0 transition-opacity duration-150 group-hover:opacity-100">
             <IconBtn label={t("Ask AI")} icon={Sparkle} onClick={() => void ask()} />
             <IconBtn label={t("Im Explorer zeigen")} icon={FolderOpen} onClick={() => revealFile(item.path)} />
-            <IconBtn label={copied ? t("Kopiert") : t("Kopieren")} icon={copied ? Check : Copy} onClick={onCopy} />
+            <IconBtn label={copied ? t("Kopiert") : t("Kopieren")} icon={Copy} dot={copied} onClick={onCopy} />
             <IconBtn label={t("Öffnen")} icon={ArrowSquareOut} onClick={() => void openFile(item.path)} />
           </span>
         </div>
@@ -199,10 +200,10 @@ function flash(set: (v: boolean) => void) {
   setTimeout(() => set(false), 1600);
 }
 
-function IconBtn({ label, icon: I, onClick }: { label: string; icon: Icon; onClick: () => void }) {
+function IconBtn({ label, icon: I, dot = false, onClick }: { label: string; icon: Icon; dot?: boolean; onClick: () => void }) {
   return (
     <button aria-label={label} title={label} onClick={onClick} className="pressable flex size-5 items-center justify-center text-label-3 hover:text-label">
-      <I size={12} weight="bold" />
+      {dot ? <SelectedDot size={5} /> : <I size={12} weight="bold" />}
     </button>
   );
 }

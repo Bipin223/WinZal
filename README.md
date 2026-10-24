@@ -41,7 +41,7 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 - The expanded clock is **bold by default** and can be switched to Regular in Appearance.
 - **Live music**: cover, title and a real audio-driven equalizer in the closed pill. The first app that starts playing keeps the pill; if it pauses or stops, the next playing app takes over automatically.
 - **Synced lyrics** from LRCLIB, optional. One line or current + next line, **Apple Music (default) / Word by word / Reveal** animations, and a continuous **10–15 px text-size slider**. The pill grows to the measured line (up to 360 px) instead of fading readable text; extremely long lines scroll slowly. Choose **Wave**, **Pulse**, **Dots**, **Ripple** or **Aurora** as a visualizer, each with a live preview in Settings → Music; Wave is the default and every style follows the cover accent.
-- **Appearance**: **Dark**, **Light**, **System** or **Custom** theme. Custom picks any island color with a full color picker; text, menus and icons switch between dark and light automatically for contrast. Island style, material, corners, clock weight and any color for the equalization or clock accent.
+- **Appearance**: **Dark**, **Light**, **System** or **Custom** theme. Custom has a full in-app HSV color picker with HEX/RGB fields and ready-made **Mocha**, **Matcha**, **Monochrome** and **Soft Yellow** themes; text, menus and icons switch between dark and light automatically. Island style, material, corners, clock weight and any color for the equalization or clock accent.
 - **Privacy dots** for microphone and camera (green) and screen recording (red), plus a recording badge.
 - **Gaming + music**: when the FPS pill is visible and music is playing, the equalizer moves into its own **circular satellite island** to the left of the FPS pill. It works in both the Dynamic and Windows island styles.
 - **Focus mode**: triple-click the notch to dim it or turn it into a thin line at the screen edge.
@@ -113,7 +113,7 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 
 ## Install
 
-1. Download **WinZal_1.6.6_x64-setup.exe** from the [latest release](https://github.com/Bipin223/WinZal/releases/latest).
+1. Download **WinZal_1.6.7_x64-setup.exe** from the [latest release](https://github.com/Bipin223/WinZal/releases/latest).
 2. Run it. It installs for your user only; Node, Rust or administrator rights are not needed.
 3. WinZal starts with Windows. The notch appears at the top of the screen and the tray icon keeps it reachable.
 
@@ -125,7 +125,7 @@ The installer is not code-signed, so Windows SmartScreen may warn on first launc
 
 WinZal **1.6.2 and newer** check a signed `latest.json` from GitHub shortly after startup and once a day. By default they also **install a found update automatically** after a short pause and restart. Turn either behavior off under **Settings → Updates**; a manual check always lets you read the changelog and click **Install** yourself.
 
-If you are on **1.6.1 or older**, install **1.6.6 manually once**; after that, future signed updates can install themselves. Settings and local data are preserved because the app ID stays the same.
+If you are on **1.6.1 or older**, install **1.6.7 manually once**; after that, future signed updates can install themselves. Settings and local data are preserved because the app ID stays the same.
 
 Updates are in-place upgrades: only the app files are replaced. Settings, vault, notes, to-dos and saved Ask chats live in the Windows app-data folder, outside the installation directory, and are never removed by an update.
 

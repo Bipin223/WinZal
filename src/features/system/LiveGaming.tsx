@@ -21,6 +21,11 @@ export function LiveGaming() {
   const f = fps.use();
   const { stats } = system.use();
   const mem = stats ? (stats.memUsed / stats.memTotal) * 100 : null;
+  const meter = [
+    { key: "cpu", value: stats?.cpu ?? null },
+    { key: "gpu", value: stats?.gpu ?? null },
+    { key: "ram", value: mem },
+  ];
 
   return (
     <motion.div
@@ -47,6 +52,20 @@ export function LiveGaming() {
         </span>
         <Stat label="CPU" value={stats?.cpu ?? null} temp={stats?.cpuTemp ?? null} />
       </LiveEdge>
+      <div aria-hidden className="pointer-events-none absolute left-1/2 flex w-[68px] -translate-x-1/2 flex-col gap-[3px]">
+        {meter.map((entry) => (
+          <span key={entry.key} className="h-[3px] overflow-hidden rounded-full bg-fill-3">
+            <span
+              className="block h-full rounded-full transition-[width,background-color] duration-700 ease-out"
+              style={{
+                width: `${Math.max(0, Math.min(100, entry.value ?? 0))}%`,
+                backgroundColor: levelColor(entry.value ?? 0),
+                opacity: entry.value == null ? 0.35 : 1,
+              }}
+            />
+          </span>
+        ))}
+      </div>
       <LiveEdge side="right" className="flex items-center gap-3">
         <Stat label="GPU" value={stats?.gpu ?? null} temp={stats?.gpuTemp ?? null} />
         <span aria-hidden className="h-3 w-px shrink-0 self-center bg-separator" />

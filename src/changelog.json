@@ -1,5 +1,31 @@
 [
   {
+    "version": "1.6.7",
+    "date": "2026-10-24",
+    "items": [
+      {
+        "de": "Wort-für-Wort-Songtext: weicherer Spring, stärkerer Blur und sanfte Skalierung von unten – deutlich flüssiger",
+        "en": "Word-by-word lyrics: softer spring, stronger blur and a gentle scale from below for a much smoother rise"
+      },
+      {
+        "de": "Neuer In-App-Farbwähler für das Custom-Theme: HSV-Fläche, Hue-Regler, HEX- und RGB-Felder statt des Systemdialogs",
+        "en": "New in-app color picker for the Custom theme: HSV field, hue slider, HEX and RGB fields instead of the system dialog"
+      },
+      {
+        "de": "Fertige Themes Mocha, Matcha, Monochrome und Soft Yellow; Monochrome und Soft Yellow auch in der Farbreihe",
+        "en": "Ready-made Mocha, Matcha, Monochrome and Soft Yellow themes; Monochrome and Soft Yellow also in the color row"
+      },
+      {
+        "de": "Kopier-Bestätigungen zeigen jetzt grüne Punkte statt Häkchen",
+        "en": "Copy confirmations now use green dots instead of checkmarks"
+      },
+      {
+        "de": "FPS-Pille: Live-Lastbalken füllt die Mitte; die CPU-Temperatur nutzt den echten Lenovo-Sensor, wenn der Helper läuft",
+        "en": "FPS pill: live load bars fill the middle; CPU temperature uses the real Lenovo sensor when the helper is running"
+      }
+    ]
+  },
+  {
     "version": "1.6.6",
     "date": "2026-10-24",
     "items": [

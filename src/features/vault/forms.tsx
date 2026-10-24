@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowsClockwise, Check, ClipboardText, QrCode, Trash } from "@phosphor-icons/react";
+import { ArrowsClockwise, ClipboardText, QrCode, Trash } from "@phosphor-icons/react";
 import { content } from "../../design/motion";
 import { HeaderActions, HeaderButton } from "../../notch/header";
 import { Button, Group, Meter, Row, Slider, Switch, TextField } from "../../ui/controls";
 import { createStore } from "../../lib/store";
+import { SelectedDot } from "../../ui/SelectedDot";
 import { vault, vaultError, type VaultItem } from "../../platform/vault";
 import { generatePassword, strengthBits, type GeneratorOptions } from "./generator";
 import { errorText } from "./errors";
@@ -210,7 +211,7 @@ export function TotpForm(props: { onDone: () => void; run: (action: () => Promis
               animate={{ opacity: 1, transform: "scale(1)", transition: content.enter }}
               exit={{ opacity: 0, transition: content.exit }}
             >
-              {scan ? <Check size={16} weight="bold" /> : <QrCode size={16} weight="bold" />}
+              {scan ? <SelectedDot size={7} /> : <QrCode size={16} weight="bold" />}
             </motion.span>
           </AnimatePresence>
         </span>

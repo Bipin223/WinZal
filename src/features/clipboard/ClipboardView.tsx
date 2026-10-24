@@ -2,7 +2,6 @@
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowsOutSimple,
-  Check,
   Copy,
   File,
   FileArchive,
@@ -28,6 +27,7 @@ import { MAX_SIZE, requestSize } from "../../notch/size";
 import { findTab } from "../../notch/tabs";
 import { clipboard, useClipboard, type ClipItem, type ClipPreview } from "../../platform/clipboard";
 import { Redacted, Segmented } from "../../ui/controls";
+import { SelectedDot } from "../../ui/SelectedDot";
 import { usePresenting } from "../privacy/store";
 import { askAI } from "../ask/handoff";
 import { t } from "../../i18n";
@@ -318,7 +318,7 @@ function Card(props: { item: ClipItem; now: number; hidden: boolean; copied: boo
             exit={{ opacity: 0 }}
             transition={fade}
           >
-            <Check size={14} weight="bold" /> {t("Kopiert")}
+            <SelectedDot size={6} /> {t("Kopiert")}
           </motion.div>
         )}
       </AnimatePresence>

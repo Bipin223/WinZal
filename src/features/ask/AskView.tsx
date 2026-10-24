@@ -1,12 +1,13 @@
 ﻿import { useEffect, useRef, useState, type ClipboardEvent, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowUp, Chats, Copy, Check, FileText, ImageSquare, NotePencil, Plus, Sparkle, Stop, Translate, TextAlignLeft, Trash, X, type Icon } from "@phosphor-icons/react";
+import { ArrowUp, Chats, Copy, FileText, ImageSquare, NotePencil, Plus, Sparkle, Stop, Translate, TextAlignLeft, Trash, X, type Icon } from "@phosphor-icons/react";
 import { content, fade } from "../../design/motion";
 import { createStore } from "../../lib/store";
 import { navigate } from "../../notch/nav";
 import { clipboard } from "../../platform/clipboard";
 import { settings, updateSettings } from "../../settings/store";
 import { Switch } from "../../ui/controls";
+import { SelectedDot } from "../../ui/SelectedDot";
 import { providerInfo, streamChat, type ChatMessage } from "./providers";
 import { askAttachment, clearAskAttachment } from "./handoff";
 import { askHistory, type AskSummary } from "./history";
@@ -672,7 +673,7 @@ function Bubble({ message, streaming }: { message: ChatMessage; streaming: boole
             }}
             className="pressable mt-1 flex items-center gap-1 text-caption text-label-4 opacity-0 group-hover:opacity-100 hover:text-label-2"
           >
-            {copied ? <Check size={11} weight="bold" /> : <Copy size={11} weight="bold" />} {copied ? t("Kopiert") : t("Kopieren")}
+            {copied ? <SelectedDot size={5} /> : <Copy size={11} weight="bold" />} {copied ? t("Kopiert") : t("Kopieren")}
           </button>
         )}
       </div>

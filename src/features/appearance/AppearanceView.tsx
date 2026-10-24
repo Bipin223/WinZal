@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { ArrowCounterClockwise, Eyedropper, Plus } from "@phosphor-icons/react";
 import { invoke } from "@tauri-apps/api/core";
 import { relaunch } from "@tauri-apps/plugin-process";
@@ -8,6 +8,7 @@ import { isNative } from "../../platform/native";
 import { settings, updateSettings, type Settings } from "../../settings/store";
 import { Switch } from "../../ui/controls";
 import { SelectedDot } from "../../ui/SelectedDot";
+import { ColorPickerPanel } from "../../ui/ColorPicker";
 import { t } from "../../i18n";
 import { DARK_SURFACE, LIGHT_SURFACE, useThemeLight } from "./theme";
 
@@ -15,7 +16,13 @@ type Appearance = Settings["appearance"];
 
 const ACCENTS = ["auto", "#0a84ff", "#30d158", "#ffd60a", "#ff9f0a", "#ff453a", "#bf5af2", "#ffffff"];
 const CLOCK_ACCENTS = ["#ff453a", "#ff9f0a", "#ffd60a", "#30d158", "#0a84ff", "#bf5af2", "#ffffff"];
-const THEME_COLORS = ["#0b0b0f", "#1c1c1e", "#0b1220", "#0f1a14", "#1a0f1a", "#f5f5f7", "#fdf6e3", "#ffffff"];
+const THEME_COLORS = ["#0b0b0f", "#1c1c1e", "#0b1220", "#0f1a14", "#1a0f1a", "#f5f5f7", "#fdf6e3", "#f7e7a1", "#e5e5e5", "#ffffff"];
+const THEME_PRESETS = [
+  { name: "Mocha", color: "#2a1b16", a: "#4a2c20", b: "#e7c4a5" },
+  { name: "Matcha", color: "#1f2e1a", a: "#3e5b34", b: "#cddfb3" },
+  { name: "Monochrome", color: "#1c1c1e", a: "#0b0b0f", b: "#e5e5e5" },
+  { name: "Soft Yellow", color: "#f7e7a1", a: "#e8c84a", b: "#fff7d1" },
+];
 
 const DEFAULTS: Appearance = {
   accent: "auto",
@@ -290,21 +297,19 @@ function ToggleRow({
 
 function ThemeColorPicker({ value, themeLight, onChange }: { value: string; themeLight: boolean; onChange: (v: string) => void }) {
   const color = /^#[0-9a-f]{6}$/i.test(value) ? value : "#141416";
+  const [open, setOpen] = useState(false);
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2.5">
-        <label
-          title={t("Theme color")}
+        <button
+          type="button"
+          title={t("Open color picker")}
+          aria-label={t("Open color picker")}
+          aria-expanded={open}
+          onClick={() => setOpen((current) => !current)}
           className="relative size-10 shrink-0 cursor-pointer overflow-hidden rounded-[12px] ring-2 ring-label"
           style={{ background: color }}
         >
-          <input
-            type="color"
-            aria-label={t("Theme color")}
-            value={color}
-            onChange={(event) => onChange(event.target.value)}
-            className="absolute inset-0 size-full cursor-pointer opacity-0"
-          />
           <span className="pointer-events-none absolute inset-0 grid place-items-center">
             <Eyedropper
               size={15}
@@ -312,7 +317,7 @@ function ThemeColorPicker({ value, themeLight, onChange }: { value: string; them
               className={themeLight ? "text-black/70" : "text-white [filter:drop-shadow(0_1px_2px_rgb(0_0_0/0.65))]"}
             />
           </span>
-        </label>
+        </button>
         <div className="min-w-0">
           <div className="text-caption font-semibold text-label">{t("Custom theme color")}</div>
           <div className="truncate text-caption text-label-3 tabular">
@@ -337,6 +342,45 @@ function ThemeColorPicker({ value, themeLight, onChange }: { value: string; them
           );
         })}
       </div>
+      <div className="mt-1">
+        <div className="mb-1.5 text-footnote font-semibold text-label-2">{t("Ready-made")}</div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {THEME_PRESETS.map((preset) => {
+            const active = color.toLowerCase() === preset.color;
+            return (
+              <button
+                key={preset.name}
+                type="button"
+                onClick={() => onChange(preset.color)}
+                aria-pressed={active}
+                className={`flex min-w-0 items-center gap-2 rounded-[10px] px-2.5 py-2 text-left transition-colors ${
+                  active ? "bg-fill-2 ring-2 ring-label" : "bg-fill-1 hover:bg-fill-2"
+                }`}
+              >
+                <span
+                  aria-hidden
+                  className="size-5 shrink-0 rounded-full ring-1 ring-separator"
+                  style={{ background: `linear-gradient(135deg, ${preset.a} 0 50%, ${preset.b} 50% 100%)` }}
+                />
+                <span className="min-w-0 flex-1 truncate text-caption font-semibold text-label">{preset.name}</span>
+                {active && <SelectedDot size={4} />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto", transition: { duration: 0.22, ease: [0.23, 1, 0.32, 1] } }}
+            exit={{ opacity: 0, height: 0, transition: { duration: 0.16, ease: [0.23, 1, 0.32, 1] } }}
+            className="overflow-hidden"
+          >
+            <ColorPickerPanel value={color} onChange={onChange} onClose={() => setOpen(false)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

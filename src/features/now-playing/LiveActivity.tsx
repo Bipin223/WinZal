@@ -219,9 +219,10 @@ function LyricLine({
                 <motion.span
                   key={`${index}-${i}`}
                   className="inline-block"
-                  initial={{ opacity: 0, filter: "blur(6px)", y: 2 }}
-                  animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
-                  transition={{ duration: 0.34, delay: i * stagger, ease: [0.23, 1, 0.32, 1] }}
+                  initial={{ opacity: 0, y: 7, scale: 0.9, filter: "blur(8px)" }}
+                  animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+                  transition={{ ...springs.lyricWord, delay: i * stagger }}
+                  style={{ transformOrigin: "50% 90%" }}
                 >
                   {word}
                   {i < words.length - 1 ? "\u00A0" : ""}
