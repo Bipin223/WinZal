@@ -7,7 +7,7 @@
 //! - VRAM: "GPU Adapter Memory(*)\Dedicated Usage" + total size from DXGI.
 //! - Ping: ICMP echo to 1.1.1.1 on its own thread (every 2 s, only while polled).
 
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -23,6 +23,8 @@ use windows::Win32::System::Performance::{
     PDH_HCOUNTER, PDH_HQUERY,
 };
 
+use crate::temps;
+
 /// 1.1.1.1 in network byte order.
 const PING_TARGET: u32 = u32::from_le_bytes([1, 1, 1, 1]);
 const PING_EVERY: Duration = Duration::from_secs(2);
@@ -30,6 +32,8 @@ const PING_EVERY: Duration = Duration::from_secs(2);
 const PING_IDLE: Duration = Duration::from_secs(5);
 /// "No ping" (timeout / offline).
 const NO_PING: u64 = u64::MAX;
+/// The temperature thread pauses after this long without a poll.
+const TEMP_IDLE: Duration = Duration::from_secs(5);
 
 pub struct SystemState(Mutex<Probe>);
 
@@ -39,6 +43,15 @@ struct Probe {
     gpu_name: Option<String>,
     gpu_total: u64,
     ping: Arc<Ping>,
+    temp: Arc<Temp>,
+}
+
+/// CPU/GPU temperatures, cached in the background; 0 = unknown.
+struct Temp {
+    cpu: AtomicU32,
+    gpu: AtomicU32,
+    /// Last poll (ms since start); decides whether the thread reads sensors.
+    wanted_at: Mutex<Instant>,
 }
 
 struct Ping {
@@ -62,7 +75,9 @@ impl Default for SystemState {
         let (gpu_name, gpu_total) = adapter().unzip();
         let ping = Arc::new(Ping { ms: AtomicU64::new(NO_PING), wanted_at: Mutex::new(Instant::now() - PING_IDLE) });
         spawn_ping(ping.clone());
-        Self(Mutex::new(Probe { sys: System::new(), gpu: Gpu::open(), gpu_name, gpu_total: gpu_total.flatten().unwrap_or(0), ping }))
+        let temp = Arc::new(Temp { cpu: AtomicU32::new(0), gpu: AtomicU32::new(0), wanted_at: Mutex::new(Instant::now() - TEMP_IDLE) });
+        spawn_temp(temp.clone());
+        Self(Mutex::new(Probe { sys: System::new(), gpu: Gpu::open(), gpu_name, gpu_total: gpu_total.flatten().unwrap_or(0), ping, temp }))
     }
 }
 
@@ -78,6 +93,9 @@ pub struct Stats {
     gpu_name: Option<String>,
     gpu_mem_used: u64,
     gpu_mem_total: u64,
+    /// °C; None = no sensor.
+    cpu_temp: Option<u32>,
+    gpu_temp: Option<u32>,
     /// Milliseconds; None = no reply.
     ping: Option<u64>,
 }
@@ -94,10 +112,15 @@ pub fn system_stats(full: bool, state: State<'_, SystemState>) -> Stats {
     // engines and the ping goes over the network, so both only run while shown.
     if full {
         *p.ping.wanted_at.lock().unwrap() = Instant::now();
+        *p.temp.wanted_at.lock().unwrap() = Instant::now();
     }
 
     let (gpu, gpu_mem_used) = if full { p.gpu.as_ref().map(Gpu::read).unwrap_or((None, 0)) } else { (None, 0) };
     let ping = if full { p.ping.ms.load(Ordering::Relaxed) } else { NO_PING };
+    // The elevated helper publishes Lenovo temps; otherwise use the background
+    // sensor thread (elevated Lenovo WMI / nvidia-smi).
+    let (helper_cpu, helper_gpu) = if full { crate::fps::helper_temps() } else { (None, None) };
+    let (local_cpu, local_gpu) = if full { p.temp.read() } else { (None, None) };
     Stats {
         cpu: p.sys.global_cpu_usage(),
         cpu_name: p.sys.cpus().first().map(|c| clean_name(c.brand())).unwrap_or_default(),
@@ -107,6 +130,8 @@ pub fn system_stats(full: bool, state: State<'_, SystemState>) -> Stats {
         gpu_name: p.gpu_name.clone(),
         gpu_mem_used,
         gpu_mem_total: p.gpu_total,
+        cpu_temp: helper_cpu.or(local_cpu),
+        gpu_temp: helper_gpu.or(local_gpu),
         ping: (ping != NO_PING).then_some(ping),
     }
 }
@@ -197,8 +222,47 @@ fn clean_name(name: &str) -> String {
     s.replace(" CPU", "").replace("  ", " ").replace(" Processor", "").trim().to_string()
 }
 
-fn spawn_ping(ping: Arc<Ping>) {
+impl Temp {
+    fn read(&self) -> (Option<u32>, Option<u32>) {
+        let cpu = self.cpu.load(Ordering::Relaxed);
+        let gpu = self.gpu.load(Ordering::Relaxed);
+        ((cpu > 0).then_some(cpu), (gpu > 0).then_some(gpu))
+    }
+}
+
+/// Reads Lenovo WMI (if this process is elevated) or nvidia-smi every other second
+/// while the Hardware/gaming overlay is visible. The elevated helper already
+/// publishes the Lenovo values, so this thread stays idle in that case.
+fn spawn_temp(temp: Arc<Temp>) {
     thread::spawn(move || {
+        let mut lenovo = None;
+        let mut last_open = Instant::now() - Duration::from_secs(60);
+        loop {
+            if temp.wanted_at.lock().unwrap().elapsed() > TEMP_IDLE {
+                thread::sleep(Duration::from_millis(500));
+                continue;
+            }
+            let (helper_cpu, helper_gpu) = crate::fps::helper_temps();
+            if helper_cpu.is_some() || helper_gpu.is_some() {
+                // system_stats prefers the helper's values; don't duplicate WMI.
+                temp.cpu.store(0, Ordering::Relaxed);
+                temp.gpu.store(0, Ordering::Relaxed);
+            } else {
+                if lenovo.is_none() && last_open.elapsed() > Duration::from_secs(30) {
+                    lenovo = temps::Lenovo::open();
+                    last_open = Instant::now();
+                }
+                let (cpu, gpu) = lenovo.as_ref().map(|l| l.temps()).unwrap_or((None, None));
+                let gpu = gpu.or_else(temps::nvidia_smi);
+                temp.cpu.store(cpu.unwrap_or(0), Ordering::Relaxed);
+                temp.gpu.store(gpu.unwrap_or(0), Ordering::Relaxed);
+            }
+            thread::sleep(Duration::from_secs(2));
+        }
+    });
+}
+
+fn spawn_ping(ping: Arc<Ping>) {    thread::spawn(move || {
         let Ok(handle) = (unsafe { IcmpCreateFile() }) else { return };
         let payload = [0u8; 32];
         let mut reply = vec![0u8; std::mem::size_of::<ICMP_ECHO_REPLY>() + payload.len() + 8];

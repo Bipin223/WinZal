@@ -16,6 +16,7 @@ mod mixer;
 mod privacy;
 pub mod secrets;
 mod system;
+mod temps;
 pub mod usage;
 mod vault;
 

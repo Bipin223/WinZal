@@ -45,10 +45,10 @@ export function LiveGaming() {
           </span>
           <span className="text-caption font-medium text-label-3">FPS</span>
         </span>
-        <Stat label="CPU" value={stats?.cpu ?? null} />
+        <Stat label="CPU" value={stats?.cpu ?? null} temp={stats?.cpuTemp ?? null} />
       </LiveEdge>
       <LiveEdge side="right" className="flex items-center gap-3">
-        <Stat label="GPU" value={stats?.gpu ?? null} />
+        <Stat label="GPU" value={stats?.gpu ?? null} temp={stats?.gpuTemp ?? null} />
         <Stat label="RAM" value={mem} />
       </LiveEdge>
     </motion.div>
@@ -61,13 +61,14 @@ function hint(error: string | null): string | undefined {
   return undefined;
 }
 
-function Stat({ label, value }: { label: string; value: number | null }) {
+function Stat({ label, value, temp = null }: { label: string; value: number | null; temp?: number | null }) {
   return (
     <span className="flex items-baseline gap-1">
       <span className="text-caption font-medium text-label-3">{label}</span>
       <span className="tabular w-[30px] text-right text-footnote font-semibold transition-colors duration-300" style={{ color: levelColor(value ?? 0) }}>
         {value === null ? "–" : `${Math.round(value)}%`}
       </span>
+      {temp != null && <span className="tabular text-caption font-medium text-label-3">{temp}°</span>}
     </span>
   );
 }

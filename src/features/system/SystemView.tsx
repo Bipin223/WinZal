@@ -22,18 +22,25 @@ export function SystemView() {
   if (!s) return null;
   const gb = (b: number) => (b / 1024 ** 3).toLocaleString(locale(), { maximumFractionDigits: 1 });
   const mem = (s.memUsed / s.memTotal) * 100;
+  // Keep the rows readable: the full marketing names plus temps don't fit 190 px.
+  const cpuShort =
+    s.cpuName.replace(/^\d+(?:st|nd|rd|th) Gen Intel /i, "").replace(/^Intel /i, "").replace(/^Core /i, "").trim() || s.cpuName;
+  const gpuShort = (s.gpuName ?? "").replace(/^NVIDIA /i, "").replace(/^AMD /i, "").replace(/^Intel /i, "").replace(/^GeForce /i, "").replace(/ Laptop GPU$/i, "").trim();
+  const gpuDetail = [gpuShort, s.gpuMemTotal ? `${gb(s.gpuMemUsed)}/${gb(s.gpuMemTotal)} GB` : null, s.gpuTemp != null ? `${s.gpuTemp}°C` : null]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div className="h-full px-4 pt-1 pb-2">
       <div className="divide-y divide-separator rounded-[14px] bg-fill-1">
-        <Row i={0} tick={tick} icon={Cpu} label="CPU" detail={s.cpuName} values={h.cpu} max={100} value={`${Math.round(s.cpu)} %`} level={s.cpu} />
+        <Row i={0} tick={tick} icon={Cpu} label="CPU" detail={`${cpuShort}${s.cpuTemp != null ? ` · ${s.cpuTemp}°C` : ""}`} values={h.cpu} max={100} value={`${Math.round(s.cpu)} %`} level={s.cpu} />
         <Row i={1} tick={tick} icon={RamIcon} label="RAM" detail={`${gb(s.memUsed)} / ${gb(s.memTotal)} GB`} values={h.mem} max={100} value={`${Math.round(mem)} %`} level={mem} />
         <Row
           i={2}
           tick={tick}
           icon={GpuIcon}
           label="GPU"
-          detail={[s.gpuName, s.gpuMemTotal ? `${gb(s.gpuMemUsed)} / ${gb(s.gpuMemTotal)} GB` : null].filter(Boolean).join(" · ") || t("Nicht verfügbar")}
+          detail={gpuDetail || t("Nicht verfügbar")}
           values={h.gpu}
           max={100}
           value={s.gpu === null ? "–" : `${Math.round(s.gpu)} %`}

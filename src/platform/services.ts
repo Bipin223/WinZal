@@ -97,6 +97,9 @@ export interface SystemStats {
   gpuName: string | null;
   gpuMemUsed: number;
   gpuMemTotal: number;
+  /** °C; null = no sensor. */
+  cpuTemp: number | null;
+  gpuTemp: number | null;
   /** ms; null = no reply. */
   ping: number | null;
 }
@@ -117,6 +120,8 @@ export function fetchSystem(full: boolean): Promise<SystemStats> {
     gpuName: "GeForce RTX 4070 Ti",
     gpuMemUsed: full ? 2.9 * gb + (mock.gpu / 100) * 3 * gb : 0,
     gpuMemTotal: 12 * gb,
+    cpuTemp: full ? 62 : null,
+    gpuTemp: full ? 58 : null,
     ping: full ? Math.round(mock.ping) : null,
   });
 }

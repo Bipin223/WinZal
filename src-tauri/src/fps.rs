@@ -178,6 +178,10 @@ struct FpsShared {
     heartbeat: AtomicU64,
     error: AtomicU32,
     stop: AtomicU32,
+    /// °C from the elevated Lenovo WMI helper; 0 = unavailable.
+    cpu_temp: AtomicU32,
+    gpu_temp: AtomicU32,
+    temp_at: AtomicU64,
     entries: [FpsEntry; SLOTS],
 }
 
@@ -236,6 +240,24 @@ unsafe fn open_mapping(helper: bool) -> Option<*mut FpsShared> {
 fn helper_alive(shared: *mut FpsShared) -> bool {
     let heartbeat = unsafe { (*shared).heartbeat.load(Ordering::Relaxed) };
     heartbeat != 0 && unsafe { GetTickCount64() }.saturating_sub(heartbeat) < 5000
+}
+
+/// CPU/GPU temperatures published by the elevated helper. `None` when the helper
+/// is not running or the Lenovo WMI provider is unavailable.
+pub(crate) fn helper_temps() -> (Option<u32>, Option<u32>) {
+    let Some(shared) = shared() else { return (None, None) };
+    if !helper_alive(shared) {
+        return (None, None);
+    }
+    unsafe {
+        let at = (*shared).temp_at.load(Ordering::Relaxed);
+        if at == 0 || GetTickCount64().saturating_sub(at) > 6000 {
+            return (None, None);
+        }
+        let cpu = (*shared).cpu_temp.load(Ordering::Relaxed);
+        let gpu = (*shared).gpu_temp.load(Ordering::Relaxed);
+        ((cpu > 0).then_some(cpu), (gpu > 0).then_some(gpu))
+    }
 }
 
 /// Reads the helper counters for the foreground process. `None` means "no helper";
@@ -385,6 +407,9 @@ pub fn run_helper(main_pid: u32) -> ! {
         (*shared).heartbeat.store(0, Ordering::Relaxed);
         (*shared).error.store(0, Ordering::Relaxed);
         (*shared).stop.store(0, Ordering::Relaxed);
+        (*shared).cpu_temp.store(0, Ordering::Relaxed);
+        (*shared).gpu_temp.store(0, Ordering::Relaxed);
+        (*shared).temp_at.store(0, Ordering::Relaxed);
         for entry in (*shared).entries.iter() {
             entry.pid.store(0, Ordering::Relaxed);
             entry.epoch.store(0, Ordering::Relaxed);
@@ -425,6 +450,10 @@ pub fn run_helper(main_pid: u32) -> ! {
         }
         unsafe { (*shared).heartbeat.store(GetTickCount64(), Ordering::Relaxed) };
     });
+
+    // Temperatures need the same elevated token for Lenovo's WMI provider.
+    let temp_addr = shared as usize;
+    thread::spawn(move || temp_loop(temp_addr));
 
     unsafe {
         (*shared).heartbeat.store(GetTickCount64(), Ordering::Relaxed);
@@ -507,6 +536,37 @@ fn event_kind(provider: GUID, id: u16) -> Option<usize> {
         }
     } else {
         None
+    }
+}
+
+/// Elevated thread: Lenovo GameZone WMI temperatures, with nvidia-smi as the GPU
+/// fallback. Publishes °C into the shared block for the normal notch process.
+fn temp_loop(shared_addr: usize) {
+    let shared = shared_addr as *mut FpsShared;
+    let mut lenovo: Option<crate::temps::Lenovo> = None;
+    let mut last_open = Instant::now() - Duration::from_secs(60);
+    loop {
+        if unsafe { (*shared).stop.load(Ordering::Relaxed) } != 0 {
+            break;
+        }
+        if lenovo.is_none() && last_open.elapsed() > Duration::from_secs(10) {
+            lenovo = crate::temps::Lenovo::open();
+            last_open = Instant::now();
+        }
+        let (cpu, mut gpu) = lenovo.as_ref().map(|l| l.temps()).unwrap_or((None, None));
+        if gpu.is_none() {
+            gpu = crate::temps::nvidia_smi();
+        }
+        if cpu.is_none() && gpu.is_none() && lenovo.is_some() {
+            // The provider answered but has no sensors (e.g. non-Lenovo); retry later.
+            lenovo = None;
+        }
+        unsafe {
+            (*shared).cpu_temp.store(cpu.unwrap_or(0), Ordering::Relaxed);
+            (*shared).gpu_temp.store(gpu.unwrap_or(0), Ordering::Relaxed);
+            (*shared).temp_at.store(GetTickCount64(), Ordering::Relaxed);
+        }
+        thread::sleep(Duration::from_secs(2));
     }
 }
 

@@ -593,13 +593,31 @@ function BluetoothTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
 
 function PowerTile() {
   const [energy, setEnergy] = useState<EnergyState | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const busyRef = useRef(false);
+  const settle = useRef(0);
 
   useEffect(() => {
-    const load = () => void systemControls.energy().then(setEnergy).catch(() => setEnergy(null));
+    // Don't let the 5 s poll race a just-clicked mode and flip the tile back.
+    const load = () => {
+      if (busyRef.current || Date.now() < settle.current) return;
+      void systemControls.energy().then(setEnergy).catch(() => setEnergy(null));
+    };
     load();
     const id = setInterval(load, 5000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const outside = (e: PointerEvent) => {
+      if (!box.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    window.addEventListener("pointerdown", outside);
+    return () => window.removeEventListener("pointerdown", outside);
+  }, [menuOpen]);
 
   const scheme = energy?.scheme;
   const mode: PowerMode = scheme === "saver" ? "saver" : scheme === "high" ? "high" : "balanced";
@@ -607,27 +625,72 @@ function PowerTile() {
   const state = mode === "saver" ? t("Sparmodus") : mode === "high" ? t("Hoch") : t("Ausgeglichen");
   const tone = mode === "saver" ? "text-[#0a84ff]" : mode === "high" ? "text-[#ff453a]" : "text-white";
   const next: PowerMode = mode === "saver" ? "balanced" : mode === "balanced" ? "high" : "saver";
+  const options: { mode: PowerMode; label: string; level: number; tone: string }[] = [
+    { mode: "saver", label: t("Sparmodus"), level: 0.28, tone: "text-[#0a84ff]" },
+    { mode: "balanced", label: t("Ausgeglichen"), level: 0.6, tone: "text-white" },
+    { mode: "high", label: t("Hoch"), level: 0.92, tone: "text-[#ff453a]" },
+  ];
+
+  const select = (target: PowerMode) => {
+    setMenuOpen(false);
+    if (busyRef.current) return;
+    if (target === mode && energy) return;
+    busyRef.current = true;
+    settle.current = Date.now() + 3500;
+    setBusy(true);
+    setEnergy((e) => (e ? { ...e, saver: target === "saver", scheme: target } : e));
+    void systemControls
+      .setEnergy(target)
+      .then(setEnergy)
+      .catch(() => systemControls.energy().then(setEnergy).catch(() => setEnergy(null)))
+      .finally(() => {
+        busyRef.current = false;
+        settle.current = Date.now() + 2500;
+        setBusy(false);
+      });
+  };
 
   return (
-    <ToggleTile
-      label="Power"
-      state={state}
-      active={false}
-      statusDot={mode === "saver" ? "#0a84ff" : mode === "high" ? "#ff453a" : "#ffffff"}
-      renderGlyph={() => <BatteryIcon level={level} size={22} className={tone} />}
-      glyphKey={mode}
-      straight
-      bareIcon
-      onClick={() => {
-        setEnergy((e) => e && { ...e, saver: next === "saver", scheme: next });
-        void systemControls.setEnergy(next).then(setEnergy).catch(() => systemControls.energy().then(setEnergy));
-      }}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        void systemControls.openUri("ms-settings:powersleep");
-      }}
-      title={t("Power mode")}
-    />
+    <div ref={box} className="relative min-w-0">
+      <ToggleTile
+        label="Power"
+        state={busy ? "…" : state}
+        active={false}
+        statusDot={mode === "saver" ? "#0a84ff" : mode === "high" ? "#ff453a" : "#ffffff"}
+        renderGlyph={() => <BatteryIcon level={level} size={22} className={tone} />}
+        glyphKey={mode}
+        straight
+        bareIcon
+        onClick={() => select(next)}
+        onMenu={() => setMenuOpen((open) => !open)}
+        menuLabel={t("Power mode")}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          void systemControls.openUri("ms-settings:powersleep");
+        }}
+        title={t("Power mode")}
+      />
+      {menuOpen && (
+        <div className="absolute right-0 bottom-full z-50 mb-2 w-[190px] overflow-hidden rounded-[12px] bg-[#1b1b1d] p-1.5 shadow-2xl">
+          <div className="px-2 py-1 text-[10px] font-semibold tracking-wide text-label-3 uppercase">{t("Power mode")}</div>
+          {options.map((option) => (
+            <button
+              key={option.mode}
+              type="button"
+              onClick={() => select(option.mode)}
+              className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-left hover:bg-white/6"
+            >
+              <BatteryIcon level={option.level} size={16} className={option.tone} />
+              <span className="min-w-0 flex-1 truncate text-caption text-label">{option.label}</span>
+              {mode === option.mode && <Check size={11} weight="bold" className="shrink-0 text-green" />}
+            </button>
+          ))}
+          <div className="border-t border-white/8 px-2.5 py-1.5 text-[9px] leading-[12px] text-label-4">
+            {t("Windows power mode; right-click for Windows settings.")}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

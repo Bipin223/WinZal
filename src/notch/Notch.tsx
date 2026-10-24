@@ -22,7 +22,7 @@ import { nav, navigate } from "./nav";
 import { update } from "../lib/update";
 import { findTab, settingsTab, tabs, type NotchTab } from "./tabs";
 import { holdOpen, pinned, togglePin, useNotchState, type NotchStatus } from "./useNotchState";
-import { t } from "../i18n";
+import { t, locale } from "../i18n";
 import { formatTemp, formatTimeParts } from "../lib/format";
 import { describe, useForecast } from "../features/weather/store";
 import { timer } from "../features/timer/store";
@@ -118,7 +118,7 @@ export function Notch() {
         // Keep the resting island tight: just the clock and the weather.
         w:
           floating && clockPill && status !== "open" && !tightHit
-            ? Math.min(shape.w, status === "peek" ? 174 : 164)
+            ? Math.min(shape.w, status === "peek" ? 268 : 252)
             : shape.w,
       }
     : shape;
@@ -315,6 +315,7 @@ function ClosedClock() {
     return () => window.clearInterval(id);
   }, []);
   const { time, period } = formatTimeParts(now);
+  const date = now.toLocaleDateString(locale(), { weekday: "short", day: "numeric", month: "short" });
   const wx = forecast && forecast !== "error" ? describe(forecast.current.code, forecast.current.day) : null;
   const temp = forecast && forecast !== "error" ? formatTemp(forecast.current.temp) : null;
   return (
@@ -322,6 +323,7 @@ function ClosedClock() {
       <div className="flex items-center gap-1">
         <ClockTime time={time} className="tabular text-[12px] font-semibold text-label" />
         {period && <span className="text-[9px] font-semibold text-label-3">{period}</span>}
+        <span className="text-[9px] font-medium text-label-3">· {date}</span>
       </div>
       {wx && (
         <>
