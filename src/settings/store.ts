@@ -38,8 +38,8 @@ export interface Settings {
      */
     idleStyle: "notch" | "line";
   };
-  /** Gaming mode: FPS + load in the closed notch: off, only in fullscreen, or always. */
-  gaming: { mode: "off" | "fullscreen" | "on" };
+  /** Gaming mode: FPS + load in the closed notch: off, for chosen games/apps, or always. */
+  gaming: { mode: "off" | "games" | "always"; apps: string[] };
   /** Dots like on iPhone: mic/camera (green) or screen recording (red) in use. */
   privacyDots: boolean;
   /** Notch colours and shape. `accent: "auto"` follows the album art. */
@@ -73,13 +73,13 @@ export interface Settings {
     lyricsLayout: "inline" | "lines";
     /** Keep the normal closed pill width or grow it so more of the line fits. */
     lyricsSize: "default" | "large";
-    /** Line change animation: fade/blur (current), Apple Music-style scroll, or a stronger blur. */
-    lyricsAnimation: "current" | "apple" | "blur";
+    /** Line change animation: fade/blur (current), Apple Music-style scroll, or word-by-word blur reveal. */
+    lyricsAnimation: "current" | "apple" | "word";
     /** true = hardware acceleration (smoother, more RAM); false = software/CPU (less RAM, more CPU). */
     gpuAcceleration: boolean;
   };
   /** Discord call in the notch (local RPC, on = Discord tool enabled). The client secret is stored with the secrets. */
-  discord: { clientId: string };
+  discord: { clientId: string; presence: boolean };
   alarm: { sound: AlarmSound; volume: number; duration: AlarmDuration };
   /** English is the only language in this build. */
   language: "en";
@@ -128,7 +128,7 @@ const defaults: Settings = {
   },
   weather: null,
   display: { visibility: "always", monitor: null, offset: 0, focusStyle: "dim", idleStyle: "notch" },
-  gaming: { mode: "off" },
+  gaming: { mode: "off", apps: [] },
   privacyDots: true,
   appearance: {
     accent: "auto",
@@ -144,14 +144,14 @@ const defaults: Settings = {
     musicInPill: true,
     clockAccent: "#ff453a",
     clockText: "large",
-    clockBold: false,
+    clockBold: true,
     lyricsInPill: false,
     lyricsLayout: "inline",
     lyricsSize: "default",
     lyricsAnimation: "current",
     gpuAcceleration: false,
   },
-  discord: { clientId: "" },
+  discord: { clientId: "", presence: true },
   alarm: { sound: "chime", volume: 0.7, duration: 5 },
   language: "en",
   units: regionUnits(),
@@ -203,10 +203,15 @@ settings.set((s) => {
     tools,
     usage: { ...defaults.usage, ...s.usage },
     display: { ...defaults.display, ...s.display },
-    gaming: { ...defaults.gaming, ...s.gaming },
+    gaming: migrateGaming(s.gaming),
     appearance: {
       ...defaults.appearance,
       ...s.appearance,
+      // The old "blur" line option is now the word-by-word reveal.
+      lyricsAnimation:
+        (s.appearance as { lyricsAnimation?: string } | undefined)?.lyricsAnimation === "blur"
+          ? "word"
+          : s.appearance?.lyricsAnimation ?? defaults.appearance.lyricsAnimation,
       // The experimental RGB accent was removed; fall back to auto.
       accent: s.appearance?.accent === "rgb" ? defaults.appearance.accent : s.appearance?.accent ?? defaults.appearance.accent,
     },
@@ -229,6 +234,24 @@ try {
   }
 } catch {
   // localStorage unavailable: defaults already use large.
+}
+
+// The expanded clock starts bold now; Regular stays one tap away in Appearance.
+try {
+  if (!localStorage.getItem("notch:clock-bold")) {
+    settings.set((s) => ({ ...s, appearance: { ...s.appearance, clockBold: true } }));
+    localStorage.setItem("notch:clock-bold", "1");
+  }
+} catch {
+  // localStorage unavailable: defaults already use bold.
+}
+
+/** Old gaming modes were off / fullscreen / always; now off / games / always. */
+function migrateGaming(old: unknown): Settings["gaming"] {
+  const legacy = (old ?? {}) as { mode?: string; apps?: unknown };
+  const mode = legacy.mode === "on" || legacy.mode === "always" ? "always" : legacy.mode === "fullscreen" || legacy.mode === "games" ? "games" : "off";
+  const apps = Array.isArray(legacy.apps) ? legacy.apps.filter((id): id is string => typeof id === "string" && id.length > 0) : [];
+  return { mode, apps };
 }
 
 /** Migrates the old shape ({ provider: "demo", model }) and adds missing providers. */

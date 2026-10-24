@@ -274,6 +274,19 @@ export interface MonitorInfo {
   height: number;
 }
 
+export interface ForegroundInfo {
+  app: string;
+  title: string;
+  fullscreen: boolean;
+  gaming: boolean;
+}
+
+export interface VisibleApp {
+  id: string;
+  name: string;
+  title: string;
+}
+
 export const display = {
   monitors: (): Promise<MonitorInfo[]> =>
     isNative
@@ -282,7 +295,7 @@ export const display = {
           { name: "\\.\DISPLAY1", primary: true, width: 2560, height: 1440 },
           { name: "\\.\DISPLAY2", primary: false, width: 1920, height: 1080 },
         ]),
-  apply: (config: { hideFullscreen: boolean; monitor: string | null; offset: number; gaming: boolean }) => {
+  apply: (config: { hideFullscreen: boolean; monitor: string | null; offset: number; gamingMode: string; gamingApps: string[] }) => {
     if (isNative) void invoke("display_apply", { config });
   },
   /** true while an app covers the notch's monitor in fullscreen. */
@@ -291,6 +304,13 @@ export const display = {
     const off = listen<boolean>("notch://fullscreen", (e) => handler(e.payload));
     return () => void off.then((f) => f());
   },
+  /** Foreground app + whether gaming mode wants the overlay for it. */
+  onForeground: (handler: (info: ForegroundInfo) => void): (() => void) => {
+    if (!isNative) return () => {};
+    const off = listen<ForegroundInfo>("notch://foreground", (e) => handler(e.payload));
+    return () => void off.then((f) => f());
+  },
+  apps: (): Promise<VisibleApp[]> => (isNative ? invoke<VisibleApp[]>("apps_visible") : Promise.resolve([])),
 };
 
 // ---------- Lyrics ----------

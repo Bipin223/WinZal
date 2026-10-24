@@ -11,7 +11,7 @@ export function ClockTime({ time, className }: { time: string; className?: strin
   const rest = time.slice(1);
   return (
     <span className={className}>
-      <span style={{ color: accent }}>{first}</span>
+      <span style={{ color: accent, fontWeight: 800 }}>{first}</span>
       {rest}
     </span>
   );

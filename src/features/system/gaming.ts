@@ -1,20 +1,24 @@
 import { useEffect } from "react";
 import { createStore } from "../../lib/store";
-import { display, fetchFps } from "../../platform/services";
-import { settings } from "../../settings/store";
+import { display, fetchFps, type ForegroundInfo } from "../../platform/services";
 
-/** Fullscreen app on the notch's monitor (from display.rs). */
-const fullscreen = createStore(false);
+/*
+ * Gaming mode is decided in Rust: it knows the foreground app (and whether the
+ * user selected it), so the closed overlay can show only for chosen games.
+ */
+const foreground = createStore<ForegroundInfo | null>(null);
+const gaming = createStore(false);
 
 export function startGamingWatch() {
-  display.onFullscreen((on) => fullscreen.set(on));
+  display.onForeground((info) => {
+    foreground.set(info);
+    gaming.set(info.gaming);
+  });
 }
 
 /** Is the closed notch showing FPS and load right now? */
 export function useGamingLive(): boolean {
-  const mode = settings.use().gaming.mode;
-  const full = fullscreen.use();
-  return mode === "on" || (mode === "fullscreen" && full);
+  return gaming.use();
 }
 
 export const fps = createStore<{ value: number | null; error: string | null }>({ value: null, error: null });

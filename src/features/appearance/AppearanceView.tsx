@@ -29,7 +29,7 @@ const DEFAULTS: Appearance = {
   musicInPill: true,
   clockAccent: "#ff453a",
   clockText: "large",
-  clockBold: false,
+  clockBold: true,
   lyricsInPill: false,
   lyricsLayout: "inline",
   lyricsSize: "default",

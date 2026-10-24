@@ -71,7 +71,7 @@ export function MusicSettings() {
                 options={[
                   { value: "current", label: t("Aktuell") },
                   { value: "apple", label: t("Apple Music") },
-                  { value: "blur", label: t("Unscharf") },
+                  { value: "word", label: t("Wort für Wort") },
                 ]}
               />
             </Row>

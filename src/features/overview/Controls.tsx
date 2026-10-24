@@ -977,7 +977,7 @@ export function PowerActions() {
   };
 
   return (
-    <div className="flex shrink-0 items-center gap-2">
+    <div className="flex shrink-0 items-center gap-1.5">
       {POWER_ACTIONS.map(({ id, label, icon: Icon, weight }) => {
         const armed = confirm === id;
         return (
@@ -985,16 +985,16 @@ export function PowerActions() {
             key={id}
             type="button"
             onClick={() => run(id)}
-            whileHover={{ scale: 1.12, y: -1 }}
+            whileHover={{ scale: 1.08, y: -0.5 }}
             whileTap={{ scale: 0.88 }}
             transition={springs.peek}
-            className={`relative flex size-7 items-center justify-center rounded-full ${
+            className={`relative flex size-6 items-center justify-center rounded-full ${
               armed ? "text-red" : "text-label-2 hover:text-label"
             }`}
             title={armed ? t("Sicher?") : t(label)}
             aria-label={t(label)}
           >
-            <Icon size={17} weight={weight} />
+            <Icon size={14} weight={weight} />
             {armed && (
               <motion.span
                 className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-red/45"

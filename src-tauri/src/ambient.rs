@@ -617,6 +617,9 @@ const ALLOWED_URIS: &[&str] = &[
     "ms-settings:bluetooth",
     "ms-settings:batterysaver",
     "ms-settings:nightlight",
+    "https://github.com/Bipin223",
+    "https://github.com/Bipin223/WinZal",
+    "https://bipin-rijal.vercel.app",
 ];
 
 #[tauri::command]

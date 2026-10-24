@@ -9,15 +9,22 @@
 //! `notch://fullscreen` and the frontend shows FPS and load.
 //! `offset` moves the notch sideways (dragging), clamped to the monitor.
 
+use std::collections::BTreeMap;
+use std::path::Path;
 use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, State, WebviewWindow};
-use windows::Win32::Foundation::{HWND, RECT};
+use windows::core::{BOOL, PWSTR};
+use windows::Win32::Foundation::{CloseHandle, HWND, LPARAM, RECT};
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST};
-use windows::Win32::UI::WindowsAndMessaging::{GetClassNameW, GetDesktopWindow, GetForegroundWindow, GetShellWindow, GetWindowRect, IsZoomed};
+use windows::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION};
+use windows::Win32::UI::WindowsAndMessaging::{
+    EnumWindows, GetClassNameW, GetDesktopWindow, GetForegroundWindow, GetShellWindow, GetWindow, GetWindowRect, GetWindowTextLengthW, GetWindowTextW,
+    GetWindowThreadProcessId, IsWindowVisible, IsZoomed, GW_OWNER,
+};
 
 use crate::hit_test::HitState;
 
@@ -36,9 +43,12 @@ pub struct Config {
     /// Horizontal offset from the center in CSS px.
     #[serde(default)]
     offset: f64,
-    /// Gaming mode "in fullscreen": don't hide, just report.
+    /// "off" | "games" | "always".
     #[serde(default)]
-    gaming: bool,
+    gaming_mode: String,
+    /// Lowercase exe names whose foreground presence shows the gaming overlay.
+    #[serde(default)]
+    gaming_apps: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -48,6 +58,23 @@ pub struct MonitorInfo {
     primary: bool,
     width: u32,
     height: u32,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForegroundInfo {
+    app: String,
+    title: String,
+    fullscreen: bool,
+    gaming: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VisibleApp {
+    id: String,
+    name: String,
+    title: String,
 }
 
 #[tauri::command]
@@ -111,18 +138,38 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
         let mut hidden = false;
         let mut last_fullscreen = false;
         let mut last_foreground = HWND::default();
+        let mut last_app = String::new();
+        let mut last_title = String::new();
+        let mut last_gaming = false;
         loop {
             thread::sleep(POLL);
             let state = app.state::<DisplayState>();
-            let (hide_fullscreen, gaming) = {
+            let (hide_fullscreen, mode, apps) = {
                 let c = state.0.lock().unwrap();
-                (c.hide_fullscreen, c.gaming)
+                (c.hide_fullscreen, c.gaming_mode.clone(), c.gaming_apps.clone())
             };
             let foreground = unsafe { GetForegroundWindow() };
             let fullscreen = foreground != own && covers_monitor(foreground, own);
-            if fullscreen != last_fullscreen {
+            let app_id = foreground_app(foreground);
+            let title = window_title(foreground);
+            let gaming = match mode.as_str() {
+                "always" => true,
+                "games" => !app_id.is_empty() && apps.iter().any(|item| item.eq_ignore_ascii_case(&app_id)),
+                _ => false,
+            };
+            let fullscreen_changed = fullscreen != last_fullscreen;
+            if fullscreen_changed {
                 last_fullscreen = fullscreen;
                 let _ = app.emit("notch://fullscreen", fullscreen);
+            }
+            if app_id != last_app || title != last_title || fullscreen_changed || gaming != last_gaming {
+                last_app = app_id.clone();
+                last_title = title.clone();
+                last_gaming = gaming;
+                let _ = app.emit(
+                    "notch://foreground",
+                    ForegroundInfo { app: app_id, title, fullscreen, gaming },
+                );
             }
             let hide = hide_fullscreen && !gaming && fullscreen;
 
@@ -144,6 +191,106 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
             last_foreground = foreground;
         }
     });
+}
+
+/// Start menu / shell / the notch itself are not interesting as games.
+fn is_shell_app(id: &str) -> bool {
+    matches!(
+        id,
+        "winzal.exe"
+            | "explorer.exe"
+            | "searchhost.exe"
+            | "shellexperiencehost.exe"
+            | "startmenuexperiencehost.exe"
+            | "textinputhost.exe"
+            | "applicationframehost.exe"
+    )
+}
+
+/// Lowercase file name of the process owning `hwnd` (e.g. "limusic-app.exe").
+fn foreground_app(hwnd: HWND) -> String {
+    if hwnd.is_invalid() {
+        return String::new();
+    }
+    let mut pid = 0u32;
+    unsafe { GetWindowThreadProcessId(hwnd, Some(&mut pid)) };
+    if pid == 0 {
+        return String::new();
+    }
+    let Ok(handle) = (unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) }) else {
+        return String::new();
+    };
+    let mut buf = vec![0u16; 1024];
+    let mut len = buf.len() as u32;
+    let ok = unsafe { QueryFullProcessImageNameW(handle, PROCESS_NAME_WIN32, PWSTR(buf.as_mut_ptr()), &mut len) }.is_ok();
+    let _ = unsafe { CloseHandle(handle) };
+    if !ok {
+        return String::new();
+    }
+    let path = String::from_utf16_lossy(&buf[..len as usize]);
+    Path::new(&path)
+        .file_name()
+        .map(|name| name.to_string_lossy().to_lowercase())
+        .unwrap_or_default()
+}
+
+fn window_title(hwnd: HWND) -> String {
+    let len = unsafe { GetWindowTextLengthW(hwnd) };
+    if len <= 0 {
+        return String::new();
+    }
+    let mut buf = vec![0u16; len as usize + 1];
+    let n = unsafe { GetWindowTextW(hwnd, &mut buf) };
+    String::from_utf16_lossy(&buf[..n.max(0) as usize])
+}
+
+/// Visible top-level windows, one row per exe, for the "games & apps" picker.
+#[tauri::command]
+pub fn apps_visible() -> Vec<VisibleApp> {
+    struct Search {
+        found: BTreeMap<String, VisibleApp>,
+    }
+    unsafe extern "system" fn collect(hwnd: HWND, lparam: LPARAM) -> BOOL {
+        let search = &mut *(lparam.0 as *mut Search);
+        if !IsWindowVisible(hwnd).as_bool() || GetWindow(hwnd, GW_OWNER).is_ok_and(|owner| !owner.is_invalid()) {
+            return true.into();
+        }
+        let title = window_title(hwnd);
+        if title.is_empty() {
+            return true.into();
+        }
+        let id = foreground_app(hwnd);
+        if id.is_empty() || is_shell_app(&id) {
+            return true.into();
+        }
+        search.found.entry(id.clone()).or_insert_with(|| VisibleApp {
+            name: friendly_name(&id),
+            id,
+            title,
+        });
+        true.into()
+    }
+
+    let mut search = Search { found: BTreeMap::new() };
+    unsafe {
+        let _ = EnumWindows(Some(collect), LPARAM(&mut search as *mut Search as isize));
+    }
+    search.found.into_values().collect()
+}
+
+fn friendly_name(id: &str) -> String {
+    id.trim_end_matches(".exe")
+        .split(['-', '_'])
+        .filter(|part| !part.is_empty())
+        .map(|part| {
+            let mut chars = part.chars();
+            match chars.next() {
+                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                None => String::new(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// Does `hwnd` cover the whole monitor the notch (`own`) is on?

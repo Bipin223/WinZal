@@ -11,6 +11,10 @@ export interface LyricsDisplay {
   current: string | null;
   next: string | null;
   index: number;
+  /** Start time of the current line in seconds. */
+  start: number;
+  /** Start time of the next line, or the end of the track. */
+  end: number;
 }
 
 /** Parse once per track, even when the pill closes and reopens. */
@@ -91,11 +95,15 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
     setIndex((prev) => (prev === next ? prev : next));
   }, [enabled, playing, lines, np?.position]);
 
-  if (index < 0 || !lines[index]) return { current: null, next: null, index: -1 };
+  if (index < 0 || !lines[index]) return { current: null, next: null, index: -1, start: 0, end: 0 };
+  const start = lines[index].at;
+  const end = lines[index + 1]?.at ?? (np && np.duration > start ? np.duration : start + 4);
   return {
     current: lines[index].text,
     next: lines[index + 1]?.text ?? null,
     index,
+    start,
+    end,
   };
 }
 

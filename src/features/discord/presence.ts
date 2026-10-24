@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { media } from "../../platform/media";
 import { isNative } from "../../platform/native";
+import { settings } from "../../settings/store";
 import { discordState } from "./store";
 
 /**
@@ -8,7 +9,8 @@ import { discordState } from "./store";
  * plays. Runs from app start, so it also works while the notch is closed.
  *
  * The Discord card is owned by Discord: the app only supplies the type
- * (Listening), title, artist, timestamps and cover URL.
+ * (Listening), title, artist, timestamps and cover URL. The user can switch the
+ * whole presence off in Settings -> Connections -> Discord.
  */
 let started = false;
 
@@ -19,6 +21,13 @@ export function startDiscordPresence() {
   let lastKey = "";
 
   const push = () => {
+    if (!settings.get().discord.presence) {
+      if (lastKey !== "off") {
+        lastKey = "off";
+        void invoke("discord_activity", { info: null }).catch(() => {});
+      }
+      return;
+    }
     if (discordState.get().status !== "ready") {
       // Once the RPC session is ready again, force a fresh activity update.
       lastKey = "";
@@ -46,6 +55,7 @@ export function startDiscordPresence() {
   };
 
   media.subscribe(push);
+  settings.subscribe(push);
   discordState.subscribe(() => {
     lastKey = "";
     push();

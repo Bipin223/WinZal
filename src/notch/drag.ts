@@ -11,7 +11,13 @@ const SNAP = 24;
 /** Sends display settings to Rust, optionally with an offset that isn't saved yet. */
 export function applyDisplay(offset = settings.get().display.offset) {
   const s = settings.get();
-  display.apply({ hideFullscreen: s.display.visibility === "hide-fullscreen", monitor: s.display.monitor, offset, gaming: s.gaming.mode !== "off" });
+  display.apply({
+    hideFullscreen: s.display.visibility === "hide-fullscreen",
+    monitor: s.display.monitor,
+    offset,
+    gamingMode: s.gaming.mode,
+    gamingApps: s.gaming.apps,
+  });
 }
 
 /*

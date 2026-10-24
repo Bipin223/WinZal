@@ -33,7 +33,7 @@ startUpdateWatch();
 let lastDisplay = "";
 const syncDisplay = () => {
   const { display, gaming } = settings.get();
-  const key = `${display.visibility}|${display.monitor}|${display.offset}|${gaming.mode}`;
+  const key = `${display.visibility}|${display.monitor}|${display.offset}|${gaming.mode}|${gaming.apps.join(",")}`;
   if (key === lastDisplay) return;
   lastDisplay = key;
   applyDisplay();

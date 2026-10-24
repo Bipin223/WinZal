@@ -17,13 +17,14 @@ import {
   SquaresFour,
   Stop,
   Timer,
+  UserCircle,
   type Icon,
 } from "@phosphor-icons/react";
 import { content, fade, springs } from "../../design/motion";
 import { alarmSounds, playAlarm, stopAlarm, type AlarmDuration } from "../../lib/sound";
 import { nav } from "../../notch/nav";
 import { tabs } from "../../notch/tabs";
-import { autostart, display, fetchFps, secrets, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName, type UsageId } from "../../platform/services";
+import { autostart, display, fetchFps, secrets, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName, type UsageId, type VisibleApp } from "../../platform/services";
 import { settings, updateAsk, updateSettings, type AskProvider } from "../../settings/store";
 import { BrandLogo, brandName } from "../../ui/brands";
 import { Button, Group, Row, Segmented, Select, Slider, Switch, TextField } from "../../ui/controls";
@@ -33,6 +34,7 @@ import { fps } from "../system/gaming";
 import { PlaceSearch } from "../weather/WeatherView";
 import { AppearanceView } from "../appearance/AppearanceView";
 import { MusicSettings } from "./MusicSettings";
+import { AboutView } from "./AboutView";
 import { VaultSettings } from "../vault/VaultSettings";
 import { detectPlace } from "../weather/store";
 import { focusMode, setFocusMode } from "../../notch/focus";
@@ -41,7 +43,7 @@ import { between, changelog, itemText, markSeen, useUnseen } from "../../lib/cha
 import { privacy, togglePresentation, usePresenting } from "../privacy/store";
 import { locale, t, tBackend } from "../../i18n";
 
-type PageId = "general" | "display" | "appearance" | "music" | "tools" | "timer" | "ai" | "accounts";
+type PageId = "general" | "display" | "appearance" | "music" | "tools" | "timer" | "ai" | "accounts" | "about";
 
 const pages: { id: PageId; label: string; icon: Icon }[] = [
   { id: "general", label: "Allgemein", icon: SlidersHorizontal },
@@ -52,6 +54,7 @@ const pages: { id: PageId; label: string; icon: Icon }[] = [
   { id: "timer", label: "Timer", icon: Timer },
   { id: "ai", label: "AI", icon: Sparkle },
   { id: "accounts", label: "Verbindungen", icon: Plugs },
+  { id: "about", label: "About", icon: UserCircle },
 ];
 
 /** Deep links from other tools (`navigate("settings", "<section>")`) → page holding that section. */
@@ -68,6 +71,7 @@ const sectionPage: Record<string, PageId> = {
   usage: "ai",
   discord: "accounts",
   vault: "tools",
+  about: "about",
 };
 
 /** Last open page survives closing/opening the notch (the component is rebuilt). */
@@ -164,6 +168,7 @@ export function SettingsView() {
                 <KeysNote />
               </>
             )}
+            {page === "about" && <AboutView />}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -593,20 +598,94 @@ function Display() {
           id="gaming-mode"
           size="sm"
           value={s.gaming.mode}
-          onChange={(mode) => updateSettings({ gaming: { mode } })}
+          onChange={(mode) => updateSettings((cur) => ({ gaming: { ...cur.gaming, mode } }))}
           options={[
             { value: "off", label: t("Aus") },
-            { value: "fullscreen", label: t("Bei Vollbild") },
-            { value: "on", label: t("Immer") },
+            { value: "games", label: t("Spiele") },
+            { value: "always", label: t("Immer") },
           ]}
         />
       </Row>
+      {s.gaming.mode === "games" && <GamingApps />}
       <FpsUnlockRow />
       <Row label={t("Aufnahme-Punkte")} hint={t("Rot: Bildschirm wird aufgenommen (immer sichtbar) · Grün: Mikrofon/Kamera aktiv")}>
         <Switch label={t("Aufnahme-Punkte")} checked={s.privacyDots} onChange={(privacyDots) => updateSettings({ privacyDots })} />
       </Row>
     </Group>
   );
+}
+
+/** Pick the games/apps that should trigger the FPS overlay. */function GamingApps() {
+  const gaming = settings.use().gaming;
+  const [apps, setApps] = useState<VisibleApp[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [manual, setManual] = useState("");
+  const load = () => {
+    setLoading(true);
+    void display
+      .apps()
+      .then(setApps)
+      .catch(() => setApps([]))
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => {
+    load();
+  }, []);
+  const selected = new Set(gaming.apps);
+  const extras = gaming.apps.filter((id) => !apps.some((app) => app.id === id));
+  const toggle = (id: string) => {
+    updateSettings((cur) => ({
+      gaming: {
+        ...cur.gaming,
+        apps: cur.gaming.apps.includes(id) ? cur.gaming.apps.filter((item) => item !== id) : [...cur.gaming.apps, id],
+      },
+    }));
+  };
+  const addManual = () => {
+    const raw = manual.trim().toLowerCase();
+    if (!raw) return;
+    const id = raw.endsWith(".exe") ? raw : `${raw}.exe`;
+    if (!gaming.apps.includes(id)) toggle(id);
+    setManual("");
+  };
+  return (
+    <Group title={t("Spiele & Apps")} id="settings-gaming-apps">
+      <div className="px-3 py-2 text-caption text-label-3">
+        {t("FPS erscheint nur, wenn eine dieser Apps im Vordergrund ist.")}
+      </div>
+      {apps.map((app) => (
+        <Row key={app.id} label={app.name} hint={app.title}>
+          <Switch label={app.name} checked={selected.has(app.id)} onChange={() => toggle(app.id)} />
+        </Row>
+      ))}
+      {extras.map((id) => (
+        <Row key={id} label={friendlyAppName(id)} hint={t("Nicht geöffnet")}>
+          <Switch label={id} checked onChange={() => toggle(id)} />
+        </Row>
+      ))}
+      {apps.length === 0 && extras.length === 0 && <Row label={loading ? t("Suche …") : t("Keine offenen Apps gefunden")} />}
+      <Row label={t("App hinzufügen")} hint={t("Exe-Name, z. B. genshinimpact.exe")}>
+        <div className="flex items-center gap-1.5">
+          <TextField value={manual} onChange={setManual} onSubmit={addManual} placeholder="game.exe" width="w-32" />
+          <Button onClick={addManual}>{t("Hinzufügen")}</Button>
+        </div>
+      </Row>
+      <Row label={t("Aktualisieren")}>
+        <Button disabled={loading} onClick={load}>
+          {t("Neu laden")}
+        </Button>
+      </Row>
+    </Group>
+  );
+}
+
+function friendlyAppName(id: string): string {
+  return id
+    .replace(/\.exe$/i, "")
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 /** Presentation mode: one switch, plus automatic while the screen is recorded or shared. */
@@ -651,7 +730,7 @@ function Discord() {
   const s = settings.use();
   const state = discordState.use();
   const [id, setId] = useState(s.discord.clientId);
-  const save = () => updateSettings({ discord: { clientId: id.trim() } });
+  const save = () => updateSettings((cur) => ({ discord: { ...cur.discord, clientId: id.trim() } }));
   return (
     <Group title="Discord" id="settings-discord">
       <Row label={t("Status")} hint={state.error ? tBackend(state.error) : undefined}>
@@ -664,8 +743,21 @@ function Discord() {
         </div>
       </Row>
       <SecretRow name="discord.secret" label={t("Client-Secret")} onSaved={reconnectDiscord} />
+      <Row label={t("Rich Presence")} hint={t("Aktuellen Song auf Discord anzeigen")}>
+        <Switch
+          label={t("Rich Presence")}
+          checked={s.discord.presence}
+          onChange={(presence) => updateSettings((cur) => ({ discord: { ...cur.discord, presence } }))}
+        />
+      </Row>
       <div className="px-3 py-2 text-caption text-label-3">
         {t("discord.com/developers → New Application → OAuth2: Client-ID und Client-Secret kopieren und unter Redirects http://localhost eintragen und speichern. Beim ersten Verbinden fragt Discord einmal nach.")}
+      </div>
+      <div className="px-3 py-2 text-caption text-label-3">
+        {t("Der Name hinter „Listening to“ ist der Name deiner Discord-App. Benenne die App im Developer Portal um, wenn dort nicht WinZal stehen soll.")}
+      </div>
+      <div className="px-3 py-2 text-caption text-label-3">
+        {t("Die Karte zeigt zusätzlich die Buttons „Listen on YouTube Music“ und „Get WinZal“.")}
       </div>
     </Group>
   );

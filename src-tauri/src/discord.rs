@@ -151,6 +151,12 @@ pub async fn discord_activity(info: Option<ActivityInfo>, state: State<'_, Disco
                     let end = start + info.duration as i64;
                     activity["timestamps"] = json!({ "start": start, "end": end });
                 }
+                // Two buttons, like Spotify/LI Music's rich presence. Discord allows at most two.
+                let search = url_encode(&format!("{title} {artist}"));
+                activity["buttons"] = json!([
+                    { "label": "Listen on YouTube Music", "url": format!("https://music.youtube.com/search?q={search}") },
+                    { "label": "Get WinZal", "url": "https://github.com/Bipin223/WinZal" }
+                ]);
                 activity
             }
         }
@@ -165,6 +171,18 @@ pub async fn discord_activity(info: Option<ActivityInfo>, state: State<'_, Disco
 
 fn clip(text: &str, max: usize) -> String {
     text.chars().take(max).collect()
+}
+
+/// Minimal RFC 3986 encoder for the YouTube Music search button.
+fn url_encode(value: &str) -> String {
+    let mut out = String::new();
+    for byte in value.as_bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => out.push(*byte as char),
+            _ => out.push_str(&format!("%{byte:02X}")),
+        }
+    }
+    out
 }
 
 /// iTunes is keyless and returns a usable, public cover URL for most tracks.

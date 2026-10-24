@@ -147,6 +147,7 @@ pub fn run() {
             files::file_preview,
             display::display_monitors,
             display::display_apply,
+            display::apps_visible,
             fps::gaming_fps,
             fps::fps_unlock,
             controls::volume_get,
