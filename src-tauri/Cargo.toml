@@ -1,6 +1,6 @@
 [package]
 name = "winzal"
-version = "1.6.7"
+version = "1.6.8"
 edition = "2021"
 license = "GPL-3.0-only"
 

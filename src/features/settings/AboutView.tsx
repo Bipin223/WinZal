@@ -9,7 +9,7 @@ import { t } from "../../i18n";
  * that are useful when someone wants to follow the project.
  */
 export function AboutView() {
-  const version = update.use().current ?? "1.6.7";
+  const version = update.use().current ?? "1.6.8";
   const open = (url: string) => void systemControls.openUri(url);
 
   return (

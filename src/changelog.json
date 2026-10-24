@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.6.8",
+    "date": "2026-10-24",
+    "items": [
+      {
+        "de": "Custom-Theme zeigt nur noch den funktionierenden Farbwähler; die fertigen Theme-Karten und die zusätzliche Farbreihe sind entfernt",
+        "en": "Custom theme now shows only the working color picker; the ready-made theme cards and extra color row are removed"
+      },
+      {
+        "de": "Farbwähler reagiert jetzt zuverlässig auf Ziehen in Fläche und Hue-Regler, auch in WebView2",
+        "en": "The color picker now reliably follows dragging in the field and hue slider, including in WebView2"
+      }
+    ]
+  },
+  {
     "version": "1.6.7",
     "date": "2026-10-24",
     "items": [

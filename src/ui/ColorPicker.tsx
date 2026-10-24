@@ -1,47 +1,83 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { X } from "@phosphor-icons/react";
 import { t } from "../i18n";
 
 /** Small, dependency-free HSV color field used by the Appearance page. */
-export function ColorPickerPanel({
-  value,
-  onChange,
-  onClose,
-}: {
-  value: string;
-  onChange: (hex: string) => void;
-  onClose: () => void;
-}) {
+export function ColorPickerPanel({ value, onChange }: { value: string; onChange: (hex: string) => void }) {
   const [hsv, setHsv] = useState(() => hexToHsv(value));
   const [hexText, setHexText] = useState(value.toUpperCase());
+  const hsvRef = useRef(hsv);
+  const onChangeRef = useRef(onChange);
   const sv = useRef<HTMLDivElement>(null);
   const hue = useRef<HTMLDivElement>(null);
+  const drag = useRef<"sv" | "hue" | null>(null);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  useEffect(() => {
+    const apply = (next: { h: number; s: number; v: number }) => {
+      hsvRef.current = next;
+      setHsv(next);
+      onChangeRef.current(hsvToHex(next));
+    };
+    const move = (event: PointerEvent) => {
+      if (drag.current === "sv") {
+        const rect = sv.current?.getBoundingClientRect();
+        if (!rect) return;
+        const s = clamp((event.clientX - rect.left) / rect.width);
+        const v = 1 - clamp((event.clientY - rect.top) / rect.height);
+        apply({ ...hsvRef.current, s, v });
+      } else if (drag.current === "hue") {
+        const rect = hue.current?.getBoundingClientRect();
+        if (!rect) return;
+        const h = clamp((event.clientX - rect.left) / rect.width) * 360;
+        apply({ ...hsvRef.current, h });
+      }
+    };
+    const stop = () => {
+      drag.current = null;
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    };
+  }, []);
 
   useEffect(() => {
     const next = hexToHsv(value);
-    setHsv((current) => (hsvToHex(current).toLowerCase() === normalize(value) ? current : next));
+    if (hsvToHex(hsvRef.current).toLowerCase() !== normalize(value)) {
+      hsvRef.current = next;
+      setHsv(next);
+    }
     setHexText(value.toUpperCase());
   }, [value]);
 
-  const pickSv = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const rect = sv.current?.getBoundingClientRect();
+  const start = (target: "sv" | "hue") => (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    drag.current = target;
+    const rect = (target === "sv" ? sv : hue).current?.getBoundingClientRect();
     if (!rect) return;
-    const s = clamp((event.clientX - rect.left) / rect.width);
-    const v = 1 - clamp((event.clientY - rect.top) / rect.height);
-    const next = { ...hsv, s, v };
-    setHsv(next);
-    onChange(hsvToHex(next));
+    if (target === "sv") {
+      const s = clamp((event.clientX - rect.left) / rect.width);
+      const v = 1 - clamp((event.clientY - rect.top) / rect.height);
+      const next = { ...hsvRef.current, s, v };
+      hsvRef.current = next;
+      setHsv(next);
+      onChangeRef.current(hsvToHex(next));
+    } else {
+      const h = clamp((event.clientX - rect.left) / rect.width) * 360;
+      const next = { ...hsvRef.current, h };
+      hsvRef.current = next;
+      setHsv(next);
+      onChangeRef.current(hsvToHex(next));
+    }
   };
-
-  const pickHue = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const rect = hue.current?.getBoundingClientRect();
-    if (!rect) return;
-    const h = clamp((event.clientX - rect.left) / rect.width) * 360;
-    const next = { ...hsv, h };
-    setHsv(next);
-    onChange(hsvToHex(next));
-  };
-
   const rgb = hexToRgb(value);
   const setRgb = (channel: "r" | "g" | "b", raw: string) => {
     const number = Math.max(0, Math.min(255, Number(raw) || 0));
@@ -57,14 +93,7 @@ export function ColorPickerPanel({
         aria-label={t("Saturation and brightness")}
         aria-valuetext={`${Math.round(hsv.s * 100)}%, ${Math.round(hsv.v * 100)}%`}
         tabIndex={0}
-        onPointerDown={(event) => {
-          event.currentTarget.setPointerCapture(event.pointerId);
-          pickSv(event);
-        }}
-        onPointerMove={(event) => {
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) pickSv(event);
-        }}
-        onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}
+        onPointerDown={start("sv")}
         className="relative h-[128px] w-full cursor-crosshair touch-none overflow-hidden rounded-[10px] ring-1 ring-white/10"
         style={{
           backgroundColor: `hsl(${hsv.h} 100% 50%)`,
@@ -91,14 +120,7 @@ export function ColorPickerPanel({
         aria-valuemax={360}
         aria-valuenow={Math.round(hsv.h)}
         tabIndex={0}
-        onPointerDown={(event) => {
-          event.currentTarget.setPointerCapture(event.pointerId);
-          pickHue(event);
-        }}
-        onPointerMove={(event) => {
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) pickHue(event);
-        }}
-        onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}
+        onPointerDown={start("hue")}
         className="relative mt-2.5 h-3 w-full cursor-pointer touch-none rounded-full ring-1 ring-black/10"
         style={{
           background:
@@ -129,14 +151,6 @@ export function ColorPickerPanel({
             aria-label={t("Hex color")}
           />
         </label>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t("Fertig")}
-          className="pressable flex size-7 shrink-0 items-center justify-center rounded-full bg-fill-1 text-label-3 hover:text-label"
-        >
-          <X size={12} weight="bold" />
-        </button>
       </div>
 
       <div className="mt-2 grid grid-cols-3 gap-1.5">
