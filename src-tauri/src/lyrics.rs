@@ -47,7 +47,7 @@ impl Track {
 fn client() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
         .timeout(Duration::from_secs(6))
-        .user_agent("WinZal/1.6.0 (https://github.com/Bipin223/WinZal)")
+        .user_agent(concat!("WinZal/", env!("CARGO_PKG_VERSION"), " (https://github.com/Bipin223/WinZal)"))
         .build()
         .map_err(|e| e.to_string())
 }

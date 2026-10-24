@@ -1,183 +1,210 @@
-<h1 align="center">L4-Notchbar</h1>
+<p align="center">
+  <img src="src-tauri/icons/128x128@2x.png" width="96" alt="WinZal icon" />
+</p>
+
+<h1 align="center">WinZal</h1>
 
 <p align="center">
-  <b>Windows never had a Dynamic Island. Now it does.</b>
+  <b>A Dynamic Island for Windows.</b><br />
+  Music, synced lyrics, gaming stats, Discord and power controls in one tiny notch at the top of your screen.
 </p>
 
 <p align="center">
-  <a href="https://github.com/Linux5Real/L4-Windows-NotchBar/releases/latest"><img src="https://img.shields.io/github/v/release/Linux5Real/L4-Windows-NotchBar?style=flat-square&label=release&color=111" alt="Latest release" /></a>
-  <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-111?style=flat-square" alt="Windows 10 and 11" />
+  <a href="https://github.com/Bipin223/WinZal/releases/latest"><img src="https://img.shields.io/github/v/release/Bipin223/WinZal?style=flat-square&label=release&color=111" alt="Latest release" /></a>
+  <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-111?style=flat-square&logo=windows&logoColor=white" alt="Windows 10 and 11" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-111?style=flat-square" alt="GPL-3.0" /></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Linux5Real/L4-Windows-NotchBar/releases/latest"><b>Download</b></a>
+  <a href="https://github.com/Bipin223/WinZal/releases/latest"><b>Download</b></a>
   &nbsp;·&nbsp;
-  <a href="#what-it-does"><b>Features</b></a>
+  <a href="#features"><b>Features</b></a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/Linux5Real/L4-Windows-NotchBar/issues/new"><b>Suggest an idea</b></a>
+  <a href="#install"><b>Install</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/Bipin223/WinZal/issues/new"><b>Suggest an idea</b></a>
 </p>
 
-https://github.com/user-attachments/assets/0883a7b8-6197-4a75-9c49-da58bf644983
-
-A Dynamic-Island-style notch for Windows. It sits at the top of your screen, stays out of the way until you need it, and opens on hover, click or **Ctrl + Alt + Space**.
-
-Inside: music controls with a live equalizer, a vault for passwords and 2FA codes, live weather, your Discord call, your portfolio, an AI chat (Claude, ChatGPT and more) with your usage limits, clipboard history, a file shelf, a file and unit converter, timers, to-dos and notes, live hardware stats with FPS for games, and privacy dots for mic, camera and screen recording.
-
-Make it yours: reorder or hide any tool, move the notch, pick the monitor, hide it automatically in fullscreen apps, or triple-click it to fade it out when it's in the way. All of that in a single executable of a few megabytes, with smooth animations throughout.
-
-> [!TIP]
-> **Missing something?** If you have an idea for a new tool, a feature you'd love to see or something that bugs you, just [open an issue](https://github.com/Linux5Real/L4-Windows-NotchBar/issues/new) and describe it. Every idea is welcome.
-
-## What it does
-
-### Windows and system
-
-- **Overview** is a small control center: time, weather, what is playing right now, Windows focus and a volume slider.
-- **Now Playing** controls anything with a Windows media session (Spotify, browser players and so on) and shows cover, title, progress and a live equalizer driven by the actual audio output.
-- **Clipboard** keeps a history of text, links, images and files, with filters and previews. Password managers are excluded on purpose, and nothing is written to disk.
-- **Shelf** is a parking spot for files. Drop them onto the Notch or press Ctrl + V, then open, copy or reveal them later.
-- **Hardware** shows live CPU, RAM, GPU, VRAM and ping, with history that keeps recording while the Notch is closed.
-- **Gaming mode** puts FPS, CPU, GPU and RAM into the closed Notch, always or only while a fullscreen app runs. FPS works for DirectX, OpenGL and Vulkan games. Windows only allows this for members of the *Performance Log Users* group: click **Settings → Display → Unlock FPS** once, confirm the Windows prompt, then sign out and back in. A lock icon in the Notch means this step is still missing.
-- **Privacy dots** turn green when the microphone or camera is in use and red while the screen is being recorded, like on an iPhone.
-
-### Services
-
-- **Ask** is a chat with Claude, ChatGPT, OpenRouter or any OpenAI-compatible endpoint, with streaming and adjustable reasoning effort.
-- **AI usage** shows your subscription limits for Claude, ChatGPT, Gemini and Cursor.
-- **Weather** gives current conditions and a 7-day forecast through Open-Meteo. No API key needed.
-- **Portfolio** connects to Trading 212 and shows profit and loss and a history chart, live or in demo mode. The app only reads, it never trades.
-- **Discord** shows your current voice call with speaking members and buttons for mute, deafen and hang up. In the closed Notch, a green equalizer plays while someone talks.
-
-### Local and offline
-
-- **Timer** with focus and break presets, custom durations, six alarm sounds and a running countdown in the closed Notch. An expired timer stays visible until you dismiss it.
-- **To-dos** and **notes** live on your machine and need no account.
-- **Converter** handles units, images (PNG, JPG, WebP, ICO, BMP, DDS), documents (PDF, DOCX, TXT, Markdown, HTML), spreadsheets (XLSX, CSV, JSON) and audio or video if ffmpeg is installed.
-
-## New in 1.1: Vault
-
-Passwords and two-factor codes, one hover away and encrypted on your PC.
-
-<p>
-  <img src="docs/media/vault-passwords.png" width="49%" alt="Saved passwords, one of them shown after entering the PIN" />
-  <img src="docs/media/vault-2fa.png" width="49%" alt="Live 2FA codes with a countdown ring" />
+<p align="center">
+  <img src="docs/media/player-mixer.png" width="860" alt="WinZal Now Playing with album art, progress, playback controls and a per-app volume mixer" />
 </p>
 
-- **Passwords** with name and username or email. Copy either one with a click, show or edit the password, or let the generator create a strong one.
-- **2FA codes** with a live countdown. Screenshot the QR code (Win + Shift + S) and press **Ctrl + V**, or type the key, then name it.
-- **4-digit PIN** before anything secret is shown or copied, adjustable for passwords and 2FA separately in **Settings → Tools → Vault**. Five wrong tries lock it for 30 seconds, doubling from there.
-- **Never in clipboard history.** Copies skip the Notch clipboard and Windows' Win + V history, and passwords and codes leave the clipboard after 30 seconds.
-- **Local only**, encrypted with Windows DPAPI and bound to your Windows account. Forgot the PIN? **Reset vault** in settings deletes everything; there is no back door.
-- **Windows Hello (new in 1.2, optional):** unlock with face, fingerprint or Windows PIN instead of the vault PIN. Secrets are then additionally encrypted with a key from your PC's security chip, so even malware running as you can't read them without your confirmation.
+WinZal turns the top edge of Windows into a Dynamic Island. It sits out of the way as a small black pill, opens when you hover, click or press **Ctrl + Alt + Space**, and morphs into a compact control center. The window itself never resizes — only the shape inside it moves — so the animations stay smooth and the app stays light.
 
-<p>
-  <img src="docs/media/vault-hello.png" width="49%" alt="The vault asking for Windows Hello" />
-  <img src="docs/media/vault-hello-settings.png" width="49%" alt="Windows Hello switch in the vault settings" />
+It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Electron, no bundled Chromium, no account and no background analytics. Android is not part of this repository anymore; WinZal is Windows-only.
+
+## Features
+
+### The closed island
+
+- **Large clock by default**, with a separately selectable **Compact** clock. The first digit uses a red accent by default.
+- The expanded clock is **bold by default** and can be switched to Regular in Appearance.
+- **Live music**: cover, title and a real audio-driven equalizer in the closed pill. The first app that starts playing keeps the pill; if it pauses or stops, the next playing app takes over automatically.
+- **Synced lyrics** from LRCLIB, optional. One line or current + next line, **Default** or **Large**, and **Current / Apple / Word-by-word** animations. The pill grows to fit the line (up to 320 px) instead of fading readable text; extremely long lines scroll slowly.
+- **Privacy dots** for microphone and camera (green) and screen recording (red), plus a recording badge.
+- **Gaming + music**: when the FPS pill is visible and music is playing, the equalizer moves into its own **circular satellite island** to the left of the FPS pill. It works in both the Dynamic and Windows island styles.
+- **Focus mode**: triple-click the notch to dim it or turn it into a thin line at the screen edge.
+
+### Music and media
+
+- Works with anything Windows exposes as a media session: **LI Music, Spotify, VLC, browsers** and other players.
+- Click the **album cover** in the closed pill or in Now Playing to bring the actual playing app to the front.
+- **Per-app volume mixer**, like the Windows mixer: Spotify, Chrome, Discord, games and the system volume in one place.
+- Cover changes, progress and the equalizer follow the real playback state, not a timer.
+- Play, pause, previous, next and seek from the notch, or open the full Now Playing view.
+
+### Gaming
+
+- FPS, CPU, GPU and RAM in the closed notch. Choose **Off**, **Games** or **Always**, and pick the games/apps that should trigger the overlay.
+- A separate circular equalizer satellite appears next to the FPS pill when music is playing.
+- FPS comes from a real ETW trace. Windows only allows that for administrators, so WinZal starts a tiny elevated helper with **one UAC prompt per run**. The app itself stays non-admin.
+- CPU/GPU temperatures come from Lenovo's GameZone sensors through the same helper when available.
+
+### Power modes
+
+- **Saver**, **Balanced**, **Max** and a purple **Custom** mode in the Overview power tile.
+- On AC power all four are available; on battery only **Saver** and **Balanced** are shown.
+- **Max** is the former High mode. **Custom** is a WinZal power plan: a Balanced base with processor throttling open, 100 % maximum processor state and active cooling. It does not overwrite Lenovo Vantage's fan curve.
+- Lenovo fan modes are kept in sync when the elevated helper is running.
+- Right-click the tile for Windows power settings.
+
+### Discord
+
+- Current voice call with the channel, server and speaking members.
+- Mute, deafen and hang up from the notch.
+- **Rich Presence** with your own app name, an optional “Shown after Listening to” line (**Song / Artist / App name**) and two buttons: **Listen on YouTube Music** and **Get WinZal**.
+- Uses the Discord desktop app and your own Discord developer application. Setup is under **Settings → Connections → Discord**.
+
+### Everything else
+
+- **Overview**: time, date, weather, now playing, Windows Focus (Do Not Disturb), volume, power mode, Wi-Fi/Bluetooth and the Glim night-light switch.
+- **Clipboard** history for text, links, images and files, with previews and filters. Password managers are excluded and history stays in memory.
+- **Shelf** for parking files: drop them on the notch or paste, then open, copy or reveal them later.
+- **Vault** with passwords and live 2FA codes, a 4-digit PIN, optional **Windows Hello**, DPAPI + TPM-backed encryption and no back door.
+- **Timer** with focus/break presets, six alarm sounds and a running countdown in the closed notch.
+- **To-dos** and **Notes**, stored locally.
+- **Ask**: chat with Gemini, Groq or any OpenAI-compatible endpoint. API keys stay in the backend.
+- **AI usage**: limits for Claude, ChatGPT, Gemini and Cursor from the CLIs you are already signed in to.
+- **Weather** through Open-Meteo, with a city picker and automatic IP-based location.
+- **Hardware**: live CPU, RAM, GPU, VRAM and ping, with history while the notch is closed.
+- **Presentation mode** hides clipboard, balances and vault while you share your screen.
+- Autostart, tray menu, monitor picker, hide-in-fullscreen and drag-to-move.
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/media/winzal-overview.png" width="49%" alt="WinZal Overview with clock, weather, media, focus, volume, Wi-Fi, Bluetooth, power and Glim" />
+  <img src="docs/media/winzal-power-modes.png" width="49%" alt="WinZal power menu with Saver, Balanced, Max and purple Custom modes" />
 </p>
 
-The vault is off by default; turn it on under **Settings → Tools**.
+<p align="center">
+  <img src="docs/media/winzal-gaming-satellite.png" width="86%" alt="WinZal gaming pill with FPS, CPU, GPU and RAM, plus a separate circular equalizer island" />
+</p>
+
+<p align="center">
+  <img src="docs/media/vault-passwords.png" width="49%" alt="WinZal vault passwords" />
+  <img src="docs/media/vault-2fa.png" width="49%" alt="WinZal vault 2FA codes" />
+</p>
+
+<p align="center">
+  <img src="docs/media/performance.png" width="72%" alt="WinZal memory and processor use while closed" />
+</p>
 
 ## Install
 
-1. Download `L4-Notchbar_x.y.z_x64-setup.exe` from the [latest release](https://github.com/Linux5Real/L4-Windows-NotchBar/releases/latest).
-2. Run it. No Node, Rust or admin rights needed; it installs for your user only.
-3. The notch appears at the top of your screen and starts with Windows from then on.
+1. Download **WinZal_1.6.1_x64-setup.exe** from the [latest release](https://github.com/Bipin223/WinZal/releases/latest).
+2. Run it. It installs for your user only; Node, Rust or administrator rights are not needed.
+3. WinZal starts with Windows. The notch appears at the top of the screen and the tray icon keeps it reachable.
 
-Built and tested on Windows 11; Windows 10 should work but is untested. If WebView2 is missing, the installer fetches it automatically.
+Windows 10/11 x64 and the WebView2 runtime are required. The installer fetches WebView2 automatically if it is missing.
 
-The installer is not code-signed yet, so Windows SmartScreen may warn on first launch. Click **More info → Run anyway**.
+The installer is not code-signed, so Windows SmartScreen may warn on first launch. Choose **More info → Run anyway** only if you trust the build.
 
-## Using it
+### Updates
+
+WinZal **1.6.1 and newer** check a signed `latest.json` from GitHub shortly after startup and once a day. Nothing downloads until you click **Install** under **Settings → Updates**.
+
+If you are on **1.6.0 or older**, the old update endpoint no longer exists. Install **1.6.1 manually once**; after that, future signed updates can arrive through the app. Settings and local data are preserved because the app ID stays the same.
+
+## Using WinZal
 
 | Action | How |
 | --- | --- |
-| Open or close | Hover, click or **Ctrl + Alt + Space** (choose the trigger in settings) |
-| Switch tools | Tool bar at the bottom of the open Notch |
-| Settings | Gear icon at the end of the tool bar, or **Settings …** in the tray menu |
-| Tray icon | Left click opens the Notch, right click shows the menu (open, settings, autostart, quit) |
-| Move the Notch | Drag it sideways, either closed or by its header. "Reset to center" is in settings |
-| Focus mode | Click the Notch three times quickly. It turns half transparent and clicks pass through. Three more clicks bring it back |
-| Add files | Drag them onto the Notch, or paste with Ctrl + V |
+| Open or close | Hover, click, or press **Ctrl + Alt + Space** |
+| Switch tools | Tool bar at the bottom of the open notch |
+| Settings | Gear at the end of the tool bar, or the tray menu |
+| Tray | Left click opens the notch; right click for open, settings, autostart and quit |
+| Move | Drag the notch sideways, closed or by its header |
+| Focus mode | Triple-click the notch; triple-click again to leave |
+| Add files | Drag files onto the notch, or paste with **Ctrl + V** |
+| Power mode | Click the battery tile in Overview, or right-click it for Windows settings |
+| Lyrics | **Settings → Music** for layout, size and animation |
 
-## Settings
+## Settings and integrations
 
-Settings are grouped into General, Display, Tools, Timer, AI and Connections. There you can reorder (drag) or hide tools, pick the monitor, hide the Notch automatically during fullscreen apps, enable autostart and switch between German and English.
+Settings are grouped into General, Display, Tools, Timer, AI, Connections, Music and Updates. You can reorder or hide tools, choose the monitor, hide the notch in fullscreen apps, enable autostart and switch the language.
 
-### Setting up the integrations
+**Discord.** Create an application at [discord.com/developers](https://discord.com/developers), copy its **Client ID** and **Client Secret** into **Connections → Discord**, add `http://localhost` as an OAuth2 redirect, then join a call. Discord asks for confirmation once.
 
-Every integration is optional. Tools you don't connect simply stay out of your way.
+**Ask.** Choose Gemini or Groq and paste your API key, or enter an OpenAI-compatible base URL and model. Keys are stored in Windows Credential Manager and never sent back to the interface.
 
-**Ask (AI chat).** Under **AI**, choose a provider (Claude, ChatGPT, OpenRouter or a custom endpoint) and paste your API key. For a custom endpoint, enter the base URL (usually ending in `/v1`) and a model ID. The reasoning effort is set there too.
+**AI usage.** Nothing to enter. WinZal reads the existing local logins of Claude Code, Codex, Gemini CLI and Cursor.
 
-**AI usage.** Nothing to enter. If you are signed in to Claude Code, the Codex CLI, the Gemini CLI or Cursor on this PC, the Notch reads their existing local login and shows your limits.
+**Weather.** Works out of the box with an approximate city from your IP. Pick a city manually in the weather tool to stop the lookup.
 
-**Portfolio.** In Trading 212 go to Settings, API (Beta) and create a key with permission for account data and portfolio. Nothing more is required. Paste key and secret under **Connections** and choose live or demo account.
+**FPS and temperatures.** Open **Settings → Display → FPS & CPU temperature** and approve the one UAC prompt. The helper stops with WinZal, so the prompt is needed again on the next run.
 
-**Discord.** Discord only hands out voice permissions to your own application:
+**Updates.** Automatic checks can be switched off under **Settings → Updates**. Manual **Check** and **Install** live there too.
 
-1. Create an application at [discord.com/developers](https://discord.com/developers).
-2. Under OAuth2, copy the **Client ID** and **Client Secret** into **Connections**.
-3. Under OAuth2, Redirects, add `http://localhost` and save. Without it Discord keeps asking for permission again.
-4. Join a call. Discord asks you once to confirm.
+## Privacy
 
-**Weather.** Works out of the box with your approximate location (city level, from your IP). Pick a city by hand in the weather tool if you prefer; then the IP lookup stops.
+WinZal has no account, no server of its own, no analytics and no tracking.
 
-## Your data stays on your PC
-
-L4-Notchbar has no account, no server of its own, no analytics and no tracking. Everything it stores (settings, to-dos, notes, timer presets) lives on your machine. The clipboard history is kept in memory only and never written to disk.
-
-- **Keys and secrets** are stored in the Windows Credential Manager, never in a plain file, and they are never sent back to the interface.
-- **The vault** lives in one file encrypted with Windows DPAPI, readable only under your Windows account. The PIN is checked in the app's backend, not in the interface, and 2FA keys never leave the backend. With Windows Hello turned on, secrets are additionally sealed with AES-256-GCM under a TPM-backed Windows Hello key.
-- **Integrations talk directly to their own service** and nowhere else: Ask to the AI provider you chose, Portfolio to Trading 212, Discord to the Discord app on your PC (and discord.com for the sign-in), AI usage to the provider you are signed in to, Weather to Open-Meteo (plus an IP-based city lookup unless you picked a city). If you don't set an integration up, it makes no requests.
-- **Updates.** Once a day the app makes a single anonymous request to this repository's public release page to check for a new version. No personal data is sent. If an update exists, a dot appears on the gear icon and **Settings → General → Updates** shows it. Nothing is downloaded until you click **Update now**; the app then installs the update and restarts. Every update is cryptographically signed and verified before it is installed. You can turn the daily check off in the same place.
+- Settings, to-dos, notes and timer presets live on your PC. Clipboard history is memory-only.
+- API keys are kept in Windows Credential Manager, never in a plain settings file.
+- The vault is encrypted with Windows DPAPI and bound to your Windows account. With Windows Hello, secrets are additionally sealed with a TPM-backed key. Forgot the PIN? Reset the vault; there is no recovery back door.
+- Integrations talk directly to the service you configured: Discord to your local desktop app and discord.com, AI to your provider, weather to Open-Meteo. Unconfigured integrations make no requests.
+- The update check fetches only the public `latest.json` from GitHub and verifies the signature before installing. No personal data is sent.
 
 ## Development
 
-Built with **Tauri 2, React 19, TypeScript, Motion and Tailwind 4**. The app uses WebView2 instead of bundling Chromium, which keeps the release build at a few megabytes. Animations stay smooth because the window itself never resizes. Only the content inside it moves.
+WinZal is built with **Tauri 2, React 19, TypeScript, Motion and Tailwind 4**, using the Windows WebView2 runtime instead of a bundled browser.
 
-You need Node 22 or newer and Rust (stable). On Windows, the Visual Studio Build Tools with the C++ workload and a Windows 11 SDK are required for linking.
+Requirements: Node 22+, stable Rust, the Visual Studio Build Tools with the C++ workload, and a Windows 11 SDK.
 
 ```bash
 npm install
-npm run dev        # browser with a fake desktop, ?slow=4 slows animations for tuning
-npm run tauri dev  # the real app, run it in PowerShell
-npm run typecheck  # before every commit
-npm run i18n       # finds missing English strings (add --fix for TODO entries)
+npm run dev        # browser preview with a fake desktop; add ?showcase or ?slow=4
+npm run tauri dev  # the real Windows app
+npm run typecheck  # TypeScript check
+npm run i18n       # find missing English strings
 ```
 
-In the browser, `?showcase` switches to English with curated demo data (music, Discord call, portfolio, chat). It is what the film above was captured from.
-
-To build a standalone executable:
+Build a portable executable:
 
 ```bash
-npx tauri build --no-bundle   # result: src-tauri/target/release/notch.exe
+npx tauri build --no-bundle
+# src-tauri/target/release/winzal.exe
 ```
 
-### Releasing
-
-Releases are built by GitHub Actions (`.github/workflows/release.yml`). Bump the version, commit and push:
+Build the NSIS installer:
 
 ```bash
-npm run bump 1.1.0
-git commit -am "release 1.1.0"
-git push
+npx tauri build --bundles nsis
+# src-tauri/target/release/bundle/nsis/WinZal_x.y.z_x64-setup.exe
 ```
 
-The workflow builds the signed installer and publishes release `v1.1.0` with the installer, its signature and `latest.json`, which installed apps use to offer the update. Pushes without a version bump don't create a release. The signing key lives in the repository secret `TAURI_SIGNING_PRIVATE_KEY`.
+### Releasing signed updates
 
-Run Tauri commands from PowerShell. In Git Bash, `/usr/bin/link` shadows the MSVC linker and the build fails.
+1. Bump the version in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`, and add an entry to `src/changelog.json`.
+2. Build with `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` set. Tauri produces the installer and its `.sig`.
+3. Publish a GitHub release with the installer, the `.sig` and a `latest.json` for `windows-x86_64`.
+4. The update endpoint is `https://github.com/Bipin223/WinZal/releases/latest/download/latest.json`; it always points at the newest release.
 
-### Project layout
+The updater private key is not in this repository. Keep it somewhere safe: losing it means no more signed updates for existing installs.
 
-```
-src/            React frontend: notch shape, tools, design tokens, i18n
-src-tauri/      Rust backend: window, hit testing, tray and the Windows APIs
-scripts/        Helper scripts such as the i18n check
-```
+## Credits
 
-## License
+Developed by **Bipin Rizal** ([Bipin223](https://github.com/Bipin223)).
 
-[GPL-3.0](LICENSE). You may use, study, change and share this project, also commercially, but any version you distribute must stay open source under the same license and keep the copyright notice.
-
-The notch proportions were derived from [NotchDrop](https://github.com/Lakr233/NotchDrop) (MIT). The design follows Apple's Dynamic Island and the macOS app OmniNotch; this project is not affiliated with Apple or OmniNotch.
+WinZal is licensed under **GPL-3.0**. It builds on the L4-Notchbar codebase; thanks to its authors.

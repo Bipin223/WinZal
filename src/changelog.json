@@ -1,5 +1,27 @@
 [
   {
+    "version": "1.6.1",
+    "date": "2026-10-24",
+    "items": [
+      {
+        "de": "Songtexte weiten die geschlossene Pille, statt lesbare Zeilen auszublenden; sehr lange Zeilen scrollen langsam",
+        "en": "Lyrics widen the closed pill instead of fading readable lines; very long lines scroll slowly"
+      },
+      {
+        "de": "Gaming und Musik: ein eigener runder Equalizer schwebt links neben der FPS-Pille",
+        "en": "Gaming and music: a separate circular equalizer floats left of the FPS pill"
+      },
+      {
+        "de": "Energie-Menü mit Saver, Balanced, Max und violettem Custom; Max und Custom nur am Netzteil",
+        "en": "Power menu with Saver, Balanced, Max and purple Custom; Max and Custom only while plugged in"
+      },
+      {
+        "de": "Signierte Updates direkt aus GitHub – nach einer einmaligen manuellen Installation von 1.6.1",
+        "en": "Signed updates straight from GitHub — after a one-time manual install of 1.6.1"
+      }
+    ]
+  },
+  {
     "version": "1.6.0",
     "date": "2026-10-09",
     "items": [

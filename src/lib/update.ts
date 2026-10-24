@@ -54,11 +54,10 @@ export async function installUpdate() {
 const DAY = 24 * 60 * 60 * 1000;
 
 /**
- * Personal build: no automatic update checks. Nothing phones GitHub on its own,
- * and an official release can never replace this build unless you ask for it in
- * Settings → Updates.
+ * Signed updates from GitHub: check once after startup and once a day when the
+ * user allows it. Nothing downloads without a click in Settings → Updates.
  */
-const AUTO_CHECK = false;
+const AUTO_CHECK = true;
 
 /** On start (slightly delayed to keep startup fast) and daily after that, if allowed. */
 export function startUpdateWatch() {
