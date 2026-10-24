@@ -1,7 +1,0 @@
-# WinZal Android
-.gradle/
-build/
-app/build/
-local.properties
-*.iml
-.idea/
