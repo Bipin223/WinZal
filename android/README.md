@@ -1,43 +1,52 @@
 # WinZal for Android
 
-A lean companion to WinZal for Windows. It keeps the calm island look and the
-parts Android can genuinely support.
+The Android version is the **floating Dynamic Island**, not a dashboard app.
+Launching WinZal asks for the two Android permissions it needs, starts the island
+service and closes its own window immediately.
 
-## What works
+## What it does
 
-- Island-style home card with clock, date, weather and battery.
-- Now Playing from any app that exposes a MediaSession:
-  - title, artist, album art
-  - play / pause / previous / next
-  - progress and seek
+- A small black capsule floats above other apps, centered at the top.
+- With no music it shows the clock.
+- With music it shows the current cover and title, with a tiny equalizer.
+- Tap the capsule to expand:
+  - title and artist
+  - progress / seek
+  - previous, play/pause, next
+  - **Media access** (Notification Access settings)
+  - **Close** (stops the island)
+- Tapping the launcher icon again expands the running island.
 - Automatic session switching:
   - the first player that starts playing stays on screen
-  - if it pauses, WinZal switches to the next playing app
-- Synced lyrics from LRCLIB (line by line), cached per track.
-- Focus timer.
-- Notes saved locally.
-- About card with GitHub/Website links and the version.
-- Smooth, dependency-free UI; release APK is about **186 KB**.
+  - if it pauses, the next playing player takes over
+- 30 fps equalizer, 1 s media poll, no background JSON/network polling except lyrics
+  are not fetched in the overlay.
 
-## Needs one permission
+## Required permissions
 
-**Notification Access** is required to read the current media session. The Music
-tab has a button that opens the exact Android setting. Nothing is uploaded; the
-metadata is only kept in memory.
+1. **Display over other apps** — needed for the floating capsule.
+   The app opens that Android setting on first launch.
+2. **Notification Access** — lets the island read the playing song.
+   Expand the pill and tap **Media access**, then enable WinZal.
 
-## What Android cannot do
+No account, no data upload. The media metadata stays in memory.
 
-These are Windows-only in the desktop app, so they are intentionally omitted:
+## What Android cannot support
+
+These are Windows-only in the desktop app:
 
 - ETW FPS and Lenovo/GPU temperature sensors.
-- PowerShell/Windows Media session source-app launching.
-- Discord local RPC (Android has no Discord IPC socket).
+- Windows Media source-app launching.
+- Discord local RPC (Android has no Discord IPC socket). An OAuth2 + Gateway
+  presence bridge is possible, as some Android music apps do, but it is not part
+  of this build.
 - Native Wi-Fi/Bluetooth toggles (Android restricts apps from toggling them).
 - System tray, autostart, Windows notch overlay, file Shelf/clipboard bridge.
 
-A future version could add an optional floating overlay (`SYSTEM_ALERT_WINDOW`)
-and a home-screen widget, but the app is deliberately a normal, low-memory
-Android app today.
+Timer, notes and the About dashboard were removed in the island-only version.
+The 1.0 APK is intentionally tiny (under 200 KB before this change, similarly
+small after) and has no Compose/AndroidX dependencies, so it stays light on a
+6 GB Android 13 phone.
 
 ## Build
 
@@ -48,11 +57,11 @@ $env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
 gradle -p android assembleRelease
 ```
 
-The release APK is written to:
+APK:
 
 ```
 android/app/build/outputs/apk/release/app-release.apk
 ```
 
-It is signed with the local debug key so it can be sideloaded. Replace the
-signing config with your own key before publishing to a store.
+It is signed with the local debug key for sideloading. Replace the signing config
+with your own key before publishing to a store.
