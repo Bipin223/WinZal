@@ -56,10 +56,6 @@ export interface Settings {
     style: "dynamic" | "windows";
     /** Squeeze/bounce while dragging the notch. */
     dragAnimation: boolean;
-    /** 0..100 brightness of inactive dock icons. */
-    dockIconBrightness: number;
-    /** 0..100 brightness of dimmed subtext (Off, 3 devices, …). */
-    subtextBrightness: number;
     /** Show time + weather in the closed island. */
     clockWeather: boolean;
     /** Show the playing track in the closed pill at all (music only in the Now Playing tab when off). */
@@ -147,8 +143,6 @@ const defaults: Settings = {
     theme: "dark",
     style: "dynamic",
     dragAnimation: true,
-    dockIconBrightness: 100,
-    subtextBrightness: 100,
     clockWeather: true,
     musicInPill: true,
     clockAccent: "#ff453a",

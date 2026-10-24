@@ -134,10 +134,7 @@ function ToggleTile(props: {
 
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[11px] leading-[13px] font-semibold">{props.label}</span>
-          <span
-            className={`block truncate text-[10px] leading-[12px] ${props.active ? "text-on-label/55" : "text-label-3"}`}
-            style={{ opacity: "var(--subtext-opacity, 1)" }}
-          >
+          <span className={`block truncate text-[10px] leading-[12px] ${props.active ? "text-on-label/55" : "text-label-3"}`}>
             {props.state}
           </span>
         </span>

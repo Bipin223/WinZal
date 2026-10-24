@@ -17,6 +17,8 @@ export function ClockTime({ time, className, emphasizeFirst = false }: { time: s
           fontWeight: emphasizeFirst ? 900 : 800,
           fontSize: emphasizeFirst ? "1.12em" : undefined,
           lineHeight: 1,
+          // Keep the enlarged leading digit clear of the colon.
+          marginRight: emphasizeFirst ? "0.06em" : undefined,
         }}
       >
         {first}

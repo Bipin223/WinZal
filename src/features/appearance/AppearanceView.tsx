@@ -1,12 +1,12 @@
 import { useId, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowCounterClockwise } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, Plus } from "@phosphor-icons/react";
 import { invoke } from "@tauri-apps/api/core";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { springs } from "../../design/motion";
 import { isNative } from "../../platform/native";
 import { settings, updateSettings, type Settings } from "../../settings/store";
-import { Slider, Switch } from "../../ui/controls";
+import { Switch } from "../../ui/controls";
 import { SelectedDot } from "../../ui/SelectedDot";
 import { t } from "../../i18n";
 import { DARK_SURFACE, LIGHT_SURFACE, isLightTheme, systemLight, themedSurface, useThemeLight } from "./theme";
@@ -26,8 +26,6 @@ const DEFAULTS: Appearance = {
   theme: "dark",
   style: "dynamic",
   dragAnimation: true,
-  dockIconBrightness: 100,
-  subtextBrightness: 100,
   clockWeather: true,
   musicInPill: true,
   clockAccent: "#ff453a",
@@ -109,7 +107,7 @@ export function AppearanceView() {
           <StyleCard active={a.style === "windows"} label={t("Windows Island")} floating onClick={() => set({ style: "windows" })} />
         </div>
       </Section>
-      <Section label={t("Akzent")}>
+      <Section label={t("Equalization Accent")}>
         <Swatches value={a.accent} colors={ACCENTS} onChange={(accent) => set({ accent })} />
       </Section>
       <Section label={t("Uhr-Akzent")}>
@@ -181,32 +179,6 @@ export function AppearanceView() {
           label={restarting ? t("Restarting WinZal...") : t("GPU acceleration")}
           checked={a.gpuAcceleration}
           onChange={(v) => void setRenderMode(v)}
-        />
-      </Section>
-      <Section label={t("Icons & subtext")}>
-        <div className="flex items-center justify-between text-caption font-medium text-label-2">
-          <span>{t("Dock icons")}</span>
-          <span className="tabular text-label-3">{a.dockIconBrightness}%</span>
-        </div>
-        <Slider
-          label={t("Dock icons")}
-          value={a.dockIconBrightness}
-          min={20}
-          max={100}
-          step={5}
-          onChange={(v) => set({ dockIconBrightness: v })}
-        />
-        <div className="mt-2 flex items-center justify-between text-caption font-medium text-label-2">
-          <span>{t("Subtext")}</span>
-          <span className="tabular text-label-3">{a.subtextBrightness}%</span>
-        </div>
-        <Slider
-          label={t("Subtext")}
-          value={a.subtextBrightness}
-          min={20}
-          max={100}
-          step={5}
-          onChange={(v) => set({ subtextBrightness: v })}
         />
       </Section>
       <button
@@ -330,6 +302,7 @@ function ToggleRow({
 }
 
 function Swatches({ value, colors, onChange }: { value: string; colors: string[]; onChange: (v: string) => void }) {
+  const custom = !colors.includes(value) && /^#?[0-9a-f]{6}$/i.test(value);
   return (
     <div className="flex items-center gap-1.5">
       {colors.map((color) => {
@@ -355,6 +328,32 @@ function Swatches({ value, colors, onChange }: { value: string; colors: string[]
           </motion.button>
         );
       })}
+      <label
+        title={t("Eigene Farbe")}
+        className={`relative size-5 shrink-0 cursor-pointer overflow-hidden rounded-full ring-2 transition-colors ${
+          custom ? "ring-label" : "ring-transparent"
+        }`}
+        style={{
+          background: custom
+            ? value
+            : "conic-gradient(#ff453a, #ffd60a, #30d158, #0a84ff, #bf5af2, #ff453a)",
+        }}
+      >
+        <input
+          type="color"
+          aria-label={t("Eigene Farbe")}
+          value={/^#[0-9a-f]{6}$/i.test(value) ? value : "#ffffff"}
+          onChange={(event) => onChange(event.target.value)}
+          className="absolute inset-0 size-full cursor-pointer opacity-0"
+        />
+        <span className="pointer-events-none absolute inset-0 grid place-items-center">
+          {custom ? (
+            <SelectedDot size={5} className="ring-1 ring-white/80" />
+          ) : (
+            <Plus size={9} weight="bold" className="text-white [filter:drop-shadow(0_1px_1px_rgb(0_0_0/0.7))]" />
+          )}
+        </span>
+      </label>
     </div>
   );
 }

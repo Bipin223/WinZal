@@ -251,7 +251,6 @@ export function Notch() {
             surface,
             appearance.material === "glass" ? 0.62 : appearance.material === "dark" ? 0.82 : 1,
           ),
-        ["--subtext-opacity" as string]: appearance.subtextBrightness / 100,
         opacity: focus && !line ? 0.5 : 1,
         transform: isNative ? undefined : `translateX(${drag.offset}px)`,
       }}
@@ -410,7 +409,6 @@ function Dock({ tabs, activeId }: { tabs: NotchTab[]; activeId: string }) {
   const lastTool = useRef(tabs[0]?.id);
   if (activeId !== settingsTab.id) lastTool.current = activeId;
   const inSettings = activeId === settingsTab.id;
-  const brightness = settings.use().appearance.dockIconBrightness;
   const updateReady = update.use().phase === "available";
   // Dot on the gear = update ready or unseen changes â†’ jump straight to that section.
   const unseen = useUnseen().length > 0;
@@ -419,14 +417,13 @@ function Dock({ tabs, activeId }: { tabs: NotchTab[]; activeId: string }) {
   return (
     <div className="flex shrink-0 items-start justify-center gap-0.5 px-4 pt-1" style={{ height: DOCK_HEIGHT }}>
       {tabs.map((tab) => (
-        <DockButton key={tab.id} label={t(tab.label)} icon={tab.icon} active={tab.id === activeId} brightness={brightness} onClick={() => navigate(tab.id)} />
+        <DockButton key={tab.id} label={t(tab.label)} icon={tab.icon} active={tab.id === activeId} onClick={() => navigate(tab.id)} />
       ))}
       <span aria-hidden className="mx-1.5 mt-2 h-4 w-px bg-separator" />
       <DockButton
         label={t(settingsTab.label)}
         icon={GearSix}
         active={inSettings}
-        brightness={brightness}
         badge={badge}
         onClick={() => (inSettings ? navigate(lastTool.current ?? tabs[0].id) : navigate(settingsTab.id, badge ? "updates" : null))}
       />
@@ -434,7 +431,7 @@ function Dock({ tabs, activeId }: { tabs: NotchTab[]; activeId: string }) {
   );
 }
 
-function DockButton(props: { label: string; icon: NotchTab["icon"]; active: boolean; brightness: number; onClick: () => void; badge?: boolean }) {
+function DockButton(props: { label: string; icon: NotchTab["icon"]; active: boolean; onClick: () => void; badge?: boolean }) {
   const I = props.icon;
   return (
     <button
@@ -450,7 +447,6 @@ function DockButton(props: { label: string; icon: NotchTab["icon"]; active: bool
         size={16}
         weight={props.active ? "fill" : "bold"}
         className="relative"
-        style={{ opacity: props.active ? 1 : props.brightness / 100 }}
       />
       {/* Badge dot (e.g. update available) at the icon's top right. */}
       <AnimatePresence>

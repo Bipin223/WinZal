@@ -1,5 +1,31 @@
 [
   {
+    "version": "1.6.4",
+    "date": "2026-10-24",
+    "items": [
+      {
+        "de": "Ask-Aktionen sind größer und sitzen unten rechts: AI-Einstellungen, Chat-Verlauf und neuer Chat",
+        "en": "Ask actions are larger and sit at the lower right: AI settings, chat history and new chat"
+      },
+      {
+        "de": "Der Verlauf ist besser lesbar; die Überschrift und die Zeitstempel haben mehr Kontrast",
+        "en": "History is easier to read; the heading and timestamps have more contrast"
+      },
+      {
+        "de": "Equalization Accent und alle Farbfelder akzeptieren jetzt jede eigene Farbe über den Farbwähler",
+        "en": "Equalization Accent and every color swatch now accept any custom color through the color picker"
+      },
+      {
+        "de": "Die Regler für Dock-Symbole und Subtext wurden entfernt; beide bleiben fest auf 100 %",
+        "en": "The Dock icons and Subtext sliders were removed; both stay fixed at 100%"
+      },
+      {
+        "de": "Die vergrößerte erste Uhrziffer hat jetzt etwas Abstand zum Doppelpunkt",
+        "en": "The enlarged first clock digit now has clear space before the colon"
+      }
+    ]
+  },
+  {
     "version": "1.6.3",
     "date": "2026-10-24",
     "items": [

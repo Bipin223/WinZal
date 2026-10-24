@@ -1,9 +1,8 @@
-﻿import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowUp, Chats, Copy, Check, FileText, ImageSquare, NotePencil, Plus, Stop, Translate, TextAlignLeft, Trash, X, type Icon } from "@phosphor-icons/react";
+import { ArrowUp, Chats, Copy, Check, FileText, ImageSquare, NotePencil, Plus, Sparkle, Stop, Translate, TextAlignLeft, Trash, X, type Icon } from "@phosphor-icons/react";
 import { content, fade } from "../../design/motion";
 import { createStore } from "../../lib/store";
-import { HeaderActions, HeaderButton } from "../../notch/header";
 import { navigate } from "../../notch/nav";
 import { clipboard } from "../../platform/clipboard";
 import { settings, updateSettings } from "../../settings/store";
@@ -321,108 +320,6 @@ export function AskView() {
 
   return (
     <div className="relative flex h-full flex-col px-4 pt-1 pb-2">
-      <HeaderActions>
-        <button
-          onClick={() => navigate("settings", "ask")}
-          title={t("Modell in den Einstellungen ändern")}
-          className="mr-1 max-w-40 truncate text-caption text-label-3 hover:text-label-2"
-        >
-          {config.model || providerInfo[provider].label}
-        </button>
-        <HeaderButton
-          label={saveHistory ? t("Chat-Verlauf") : t("Chat-Verlauf - Speichern aus")}
-          active={historyOpen}
-          onClick={() => {
-            setConfirmClear(false);
-            setHistoryOpen((open) => !open);
-          }}
-        >
-          <Chats size={14} weight="bold" />
-        </HeaderButton>
-        <HeaderButton label={t("Neuer Chat")} disabled={messages.length === 0} onClick={startNew}>
-          <Plus size={14} weight="bold" />
-        </HeaderButton>
-      </HeaderActions>
-
-      {historyOpen && (
-        <>
-          <div className="absolute inset-0 z-20" onClick={() => setHistoryOpen(false)} />
-          <div className="absolute right-3 top-8 z-30 w-[280px] overflow-hidden rounded-[12px] bg-elevated p-1.5 shadow-2xl">
-            <div className="flex items-center justify-between px-2 py-1">
-              <div className="text-[10px] font-semibold tracking-wide text-label-3 uppercase">{t("Gespeicherte Chats")}</div>
-              {saved.length > 0 && (
-                <button
-                  type="button"
-                  aria-label={t("Alle löschen")}
-                  title={t("Alle löschen")}
-                  onClick={() => setConfirmClear(true)}
-                  className="pressable flex size-5 items-center justify-center rounded-[6px] text-label-4 hover:text-red"
-                >
-                  <Trash size={11} weight="bold" />
-                </button>
-              )}
-            </div>
-            <div className="max-h-[200px] overflow-y-auto [scrollbar-width:none]">
-              {saved.length === 0 ? (
-                <div className="px-2 py-2 text-caption text-label-4">{t("Noch keine gespeicherten Chats")}</div>
-              ) : (
-                saved.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`flex items-center gap-0.5 rounded-[8px] pr-1 hover:bg-fill-2 ${current.id === item.id ? "bg-fill-2" : ""}`}
-                  >
-                    <button type="button" onClick={() => void openSaved(item)} className="min-w-0 flex-1 px-2 py-1.5 text-left">
-                      <div className="truncate text-[11px] font-medium text-label">{item.title}</div>
-                      <div className="mt-0.5 text-[9px] leading-[11px] text-label-4">
-                        {when(item.updatedAt)} · {item.messages} {item.messages === 1 ? t("Nachricht") : t("Nachrichten")}
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={t("Löschen")}
-                      onClick={() => void removeSaved(item)}
-                      className="pressable flex size-6 shrink-0 items-center justify-center rounded-[6px] text-label-4 hover:text-red"
-                    >
-                      <Trash size={11} weight="bold" />
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-            {confirmClear && saved.length > 0 && (
-              <div className="mx-1 mt-1 rounded-[8px] bg-fill-1 p-2">
-                <div className="text-[10px] leading-[13px] font-medium text-label">{t("Alle gespeicherten Chats löschen?")}</div>
-                <div className="mt-1.5 flex justify-end gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setConfirmClear(false)}
-                    className="pressable h-6 rounded-full bg-fill-2 px-2.5 text-[10px] font-medium text-label-2 hover:text-label"
-                  >
-                    {t("Abbrechen")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void clearSaved()}
-                    className="pressable h-6 rounded-full bg-red px-2.5 text-[10px] font-semibold text-white"
-                  >
-                    {t("Löschen")}
-                  </button>
-                </div>
-              </div>
-            )}
-            <div className="mt-1 flex items-center justify-between gap-2 border-t border-separator px-2 pt-2 pb-1">
-              <div className="min-w-0">
-                <div className="text-[11px] font-semibold text-label">{t("Chats speichern")}</div>
-                <div className="mt-0.5 text-[9px] leading-[11px] text-label-4">
-                  {saveHistory ? t("Bis zu 3 Chats lokal auf diesem PC") : t("Aus - dieser Chat bleibt nur im Speicher")}
-                </div>
-              </div>
-              <Switch label={t("Chats speichern")} checked={saveHistory} onChange={setSaving} />
-            </div>
-          </div>
-        </>
-      )}
-
       <div ref={list} className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none]">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
@@ -497,6 +394,121 @@ export function AskView() {
         )}
       </AnimatePresence>
 
+      {historyOpen && (
+        <div
+          className="absolute inset-0 z-20"
+          onClick={() => {
+            setHistoryOpen(false);
+            setConfirmClear(false);
+          }}
+        />
+      )}
+
+      <div className="relative z-30 mt-1 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => navigate("settings", "ask")}
+          title={t("Modell in den Einstellungen ändern")}
+          className="min-w-0 truncate px-1 text-caption text-label-2 hover:text-label"
+        >
+          {config.model || providerInfo[provider].label}
+        </button>
+        <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-fill-1 p-0.5">
+          <AskAction label={t("AI-Einstellungen")} onClick={() => navigate("settings", "ask")}>
+            <Sparkle size={18} weight="fill" />
+          </AskAction>
+          <AskAction
+            label={saveHistory ? t("Chat-Verlauf") : t("Chat-Verlauf - Speichern aus")}
+            active={historyOpen}
+            onClick={() => {
+              setConfirmClear(false);
+              setHistoryOpen((open) => !open);
+            }}
+          >
+            <Chats size={18} weight="bold" />
+          </AskAction>
+          <AskAction label={t("Neuer Chat")} disabled={messages.length === 0} onClick={startNew}>
+            <Plus size={18} weight="bold" />
+          </AskAction>
+        </div>
+
+        {historyOpen && (
+          <div className="absolute right-0 bottom-full z-40 mb-1 w-[280px] overflow-hidden rounded-[12px] bg-elevated p-1.5 shadow-2xl ring-1 ring-separator">
+            <div className="flex items-center justify-between px-2 py-1">
+              <div className="text-[10px] font-semibold tracking-wide text-label-2 uppercase">{t("Gespeicherte Chats")}</div>
+              {saved.length > 0 && (
+                <button
+                  type="button"
+                  aria-label={t("Alle löschen")}
+                  title={t("Alle löschen")}
+                  onClick={() => setConfirmClear(true)}
+                  className="pressable flex size-5 items-center justify-center rounded-[6px] text-label-3 hover:text-red"
+                >
+                  <Trash size={11} weight="bold" />
+                </button>
+              )}
+            </div>
+            <div className="max-h-[200px] overflow-y-auto [scrollbar-width:none]">
+              {saved.length === 0 ? (
+                <div className="px-2 py-2 text-caption text-label-3">{t("Noch keine gespeicherten Chats")}</div>
+              ) : (
+                saved.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`flex items-center gap-0.5 rounded-[8px] pr-1 hover:bg-fill-2 ${current.id === item.id ? "bg-fill-2" : ""}`}
+                  >
+                    <button type="button" onClick={() => void openSaved(item)} className="min-w-0 flex-1 px-2 py-1.5 text-left">
+                      <div className="truncate text-[11px] font-medium text-label">{item.title}</div>
+                      <div className="mt-0.5 text-[9px] leading-[11px] text-label-3">
+                        {when(item.updatedAt)} · {item.messages} {item.messages === 1 ? t("Nachricht") : t("Nachrichten")}
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={t("Löschen")}
+                      onClick={() => void removeSaved(item)}
+                      className="pressable flex size-6 shrink-0 items-center justify-center rounded-[6px] text-label-3 hover:text-red"
+                    >
+                      <Trash size={11} weight="bold" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+            {confirmClear && saved.length > 0 && (
+              <div className="mx-1 mt-1 rounded-[8px] bg-fill-1 p-2">
+                <div className="text-[10px] leading-[13px] font-medium text-label">{t("Alle gespeicherten Chats löschen?")}</div>
+                <div className="mt-1.5 flex justify-end gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmClear(false)}
+                    className="pressable h-6 rounded-full bg-fill-2 px-2.5 text-[10px] font-medium text-label-2 hover:text-label"
+                  >
+                    {t("Abbrechen")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void clearSaved()}
+                    className="pressable h-6 rounded-full bg-red px-2.5 text-[10px] font-semibold text-white"
+                  >
+                    {t("Löschen")}
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="mt-1 flex items-center justify-between gap-2 border-t border-separator px-2 pt-2 pb-1">
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold text-label">{t("Chats speichern")}</div>
+                <div className="mt-0.5 text-[9px] leading-[11px] text-label-3">
+                  {saveHistory ? t("Bis zu 3 Chats lokal auf diesem PC") : t("Aus - dieser Chat bleibt nur im Speicher")}
+                </div>
+              </div>
+              <Switch label={t("Chats speichern")} checked={saveHistory} onChange={setSaving} />
+            </div>
+          </div>
+        )}
+      </div>
+
       <form
         className="mt-1 flex items-end gap-2 rounded-[16px] bg-fill-1 py-1.5 pr-1.5 pl-3"
         onSubmit={(e) => {
@@ -540,6 +552,24 @@ export function AskView() {
       </form>
 
     </div>
+  );
+}
+
+/** Larger Ask actions at the lower right: AI settings, chat history and new chat. */
+function AskAction(props: { label: string; onClick: () => void; active?: boolean; disabled?: boolean; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-label={props.label}
+      title={props.label}
+      onClick={props.onClick}
+      disabled={props.disabled}
+      className={`pressable flex size-9 items-center justify-center rounded-full transition-colors disabled:opacity-30 ${
+        props.active ? "bg-fill-3 text-label" : "text-label-2 hover:bg-fill-2 hover:text-label"
+      }`}
+    >
+      {props.children}
+    </button>
   );
 }
 
