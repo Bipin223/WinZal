@@ -38,7 +38,7 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 ### The closed island
 
 - **Large clock by default**, with a separately selectable **Compact** clock. The first digit uses a red accent by default.
-- The expanded clock is **bold by default** and can be switched to Regular in **Settings → Notch**.
+- The expanded clock is **bold by default** and can be switched to Regular in **Settings → Appearance**.
 - **Live music**: cover, title and a real audio-driven equalizer in the closed pill. The first app that starts playing keeps the pill; if it pauses or stops, the next playing app takes over automatically.
 - **Synced lyrics** from LRCLIB, optional. One line or current + next line, **Apple Music (default) / Word by word / Reveal** animations, and a continuous **10–15 px text-size slider** plus **Compact / Normal / Long** pill width. The pill grows to the measured line (up to 360 px) instead of fading readable text; extremely long lines scroll slowly. Choose **Wave**, **Pulse**, **Dots**, **Ripple** or **Aurora** as a visualizer, each with a live preview in Settings → Music; Wave is the default and every style follows the cover accent.
 - **Appearance**: **Dark**, **Light**, **System** or **Custom** theme. Custom has a full in-app HSV color picker with HEX/RGB fields; text, menus and icons switch between dark and light automatically. Island style, material, corners, clock weight and any color for the equalization or clock accent.
@@ -114,7 +114,7 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 
 ## Install
 
-1. Download **WinZal_1.7.0_x64-setup.exe** from the [latest release](https://github.com/Bipin223/WinZal/releases/latest).
+1. Download **WinZal_1.7.1_x64-setup.exe** from the [latest release](https://github.com/Bipin223/WinZal/releases/latest).
 2. Run it. It installs for your user only; Node, Rust or administrator rights are not needed.
 3. WinZal starts with Windows. The notch appears at the top of the screen and the tray icon keeps it reachable.
 
@@ -126,7 +126,7 @@ The installer is not code-signed, so Windows SmartScreen may warn on first launc
 
 WinZal **1.6.2 and newer** check a signed `latest.json` from GitHub shortly after startup and once a day. By default they also **install a found update automatically** after a short pause and restart. Turn either behavior off under **Settings → Updates**; a manual check always lets you read the changelog and click **Install** yourself.
 
-If you are on **1.6.1 or older**, install **1.7.0 manually once**; after that, future signed updates can install themselves. Settings and local data are preserved because the app ID stays the same.
+If you are on **1.6.1 or older**, install **1.7.1 manually once**; after that, future signed updates can install themselves. Settings and local data are preserved because the app ID stays the same.
 
 Updates are in-place upgrades: only the app files are replaced. Settings, vault, notes, to-dos and saved Ask chats live in the Windows app-data folder, outside the installation directory, and are never removed by an update.
 
@@ -148,7 +148,7 @@ Saved Ask conversations live in the app data folder as one small JSON file per c
 
 ## Settings and integrations
 
-Settings are grouped into **General**, **Notch**, **Music**, **Tools**, **Timer**, **AI**, **Discord** and **About**. The Notch page combines idle style, live length/width sliders, theme, island style, material, corners, accents, visibility, DND and gaming/FPS options. The Discord page holds Rich Presence and call setup. You can reorder or hide tools, choose the monitor, hide the notch in fullscreen apps, enable autostart and switch the language.
+Settings are grouped into **General**, **Notch**, **Appearance**, **Music**, **Tools**, **Timer**, **AI**, **Discord** and **About**. The Notch page holds idle style, live length/width sliders, visibility, DND, gaming/FPS and presentation mode; **Appearance** holds theme, island style, material, corners, accents, clock, interaction and performance. The Discord page holds Rich Presence and call setup. You can reorder or hide tools, choose the monitor, hide the notch in fullscreen apps, enable autostart and switch the language.
 
 **Discord.** Create an application at [discord.com/developers](https://discord.com/developers), copy its **Client ID** and **Client Secret** into **Settings → Discord**, add `http://localhost` as an OAuth2 redirect, then join a call. Discord asks for confirmation once.
 

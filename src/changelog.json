@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.7.1",
+    "date": "2026-10-25",
+    "items": [
+      {
+        "de": "Notch und Appearance sind wieder getrennte Seiten: Notch enthält Idle-Stil, Länge/Breite, Sichtbarkeit, Nicht stören, Gaming/FPS und Präsentationsmodus; Appearance enthält Theme, Island-Stil, Akzente, Uhr, Material, Ecken, Interaktion und Performance",
+        "en": "Notch and Appearance are separate pages again: Notch holds idle style, length/width, visibility, Do Not Disturb, gaming/FPS and presentation mode; Appearance holds theme, island style, accents, clock, material, corners, interaction and performance"
+      },
+      {
+        "de": "Alle Funktionen beider Seiten bleiben erhalten; der Appearance-Reset lässt die Notch-Größe jetzt unangetastet",
+        "en": "All features from both pages are preserved; Appearance reset now leaves the notch size untouched"
+      }
+    ]
+  },
+  {
     "version": "1.7.0",
     "date": "2026-10-25",
     "items": [

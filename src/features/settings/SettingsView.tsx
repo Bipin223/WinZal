@@ -6,6 +6,7 @@ import {
   DotsSixVertical,
   Keyboard,
   LockSimple,
+  Monitor,
   MusicNotesSimple,
   Palette,
   Play,
@@ -44,11 +45,12 @@ import { between, changelog, itemText, markSeen, useUnseen } from "../../lib/cha
 import { privacy, togglePresentation, usePresenting } from "../privacy/store";
 import { locale, t, tBackend } from "../../i18n";
 
-type PageId = "general" | "notch" | "music" | "tools" | "timer" | "ai" | "discord" | "about";
+type PageId = "general" | "notch" | "appearance" | "music" | "tools" | "timer" | "ai" | "discord" | "about";
 
 const pages: { id: PageId; label: string; icon: Icon }[] = [
   { id: "general", label: "Allgemein", icon: SlidersHorizontal },
-  { id: "notch", label: "Notch", icon: Palette },
+  { id: "notch", label: "Notch", icon: Monitor },
+  { id: "appearance", label: "Appearance", icon: Palette },
   { id: "music", label: "Musik", icon: MusicNotesSimple },
   { id: "tools", label: "Tools", icon: SquaresFour },
   { id: "timer", label: "Timer", icon: Timer },
@@ -62,7 +64,7 @@ const sectionPage: Record<string, PageId> = {
   weather: "general",
   updates: "general",
   display: "notch",
-  appearance: "notch",
+  appearance: "appearance",
   notch: "notch",
   music: "music",
   lyrics: "music",
@@ -82,6 +84,7 @@ let savedPage: PageId = "general";
 const PAGE_HEIGHT: Record<PageId, number> = {
   general: 460,
   notch: 460,
+  appearance: 460,
   music: 460,
   tools: 460,
   timer: 460,
@@ -160,11 +163,12 @@ export function SettingsView() {
             )}
             {page === "notch" && (
               <>
-                <AppearanceView />
+                <AppearanceView mode="notch" />
                 <Display />
                 <Presentation />
               </>
             )}
+            {page === "appearance" && <AppearanceView mode="appearance" />}
             {page === "music" && <MusicSettings />}
             {page === "tools" && (
               <>

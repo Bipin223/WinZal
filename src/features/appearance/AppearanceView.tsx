@@ -49,7 +49,7 @@ function fillWithAlpha(hex: string, alpha: number): string {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
-export function AppearanceView() {
+export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | "notch" }) {
   const a = settings.use().appearance;
   const display = settings.use().display;
   const themeLight = useThemeLight();
@@ -78,7 +78,9 @@ export function AppearanceView() {
 
   return (
     <div className="flex flex-col gap-1.5 pb-2">
-      <Preview fill={previewFill} accent={accent} corners={a.corners} islandStyle={a.style} />
+      {mode === "appearance" && <Preview fill={previewFill} accent={accent} corners={a.corners} islandStyle={a.style} />}
+      {mode === "notch" && (
+        <>
       <Section label={t("Geschlossen")}>
         <div className="mb-1.5 text-caption text-label-3">{t("The notch shows music, timers and more")}</div>
         <Choice
@@ -116,6 +118,10 @@ export function AppearanceView() {
           </div>
         </div>
       </Section>
+        </>
+      )}
+      {mode === "appearance" && (
+        <>
       <Section label={t("Theme")}>
         <Choice
           label={t("Modus")}
@@ -213,6 +219,9 @@ export function AppearanceView() {
           updateSettings({
             appearance: {
               ...DEFAULTS,
+              // Notch size lives on the Notch page; Appearance reset leaves it alone.
+              islandWidth: a.islandWidth,
+              islandHeight: a.islandHeight,
               gpuAcceleration: a.gpuAcceleration,
               // Music lives in its own settings page; Appearance reset leaves it alone.
               musicInPill: a.musicInPill,
@@ -231,6 +240,8 @@ export function AppearanceView() {
         <ArrowCounterClockwise size={12} weight="bold" />
         {t("Zurücksetzen")}
       </button>
+        </>
+      )}
     </div>
   );
 }
