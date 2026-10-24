@@ -70,7 +70,7 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
         )}
       </FadeBox>
       <LiveEdge side="right">
-        <Equalizer playing={np.isPlaying} fps={30} />
+        <Equalizer playing={np.isPlaying} fps={48} />
       </LiveEdge>
     </motion.div>
   );

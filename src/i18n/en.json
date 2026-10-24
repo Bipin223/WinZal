@@ -553,5 +553,12 @@
   "Enthusiast, neugieriger Lerner, Designer & Entwickler.": "Enthusiast, keen learner, curious designer & developer.",
   "Die Karte zeigt zusätzlich die Buttons „Listen on YouTube Music“ und „Get WinZal“.": "The card also gets “Listen on YouTube Music” and “Get WinZal” buttons.",
   "App hinzufügen": "Add app",
-  "Exe-Name, z. B. genshinimpact.exe": "Exe name, e.g. genshinimpact.exe"
+  "Exe-Name, z. B. genshinimpact.exe": "Exe name, e.g. genshinimpact.exe",
+  "App-Name": "App name",
+  "Ersetzt WinZal überall, wo der App-Name erscheint. Leer lassen, um ihn zu behalten.": "Replaces WinZal wherever the app name appears. Leave empty to keep it.",
+  "Leer lassen, um den Namen deiner Discord-App zu verwenden; ein Wert hier überschreibt ihn.": "Leave empty to use your Discord application’s name; a value here overrides it.",
+  "Wird angezeigt nach „Listening to“": "Shown after “Listening to”",
+  "Titel": "Song",
+  "Künstler": "Artist",
+  "Verbindung": "Connection"
 }

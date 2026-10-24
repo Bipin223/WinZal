@@ -44,8 +44,8 @@ export function Equalizer({
   playing: boolean;
   height?: number;
   tint?: string;
-  /** 30 for the always-on closed pill; 60 for the opened views. */
-  fps?: 30 | 60;
+  /** 30/48 for the always-on closed pill; 60 for the opened views. */
+  fps?: 30 | 48 | 60;
 }) {
   const bars = useRef<(HTMLSpanElement | null)[]>([]);
   const playingRef = useRef(playing);
@@ -92,7 +92,7 @@ export function Equalizer({
 
   // Animation loop: runs while something moves, sleeps when paused and settled.
   useEffect(() => {
-    const minFrame = fps === 30 ? 30 : MIN_FRAME_MS;
+    const minFrame = fps === 30 ? 30 : fps === 48 ? 20 : MIN_FRAME_MS;
     const value = [IDLE, IDLE, IDLE, IDLE];
     let frame = 0;
     let last = performance.now();

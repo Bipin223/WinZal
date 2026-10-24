@@ -730,36 +730,73 @@ function Discord() {
   const s = settings.use();
   const state = discordState.use();
   const [id, setId] = useState(s.discord.clientId);
+  const [name, setName] = useState(s.discord.appName);
   const save = () => updateSettings((cur) => ({ discord: { ...cur.discord, clientId: id.trim() } }));
+  const saveName = () => updateSettings((cur) => ({ discord: { ...cur.discord, appName: name.trim() } }));
   return (
-    <Group title="Discord" id="settings-discord">
-      <Row label={t("Status")} hint={state.error ? tBackend(state.error) : undefined}>
-        <span className={`text-caption ${state.status === "ready" ? "text-green" : "text-label-2"}`}>{t(discordStatus[state.status] ?? state.status)}</span>
-      </Row>
-      <Row label={t("Client-ID")}>
-        <div className="flex items-center gap-1.5">
-          <TextField value={id} onChange={setId} onSubmit={save} placeholder="123456789012345678" width="w-40" />
-          {id.trim() !== s.discord.clientId && <Button onClick={save}>{t("Sichern")}</Button>}
+    <>
+      <Group title={t("Rich Presence")} id="settings-discord">
+        <Row label={t("Rich Presence")} hint={t("Aktuellen Song auf Discord anzeigen")}>
+          <Switch
+            label={t("Rich Presence")}
+            checked={s.discord.presence}
+            onChange={(presence) => updateSettings((cur) => ({ discord: { ...cur.discord, presence } }))}
+          />
+        </Row>
+        {s.discord.presence && (
+          <>
+            <Row
+              label={t("Wird angezeigt nach „Listening to“")}
+              hint={t("Song name, artist or the app name")}
+            >
+              <Segmented<"title" | "artist" | "app">
+                id="discord-status"
+                size="sm"
+                value={s.discord.statusLine}
+                onChange={(statusLine) => updateSettings((cur) => ({ discord: { ...cur.discord, statusLine } }))}
+                options={[
+                  { value: "title", label: t("Titel") },
+                  { value: "artist", label: t("Künstler") },
+                  { value: "app", label: t("App-Name") },
+                ]}
+              />
+            </Row>
+            <Row
+              label={t("App-Name")}
+              hint={t("Ersetzt WinZal überall, wo der App-Name erscheint. Leer lassen, um ihn zu behalten.")}
+            >
+              <div className="flex items-center gap-1.5">
+                <TextField value={name} onChange={setName} onSubmit={saveName} placeholder="WinZal" width="w-40" />
+                {name.trim() !== s.discord.appName && <Button onClick={saveName}>{t("Sichern")}</Button>}
+              </div>
+            </Row>
+            <div className="px-3 py-2 text-caption text-label-3">
+              {t("Leer lassen, um den Namen deiner Discord-App zu verwenden; ein Wert hier überschreibt ihn.")}
+            </div>
+            <div className="px-3 py-2 text-caption text-label-3">
+              {t("Die Karte zeigt zusätzlich die Buttons „Listen on YouTube Music“ und „Get WinZal“.")}
+            </div>
+          </>
+        )}
+      </Group>
+      <Group title={t("Verbindung")} id="settings-discord-connection">
+        <Row label={t("Status")} hint={state.error ? tBackend(state.error) : undefined}>
+          <span className={`text-caption ${state.status === "ready" ? "text-green" : "text-label-2"}`}>
+            {t(discordStatus[state.status] ?? state.status)}
+          </span>
+        </Row>
+        <Row label={t("Client-ID")}>
+          <div className="flex items-center gap-1.5">
+            <TextField value={id} onChange={setId} onSubmit={save} placeholder="123456789012345678" width="w-40" />
+            {id.trim() !== s.discord.clientId && <Button onClick={save}>{t("Sichern")}</Button>}
+          </div>
+        </Row>
+        <SecretRow name="discord.secret" label={t("Client-Secret")} onSaved={reconnectDiscord} />
+        <div className="px-3 py-2 text-caption text-label-3">
+          {t("discord.com/developers → New Application → OAuth2: Client-ID und Client-Secret kopieren und unter Redirects http://localhost eintragen und speichern. Beim ersten Verbinden fragt Discord einmal nach.")}
         </div>
-      </Row>
-      <SecretRow name="discord.secret" label={t("Client-Secret")} onSaved={reconnectDiscord} />
-      <Row label={t("Rich Presence")} hint={t("Aktuellen Song auf Discord anzeigen")}>
-        <Switch
-          label={t("Rich Presence")}
-          checked={s.discord.presence}
-          onChange={(presence) => updateSettings((cur) => ({ discord: { ...cur.discord, presence } }))}
-        />
-      </Row>
-      <div className="px-3 py-2 text-caption text-label-3">
-        {t("discord.com/developers → New Application → OAuth2: Client-ID und Client-Secret kopieren und unter Redirects http://localhost eintragen und speichern. Beim ersten Verbinden fragt Discord einmal nach.")}
-      </div>
-      <div className="px-3 py-2 text-caption text-label-3">
-        {t("Der Name hinter „Listening to“ ist der Name deiner Discord-App. Benenne die App im Developer Portal um, wenn dort nicht WinZal stehen soll.")}
-      </div>
-      <div className="px-3 py-2 text-caption text-label-3">
-        {t("Die Karte zeigt zusätzlich die Buttons „Listen on YouTube Music“ und „Get WinZal“.")}
-      </div>
-    </Group>
+      </Group>
+    </>
   );
 }
 

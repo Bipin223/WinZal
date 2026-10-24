@@ -112,7 +112,12 @@ pub fn discord_action(action: String, state: State<'_, DiscordState>) {
 
 /// Publishes the current song as Discord Rich Presence. `None` clears it.
 #[tauri::command]
-pub async fn discord_activity(info: Option<ActivityInfo>, state: State<'_, DiscordState>) -> Result<(), String> {
+pub async fn discord_activity(
+    info: Option<ActivityInfo>,
+    app_name: Option<String>,
+    status_line: Option<String>,
+    state: State<'_, DiscordState>,
+) -> Result<(), String> {
     let seq = state.activity_seq.fetch_add(1, Ordering::SeqCst) + 1;
     let activity = match info {
         None => Value::Null,
@@ -138,6 +143,18 @@ pub async fn discord_activity(info: Option<ActivityInfo>, state: State<'_, Disco
                 }
 
                 let mut activity = json!({ "type": 2, "details": &title });
+                // Discord uses this name after "Listening to". LI Music exposes the same
+                // option; empty keeps the registered Discord application's name.
+                if let Some(name) = app_name.map(|name| name.trim().to_string()).filter(|name| name.chars().count() >= 2) {
+                    activity["name"] = json!(clip(&name, 128));
+                }
+                // Which field Discord shows after "Listening to" in the member list / card.
+                // 0 = app name, 1 = state (artist), 2 = details (song title).
+                activity["status_display_type"] = json!(match status_line.as_deref() {
+                    Some("app") => 0,
+                    Some("artist") => 1,
+                    _ => 2,
+                });
                 if !artist.is_empty() {
                     activity["state"] = json!(&artist);
                 }

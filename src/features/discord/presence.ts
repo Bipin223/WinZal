@@ -24,7 +24,7 @@ export function startDiscordPresence() {
     if (!settings.get().discord.presence) {
       if (lastKey !== "off") {
         lastKey = "off";
-        void invoke("discord_activity", { info: null }).catch(() => {});
+        void invoke("discord_activity", { info: null, appName: null, statusLine: null }).catch(() => {});
       }
       return;
     }
@@ -35,6 +35,8 @@ export function startDiscordPresence() {
     }
 
     const np = media.get();
+    const appName = settings.get().discord.appName;
+    const statusLine = settings.get().discord.statusLine;
     const info =
       np && np.isPlaying && np.title.trim()
         ? {
@@ -44,11 +46,13 @@ export function startDiscordPresence() {
             duration: Math.max(0, np.duration),
           }
         : null;
-    const key = info ? `${info.title}\u0001${info.artist}\u0001${Math.round(info.duration)}` : "off";
+    const key = info
+      ? `${info.title}\u0001${info.artist}\u0001${Math.round(info.duration)}\u0001${appName}\u0001${statusLine}`
+      : "off";
     if (key === lastKey) return;
     lastKey = key;
 
-    void invoke("discord_activity", { info }).catch(() => {
+    void invoke("discord_activity", { info, appName, statusLine }).catch(() => {
       // A reconnect can race the update; retry on the next state/track change.
       lastKey = "";
     });
