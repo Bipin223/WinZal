@@ -1,4 +1,4 @@
-import { GithubLogo, Globe, MapPin, type Icon } from "@phosphor-icons/react";
+import { GithubLogo, Globe, Heart, type Icon } from "@phosphor-icons/react";
 import avatar from "../../assets/bipin.png";
 import { update } from "../../lib/update";
 import { systemControls } from "../../platform/services";
@@ -19,6 +19,7 @@ export function AboutView() {
         <div aria-hidden className="absolute -top-24 -right-16 size-56 rounded-full bg-accent/20 blur-3xl" />
         <div aria-hidden className="absolute -bottom-24 -left-20 size-52 rounded-full bg-white/[0.04] blur-3xl" />
         <div className="relative flex flex-col items-center px-6 py-7 text-center">
+          <div className="mb-3 text-[10px] font-medium tracking-[0.12em] text-label-3">{t("Developed By")}</div>
           <img
             src={avatar}
             alt="Bipin Rizal"
@@ -26,11 +27,6 @@ export function AboutView() {
             className="size-[92px] rounded-[26px] object-cover shadow-[0_10px_30px_rgb(0_0_0/0.45)] ring-1 ring-white/15"
           />
           <div className="mt-3 text-[22px] leading-7 font-semibold tracking-[-0.02em] text-label">Bipin Rizal</div>
-          <div className="mt-0.5 text-caption text-label-3">{t("BCA-Student am Vishwa Adarsha College")}</div>
-          <div className="mt-1 flex items-center gap-1 text-caption text-label-3">
-            <MapPin size={11} weight="fill" />
-            {t("Itahari, Nepal")}
-          </div>
           <p className="mt-3 max-w-[380px] text-caption leading-[17px] text-label-2">
             {t("Enthusiast, neugieriger Lerner, Designer & Entwickler.")}
           </p>
@@ -57,7 +53,10 @@ export function AboutView() {
           </button>
         </Row>
       </Group>
-      <div className="pt-1 pb-2 text-center text-caption text-label-4">{t("Mit Sorgfalt in Nepal gebaut")}</div>
+      <div className="flex items-center justify-center gap-1.5 pt-1 pb-2 text-caption text-label-4">
+        <Heart size={11} weight="fill" className="text-red/70" />
+        Made with Love by <span className="font-medium text-label-3">Bipin Rizal</span>
+      </div>
     </div>
   );
 }
