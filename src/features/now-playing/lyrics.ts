@@ -68,12 +68,19 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
     setLines([]);
     setIndex(-1);
     setStatus("loading");
-    // Small grace period: skipping tracks quickly does not fire a request per track.
-    const id = window.setTimeout(() => {
+    let retry: number | undefined;
+    const load = (attempt: number) => {
       void fetchLyrics(np.title, np.artist, np.duration)
         .then((lyrics) => {
           if (!alive) return;
           const next = parseLrc(lyrics.synced);
+          // One delayed retry: a timeout or 429 must not become "no lyrics"
+          // for the rest of the session. LRCLIB answers that really have no
+          // synced text are cached by Rust, so the retry is cheap.
+          if (!next.length && !lyrics.instrumental && attempt === 0) {
+            retry = window.setTimeout(() => load(1), 4000);
+            return;
+          }
           if (parsed.size >= PARSED_MAX) {
             parsed.clear();
             meta.clear();
@@ -84,15 +91,21 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
           setStatus(next.length ? "lyrics" : lyrics.instrumental ? "instrumental" : "music");
         })
         .catch(() => {
-          if (alive) {
-            setLines([]);
-            setStatus("music");
+          if (!alive) return;
+          if (attempt === 0) {
+            retry = window.setTimeout(() => load(1), 4000);
+            return;
           }
+          setLines([]);
+          setStatus("music");
         });
-    }, 300);
+    };
+    // Small grace period: skipping tracks quickly does not fire a request per track.
+    const id = window.setTimeout(() => load(0), 300);
     return () => {
       alive = false;
       window.clearTimeout(id);
+      window.clearTimeout(retry);
     };
     // One fetch per track; position updates come from the timer below.
     // eslint-disable-next-line react-hooks/exhaustive-deps

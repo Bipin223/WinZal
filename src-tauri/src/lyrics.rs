@@ -11,6 +11,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tauri::State;
+use unicode_normalization::UnicodeNormalization;
 
 #[derive(Clone, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -125,8 +126,10 @@ fn query(base: &str, title: &str, artist: &str, duration: f64) -> Option<reqwest
 
 #[tauri::command]
 pub async fn lyrics_get(title: String, artist: String, duration: f64, state: State<'_, LyricsState>) -> Result<Lyrics, String> {
-    let title = title.trim().to_string();
-    let artist = artist.trim().to_string();
+    // Media sessions can hand out decomposed accents ("Buble" + U+0301). LRCLIB
+    // stores composed text, so normalize before the lookup and the cache key.
+    let title = title.trim().nfc().collect::<String>();
+    let artist = artist.trim().nfc().collect::<String>();
     if title.is_empty() {
         return Ok(Lyrics::default());
     }
@@ -137,6 +140,9 @@ pub async fn lyrics_get(title: String, artist: String, duration: f64, state: Sta
 
     let http = client()?;
     let mut lyrics = Lyrics::default();
+    // Only cache answers that LRCLIB actually confirmed. A timeout, 429 or 5xx
+    // must not become a permanent "no lyrics" for the rest of the session.
+    let mut cacheable = false;
 
     // Exact match first (LRCLIB's /get is stricter and faster).
     if let Some(url) = query("https://lrclib.net/api/get", &title, &artist, duration) {
@@ -144,22 +150,29 @@ pub async fn lyrics_get(title: String, artist: String, duration: f64, state: Sta
             if response.status().is_success() {
                 if let Ok(track) = response.json::<Track>().await {
                     lyrics = track.into_lyrics();
+                    cacheable = lyrics.synced.is_some() || lyrics.instrumental;
                 }
             }
         }
     }
 
     // Search fallback for local files whose duration differs from LRCLIB.
-    if lyrics.synced.is_none() {
+    if lyrics.synced.is_none() && !lyrics.instrumental {
         if let Some(url) = query("https://lrclib.net/api/search", &title, &artist, 0.0) {
             if let Ok(response) = http.get(url).send().await {
                 if response.status().is_success() {
                     if let Ok(tracks) = response.json::<Vec<Track>>().await {
+                        // Search is a definitive answer even when it returns no
+                        // usable match, so an empty list is safe to cache.
+                        cacheable = true;
                         if let Some(track) = tracks
                             .into_iter()
+                            .filter(|track| score(track, &title, &artist, duration).is_finite())
                             .max_by(|a, b| score(a, &title, &artist, duration).total_cmp(&score(b, &title, &artist, duration)))
                         {
-                            lyrics = track.into_lyrics();
+                            if score(&track, &title, &artist, duration) > 0.0 {
+                                lyrics = track.into_lyrics();
+                            }
                         }
                     }
                 }
@@ -167,10 +180,12 @@ pub async fn lyrics_get(title: String, artist: String, duration: f64, state: Sta
         }
     }
 
-    let mut cache = state.0.lock().unwrap();
-    if cache.len() >= 40 {
-        cache.clear();
+    if cacheable {
+        let mut cache = state.0.lock().unwrap();
+        if cache.len() >= 40 {
+            cache.clear();
+        }
+        cache.insert(key, lyrics.clone());
     }
-    cache.insert(key, lyrics.clone());
     Ok(lyrics)
 }
