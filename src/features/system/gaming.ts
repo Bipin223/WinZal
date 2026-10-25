@@ -18,7 +18,11 @@ export function startGamingWatch() {
 
 /** Is the closed notch showing FPS and load right now? */
 export function useGamingLive(): boolean {
-  return gaming.use();
+  const live = gaming.use();
+  // Dev-only preview: localhost/?gaming=1 shows the measured overlay without
+  // needing a real game. Vite removes this branch from the production bundle.
+  const forced = import.meta.env.DEV && new URLSearchParams(window.location.search).has("gaming");
+  return live || forced;
 }
 
 export const fps = createStore<{ value: number | null; error: string | null }>({ value: null, error: null });

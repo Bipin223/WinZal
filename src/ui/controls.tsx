@@ -350,7 +350,7 @@ type MenuPos = {
 
 export function Select<T extends string>(props: {
   value: T;
-  options: { value: T; label: string }[];
+  options: { value: T; label: string; icon?: ReactNode }[];
   onChange: (v: T) => void;
   width?: string;
 }) {
@@ -418,7 +418,10 @@ export function Select<T extends string>(props: {
         onClick={() => setOpen((o) => !o)}
         className="pressable pressable-fill flex h-7 w-full items-center justify-between gap-1 rounded-[8px] bg-fill-2 px-2 text-footnote text-label"
       >
-        <span className="truncate">{current?.label}</span>
+        <span className="flex min-w-0 items-center gap-1.5">
+          {current?.icon}
+          <span className="truncate">{current?.label}</span>
+        </span>
         <CaretUpDown
           size={11}
           weight="bold"
@@ -461,11 +464,12 @@ export function Select<T extends string>(props: {
                     props.onChange(o.value);
                     setOpen(false);
                   }}
-                  className={`flex h-7 w-full items-center rounded-[6px] px-2 text-left text-footnote hover:bg-fill-2 ${
+                  className={`flex h-7 w-full min-w-0 items-center gap-1.5 rounded-[6px] px-2 text-left text-footnote hover:bg-fill-2 ${
                     o.value === props.value ? "text-label" : "text-label-2"
                   }`}
                 >
-                  {o.label}
+                  {o.icon}
+                  <span className="truncate">{o.label}</span>
                 </button>
               ))}
             </motion.div>

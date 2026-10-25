@@ -30,6 +30,7 @@ export function LiveGaming() {
     if (g.showRam) bars.push(mem ?? 0);
   }
   const fit = useRef<HTMLDivElement>(null);
+  const retry = useRef<number | undefined>(undefined);
 
   // The shape's width follows the real row, not an estimate. This removes the
   // flexible gap between CPU and GPU and lets every stat size change shrink or
@@ -37,15 +38,41 @@ export function LiveGaming() {
   useLayoutEffect(() => {
     const el = fit.current;
     if (!el) return;
-    const report = () => gamingMeasured.set(Math.ceil(el.scrollWidth + 20));
+    // Use the row's layout width, not scrollWidth: LiveEdge transforms its two
+    // sides outwards to follow the shape, and scrollWidth would count that
+    // overflow. Feeding it back made the pill permanently wider on every frame.
+    // 24 = 12 px of air on each side, matching the clock pill.
+    const report = () => {
+      const width = Math.ceil(el.getBoundingClientRect().width + 24);
+      gamingMeasured.set(width);
+      // The first measurement can land before the parent's store subscription
+      // is live. Repeat it once after mount so the pill uses the real width
+      // instead of the (slightly smaller) first-paint estimate.
+      window.clearTimeout(retry.current);
+      retry.current = window.setTimeout(() => gamingMeasured.set(width), 60);
+    };
     const ro = new ResizeObserver(report);
     ro.observe(el);
     report();
     return () => {
       ro.disconnect();
+      window.clearTimeout(retry.current);
       gamingMeasured.set(0);
     };
   }, []);
+
+  // Settings toggles and stat changes re-render this row. Measure after every
+  // render so the pill follows immediately even if the ResizeObserver callback
+  // is delayed or the row was mounted at a narrower width.
+  useLayoutEffect(() => {
+    const el = fit.current;
+    if (!el) return;
+    const width = Math.ceil(el.getBoundingClientRect().width + 24);
+    if (gamingMeasured.get() === width) return;
+    gamingMeasured.set(width);
+    window.clearTimeout(retry.current);
+    retry.current = window.setTimeout(() => gamingMeasured.set(width), 60);
+  });
 
   return (
     <motion.div

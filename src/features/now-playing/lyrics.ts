@@ -21,10 +21,11 @@ export interface LyricsDisplay {
 }
 
 /**
- * Switch the index this early so the old line's short exit finishes exactly on
- * the timestamp. The line list still uses wait mode, so the two never overlap.
+ * Switch just before the timestamp so timer/render latency lands on the beat.
+ * The line is replaced in one commit (no exit wait), so there is no overlap and
+ * no built-in 80 ms delay.
  */
-const LYRIC_LEAD = 0.08;
+const LYRIC_LEAD = 0.05;
 
 /** Parse once per track, even when the pill closes and reopens. */
 const parsed = new Map<string, Line[]>();

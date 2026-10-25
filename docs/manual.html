@@ -182,7 +182,7 @@
       <figcaption>Closed pill → extended tool window → line mode with the amber locator.</figcaption>
     </figure>
     <div class="grid g3" style="margin-top:14px">
-      <div class="card"><h3>Closed pill</h3><p>Time, media, lyrics, weather or gaming stats, depending on what is active.</p></div>
+      <div class="card"><h3>Closed pill</h3><p>Time, media, lyrics, weather or gaming stats, depending on what is active. The black pill is measured from the live row plus 12 px per side and grows or shrinks to fit; <b>Extra width</b> at 0 auto-fits, and clock faces or stat toggles never clip at the edges.</p></div>
       <div class="card"><h3>Extended</h3><p>Header, the active tool and the dock. Settings is the gear at the end.</p></div>
       <div class="card"><h3>Line</h3><p>A minimal strip for a clean desktop. The amber dot marks the notch position.</p></div>
     </div>
@@ -327,14 +327,14 @@
   <section id="music">
     <p class="eyebrow">Music &amp; lyrics</p>
     <h2>Synced lines without the jitter</h2>
-    <p>Lyrics come from LRCLIB and are cached per track. <b>Word by Word</b> plus ten lab effects: Word fill sweep, Word focus, Glitch scramble, Liquid fill, Iridescent, Magic stripe, Spring cascade, Depth dissolve, Interlude dots and Duet split. Old and new lines never overlap; the old line leaves before the new one enters.</p>
+    <p>Lyrics come from LRCLIB and are cached per track. <b>Word by Word</b> plus eight effects: Word fill sweep, Glitch scramble, Liquid fill, Spotlight, Letter bloom, Spark, Orbit and Ambient. Lines replace in one commit and never overlap. Tracks without synced lyrics show the real media/video title.</p>
     <div class="grid g2" style="margin-top:14px">
       <div class="card"><h3>Lyric pill</h3><p>Text size 10–15, weight 400–900, min width and pill length 284–640, height 24–44. Auto width is on by default: grow and shrink with the line, never below the minimum or beyond the length.</p></div>
       <div class="card"><h3>Instrumental / Music</h3><p>Instrumental tracks show <b>Instrumental</b>. Tracks with no synced lyrics show <b>Music</b> instead of an empty slot.</p></div>
     </div>
     <div class="grid g2" style="margin-top:14px">
       <div class="card"><h3>Lyrics offset</h3><p>±1 s in 0.1 s steps. Positive values make lines appear later. Fixes early or late LRCLIB timings.</p></div>
-      <div class="card"><h3>Equalizer &amp; glow</h3><p>Five equalizers: Bars, Mirror, LED dots, Ticks, Spring capsules. Six behind-glows: Bloom, Aurora, Rings, Spectrum haze, Liquid, Halo. Both follow the Equalization Accent.</p></div>
+      <div class="card"><h3>Equalizer &amp; glow</h3><p>Three equalizers: Bars, Mirror and Ticks. Five behind-glows: Wave, Bloom, Bokeh, Leaves and Night sky. Wave is a moving ocean swell with a translucent fill below the crest; Night sky has a half moon in the pill and a full moon, random stars, galaxies, a shooting star and a UFO in the expanded panel. Both follow the Equalization Accent. The same visualization continues in the expanded Now Playing panel; one Visualization switch controls both views.</p></div>
       <div class="card"><h3>Output device</h3><p>The Now Playing mixer lists Windows playback endpoints. Pick speakers, headphones or Bluetooth and Windows switches its default output immediately.</p></div>
     </div>
   </section>

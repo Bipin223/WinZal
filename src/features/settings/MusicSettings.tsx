@@ -20,31 +20,26 @@ export function MusicSettings() {
   const equalizers: { value: Settings["appearance"]["lyricsVisualizerStyle"]; label: string }[] = [
     { value: "bars", label: "Bars" },
     { value: "mirror", label: "Mirror" },
-    { value: "dots", label: "LED dots" },
     { value: "ticks", label: "Ticks" },
-    { value: "capsule", label: "Spring capsules" },
   ];
   const glows: { value: Settings["appearance"]["lyricsGlowStyle"]; label: string }[] = [
     { value: "none", label: t("None") },
+    { value: "wave", label: "Wave" },
     { value: "bloom", label: "Bloom" },
-    { value: "aurora", label: "Aurora" },
-    { value: "rings", label: "Rings" },
-    { value: "spectrum", label: "Spectrum haze" },
-    { value: "liquid", label: "Liquid" },
-    { value: "halo", label: "Halo" },
+    { value: "bokeh", label: "Bokeh" },
+    { value: "leaves", label: "Leaves" },
+    { value: "night", label: "Night sky" },
   ];
   const animations: { value: Settings["appearance"]["lyricsAnimation"]; label: string }[] = [
     { value: "word", label: t("Word by Word") },
     { value: "fill", label: "Word fill sweep" },
-    { value: "focus", label: "Word focus" },
     { value: "glitch", label: "Glitch scramble" },
     { value: "liquid", label: "Liquid fill" },
-    { value: "irid", label: "Iridescent" },
-    { value: "stripe", label: "Magic stripe" },
-    { value: "cascade", label: "Spring cascade" },
-    { value: "dissolve", label: "Depth dissolve" },
-    { value: "dots", label: "Interlude dots" },
-    { value: "duet", label: "Duet split" },
+    { value: "spot", label: "Spotlight" },
+    { value: "letters", label: "Letter bloom" },
+    { value: "spark", label: "Spark" },
+    { value: "orbit", label: "Orbit" },
+    { value: "ambient", label: "Ambient" },
   ];
 
   return (

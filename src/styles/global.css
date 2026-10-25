@@ -183,6 +183,19 @@ body {
 .lyr-eq-ticks i { width: 1.5px; border-radius: 1px; }
 .lyr-eq-capsule { gap: 3px; }
 .lyr-eq-capsule i { width: 5px; border-radius: 999px; animation: lyr-eq-capsule 1.35s cubic-bezier(.34,1.56,.64,1) infinite; }
+.lyr-eq-ripple { position: relative; width: 40px; height: 20px; }
+.lyr-eq-ripple i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border: 1px solid var(--accent);
+  border-radius: 50%;
+  background: transparent;
+  animation: lyr-eq-ripple 2.2s ease-out infinite;
+}
 .lyr-eq-dots { gap: 4px; }
 .lyr-eq-col { display: flex; flex-direction: column-reverse; gap: 2px; }
 .lyr-eq-dots i {
@@ -207,6 +220,10 @@ body {
   0%, 100% { opacity: .18; transform: scale(.7); }
   40% { opacity: 1; transform: scale(1); }
 }
+@keyframes lyr-eq-ripple {
+  0% { transform: scale(.35); opacity: .75; }
+  70%, 100% { transform: scale(2.6); opacity: 0; }
+}
 
 /* behind glows */
 .lyr-glow {
@@ -217,76 +234,559 @@ body {
   pointer-events: none;
   border-radius: inherit;
 }
+/* Closed pill default: keep the glow in the text bay, feathered before the
+   cover and equalizer. The full-pill option keeps the old wash. */
+.lyr-glow-text {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%);
+  opacity: .82;
+}
+.lyr-glow-text .lyr-wave-front-fill { opacity: .2; }
+.lyr-glow-text .lyr-wave-back-fill { opacity: .1; }
+.lyr-glow-text .lyr-wave-crest { opacity: .45; }
+
+/* ------------------------------------------------------------------ */
+/* final.html lyric effects — word-progress driven, no line overlap. */
+.lab-line {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  white-space: nowrap;
+  line-height: inherit;
+}
+.lab-w {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  vertical-align: top;
+  transition: transform .24s cubic-bezier(.34,1.56,.64,1), opacity .25s, filter .25s;
+}
+.lab-base { display: inline-block; color: #616a7d; transition: color .26s, text-shadow .26s; }
+.lab-w.dim .lab-base { color: #434b5c; }
+.lab-w.focus .lab-base { color: #fff; text-shadow: 0 0 16px color-mix(in srgb, var(--accent) 55%, transparent); }
+.lab-w.focus { transform: scale(1.06); }
+.lab-fill {
+  position: absolute;
+  inset: 0;
+  color: transparent;
+  background: linear-gradient(180deg, var(--accent) 0%, #fff 42%, color-mix(in srgb, var(--accent) 55%, #5fe9e3) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  clip-path: inset(100% 0 0 0);
+}
+.lab-fill-right { background: none; color: #f6fbff; text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 60%, transparent); }
+.lab-w.hot .lab-fill { filter: drop-shadow(0 0 7px color-mix(in srgb, var(--accent) 50%, transparent)); }
+.lab-ul {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), #ffc46b);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 65%, transparent), 0 0 22px rgb(255 196 107 / .3);
+  transform: scaleX(0);
+  transform-origin: left center;
+  opacity: 0;
+  transition: opacity .2s;
+}
+.lab-w.hot .lab-ul { opacity: 1; }
+.lab-ch {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(125%) rotate(3deg);
+  filter: blur(6px);
+  transition: transform .72s cubic-bezier(.16,1,.3,1) var(--d,0ms), opacity .5s var(--d,0ms), filter .6s var(--d,0ms);
+}
+.lab-cascade.in .lab-ch { opacity: 1; transform: none; filter: blur(0); }
+.lab-dots-line { gap: 8px; align-items: center; }
+.lab-dots { display: inline-flex; align-items: center; gap: 6px; }
+.lab-dots i {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 80%, transparent);
+  animation: lyr-dot-pulse 1.5s ease-in-out infinite;
+}
+.lab-dots i:nth-child(2) { animation-delay: .18s; }
+.lab-dots i:nth-child(3) { animation-delay: .36s; }
+.lab-lch {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(8px) scale(.86);
+  filter: blur(5px);
+  transition: opacity .45s ease var(--d,0ms), transform .55s cubic-bezier(.16,1,.3,1) var(--d,0ms), filter .5s ease var(--d,0ms);
+}
+.lab-letters.in .lab-lch { opacity: 1; transform: none; filter: blur(0); }
+.lab-spot-line { position: relative; }
+.lab-spot {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 150px;
+  height: 230%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 30%, transparent), transparent 72%);
+  filter: blur(6px);
+  pointer-events: none;
+  opacity: .9;
+  z-index: 0;
+  transition: opacity .35s;
+}
+.lab-sparks {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.lab-sp {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #ffd479;
+  box-shadow: 0 0 8px rgb(255 200 90 / .9);
+  animation: lyr-spark-fly .66s ease-out forwards;
+}
+@keyframes lyr-spark-fly {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px))) scale(.3);
+  }
+}
+.lab-orb {
+  display: inline-block;
+  opacity: 0;
+  transform-origin: 50% 60%;
+  will-change: transform, opacity, filter;
+  animation: lyr-orbit-in 1s cubic-bezier(.16, 1, .3, 1) var(--d, 0ms) both;
+}
+@keyframes lyr-orbit-in {
+  0% { opacity: 0; transform: translate(0, -24px) rotate(-120deg) scale(.72); filter: blur(3px); }
+  55% { opacity: 1; filter: blur(.6px); }
+  100% { opacity: 1; transform: none; filter: blur(0); }
+}
+.lab-ambient-line {
+  transform-origin: 50% 50%;
+  animation: lyr-breathe-line 5.4s ease-in-out infinite;
+}
+.lab-ambient-word {
+  display: inline-block;
+  will-change: transform, opacity, filter;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 38%, transparent);
+  animation: lyr-ambient-wave 4.8s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -0.42s);
+}
+@keyframes lyr-ambient-wave {
+  0% { transform: translateY(-1.5px) scale(1); filter: blur(0); opacity: .95; }
+  28% { transform: translateY(1.5px) scale(1.03); filter: blur(2.6px); opacity: .32; }
+  52% { transform: translateY(0) scale(1.015); filter: blur(1.3px); opacity: .62; }
+  76% { transform: translateY(-1px) scale(1.005); filter: blur(.5px); opacity: .85; }
+  100% { transform: translateY(-1.5px) scale(1); filter: blur(0); opacity: .95; }
+}
+@keyframes lyr-breathe-line {
+  0%, 100% { transform: scale(1); opacity: .93; }
+  50% { transform: scale(1.02); opacity: 1; }
+}
 .lyr-glow i { position: absolute; display: block; }
+/* Ocean wave: two filled layers below the surface, a bright crest, and a
+   seamless drift (the SVG is three periods wide; one third per cycle). */
+.lyr-wave {
+  position: absolute;
+  left: -100%;
+  bottom: -1px;
+  width: 300%;
+  height: calc(100% + 1px);
+  pointer-events: none;
+}
+.lyr-wave-back { animation: lyr-wave-back 12s linear infinite; }
+.lyr-wave-front { animation: lyr-wave-front 8s linear infinite; }
+.lyr-wave-back-fill { fill: var(--accent); opacity: .14; }
+.lyr-wave-front-fill { fill: var(--accent); opacity: .26; }
+.lyr-wave-crest {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  opacity: .6;
+  vector-effect: non-scaling-stroke;
+}
 .lyr-glow-bloom i {
-  inset: 8% 4%;
+  inset: 8% 2%;
   background:
-    radial-gradient(55% 120% at 28% 50%, color-mix(in srgb, var(--accent) 55%, transparent), transparent 70%),
-    radial-gradient(50% 110% at 74% 50%, rgba(255, 178, 96, .4), transparent 72%);
+    radial-gradient(58% 120% at 28% 50%, color-mix(in srgb, var(--accent) 55%, transparent), transparent 70%),
+    radial-gradient(52% 110% at 74% 50%, rgba(255, 178, 96, .4), transparent 72%);
   filter: blur(18px);
   animation: lyr-glow-breathe 3.4s ease-in-out infinite;
 }
-.lyr-glow-aurora i {
-  width: 58%; height: 150%; left: 2%; top: -20%;
+/* Silk — satin bands rotating slowly. */
+.lyr-glow-silk i {
+  inset: -70%;
+  background: repeating-linear-gradient(100deg,
+    transparent 0 16px,
+    color-mix(in srgb, var(--accent) 30%, transparent) 24px,
+    rgb(255 255 255 / .22) 32px,
+    rgb(255 196 107 / .26) 42px,
+    transparent 58px);
+  filter: blur(9px);
+  opacity: .55;
+  animation: lyr-glow-silk 26s linear infinite;
+}
+/* Bokeh — drifting light motes. */
+.lyr-glow-bokeh i { border-radius: 50%; filter: blur(6px); opacity: .55; }
+.bokeh-mote {
+  animation-name: lyr-bokeh-a;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  will-change: transform;
+}
+.bokeh-1 { animation-name: lyr-bokeh-b; }
+.bokeh-2 { animation-name: lyr-bokeh-c; }
+@keyframes lyr-bokeh-a {
+  0% { transform: translate(0, 0) scale(.88); }
+  100% { transform: translate(var(--dx, 18px), var(--dy, -10px)) scale(1.18); }
+}
+@keyframes lyr-bokeh-b {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(var(--dx, -18px), var(--dy, 10px)) scale(.82); }
+}
+@keyframes lyr-bokeh-c {
+  0% { transform: translate(0, 0) rotate(0deg) scale(.9); }
+  100% { transform: translate(var(--dx, 12px), var(--dy, -8px)) rotate(20deg) scale(1.08); }
+}
+/* Four independent blurred light leaks crossing the expanded panel. */
+.bokeh-leak {
+  position: absolute;
+  height: 18px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--accent) 45%, transparent);
-  filter: blur(24px);
-  mix-blend-mode: screen;
-  animation: lyr-glow-drift-a 9s ease-in-out infinite alternate;
-}
-.lyr-glow-aurora i:nth-child(2) {
-  width: 52%; height: 140%; left: auto; right: 2%; top: -15%;
-  background: rgba(255, 170, 90, .32);
-  animation-name: lyr-glow-drift-b;
-  animation-duration: 12s;
-}
-.lyr-glow-rings i {
-  left: 50%; top: 50%; width: 150px; height: 64px; margin: -32px 0 0 -75px;
-  border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
-  animation: lyr-glow-ring 3.6s ease-out infinite;
-}
-.lyr-glow-rings i:nth-child(2) { animation-delay: 1.8s; border-color: rgba(255, 196, 107, .4); }
-.lyr-glow-spectrum { display: flex; align-items: flex-end; justify-content: center; gap: 7px; padding: 0 6%; filter: blur(12px); opacity: .55; }
-.lyr-glow-spectrum i {
-  position: relative;
-  width: 9px; height: 70%;
-  border-radius: 6px;
-  transform-origin: bottom;
-  background: linear-gradient(180deg, #ffc46b, var(--accent));
-  animation: lyr-glow-spectrum 1.7s ease-in-out infinite;
-}
-.lyr-glow-liquid i {
-  inset: 6% 4%;
-  border-radius: 45% 55% 60% 40% / 52% 46% 54% 48%;
-  background: conic-gradient(from 0deg, color-mix(in srgb, var(--accent) 55%, transparent), rgba(255, 180, 100, .32), color-mix(in srgb, var(--accent) 55%, transparent));
   filter: blur(22px);
-  opacity: .75;
-  animation: lyr-glow-morph 14s ease-in-out infinite;
+  opacity: .2;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  will-change: translate, opacity;
 }
-.lyr-glow-halo i {
-  left: 8%; right: 8%; top: 20%; height: 60%;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 60%, transparent), transparent 70%);
-  filter: blur(18px);
-  opacity: .5;
-  animation: lyr-glow-halo 7s ease-in-out infinite;
+.leak-a {
+  width: 64%;
+  left: -20%;
+  top: 18%;
+  rotate: -16deg;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 60%, transparent), transparent);
+  animation: lyr-leak-a 17s ease-in-out infinite alternate;
 }
-.lyr-glow-halo i:nth-child(2) {
-  background: radial-gradient(closest-side, rgba(255, 180, 100, .5), transparent 70%);
-  animation-delay: -3.5s;
+.leak-b {
+  width: 56%;
+  right: -18%;
+  bottom: 10%;
+  rotate: 14deg;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, #ffc46b 50%, transparent), transparent);
+  animation: lyr-leak-b 21s ease-in-out infinite alternate;
+  animation-delay: -6s;
+}
+.leak-c {
+  width: 48%;
+  left: 12%;
+  top: 48%;
+  rotate: 24deg;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / .34), transparent);
+  animation: lyr-leak-c 14s ease-in-out infinite alternate;
+  animation-delay: -3s;
+}
+.leak-d {
+  width: 52%;
+  right: 4%;
+  top: 34%;
+  rotate: -28deg;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 40%, #ff9fb1), transparent);
+  animation: lyr-leak-d 25s ease-in-out infinite alternate;
+  animation-delay: -11s;
+}
+@keyframes lyr-leak-a {
+  0% { translate: -8% 0; opacity: .1; }
+  45% { translate: 14% -6%; opacity: .28; }
+  100% { translate: 24% 4%; opacity: .15; }
+}
+@keyframes lyr-leak-b {
+  0% { translate: 8% -4%; opacity: .12; }
+  50% { translate: -16% 5%; opacity: .3; }
+  100% { translate: -26% -2%; opacity: .14; }
+}
+@keyframes lyr-leak-c {
+  0% { translate: -12% 4%; opacity: .08; }
+  50% { translate: 10% -7%; opacity: .24; }
+  100% { translate: 18% 2%; opacity: .12; }
+}
+@keyframes lyr-leak-d {
+  0% { translate: 10% 2%; opacity: .1; }
+  50% { translate: -12% -5%; opacity: .22; }
+  100% { translate: -20% 6%; opacity: .12; }
+}
+@keyframes lyr-glow-breathe {
+  0%, 100% { opacity: .55; transform: scaleX(.95); }
+  50% { opacity: 1; transform: scaleX(1.05); }
+}
+@keyframes lyr-glow-silk { to { transform: rotate(360deg); } }
+
+/* Leaves: autumn silhouettes falling from upper-left to lower-right. */
+.lyr-glow-leaves i {
+  position: absolute;
+  top: -16px;
+  opacity: 0;
+  animation: lyr-leaf-fall var(--dur, 9s) linear infinite;
+  animation-delay: var(--delay, 0s);
+}
+.lyr-glow-leaves i svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.lyr-glow-leaves i path { fill: currentColor; }
+.lyr-glow-leaves i .vein {
+  fill: none;
+  stroke: rgb(0 0 0 / .3);
+  stroke-width: .8;
+  stroke-linecap: round;
 }
 
-@keyframes lyr-glow-breathe { 0%,100% { opacity:.55; transform:scaleX(.95); } 50% { opacity:1; transform:scaleX(1.05); } }
-@keyframes lyr-glow-drift-a { 0% { transform:translate(-8%,4%) scale(.9); } 100% { transform:translate(12%,-6%) scale(1.15); } }
-@keyframes lyr-glow-drift-b { 0% { transform:translate(10%,-4%) scale(1.1); } 100% { transform:translate(-10%,6%) scale(.9); } }
-@keyframes lyr-glow-ring { 0% { transform:scale(.55); opacity:0; } 18% { opacity:.55; } 100% { transform:scale(3.1); opacity:0; } }
-@keyframes lyr-glow-spectrum { 0%,100% { transform:scaleY(.22); } 50% { transform:scaleY(1); } }
-@keyframes lyr-glow-morph {
-  0%,100% { border-radius:45% 55% 60% 40%/52% 46% 54% 48%; transform:rotate(0) scale(1); }
-  50% { border-radius:58% 42% 44% 56%/45% 58% 42% 55%; transform:rotate(8deg) scale(1.06); }
+/* Night sky: moon, random stars, galaxies, shooting star and the little UFO. */
+.lyr-glow-night::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(90% 130% at 80% -10%, rgb(120 150 255 / .2), transparent 62%),
+    radial-gradient(70% 110% at 15% 110%, rgb(90 70 160 / .16), transparent 70%);
+  pointer-events: none;
 }
-@keyframes lyr-glow-halo { 0%,100% { transform:translateX(-12%) scale(.92); } 50% { transform:translateX(12%) scale(1.08); } }
+.lyr-glow-night .moonHalo,
+.lyr-glow-night .moon { position: absolute; display: block; }
+.lyr-glow-night .moonHalo {
+  right: 3%;
+  top: -2%;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  z-index: 1;
+  background: radial-gradient(circle, rgb(232 241 255 / .3), rgb(232 241 255 / .09) 46%, transparent 68%);
+  filter: blur(6px);
+  animation: lyr-moon-halo 7s ease-in-out infinite;
+}
+.lyr-glow-night .moon {
+  right: 10%;
+  top: 12%;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  z-index: 2;
+  background: radial-gradient(circle at 34% 30%, #fff 0%, #f8faff 40%, #e8edf9 72%, #cfd7ea 100%);
+  box-shadow:
+    inset -2px -2px 4px rgb(110 125 160 / .3),
+    0 0 9px 2px rgb(240 246 255 / .7),
+    0 0 24px 8px rgb(220 232 255 / .22);
+  animation: lyr-moon-drift 18s ease-in-out infinite alternate;
+}
+/* Closed pill: a true half moon. */
+.lyr-glow-night .moon::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 50%;
+  background: var(--color-notch, #05060a);
+  clip-path: inset(0 50% 0 0);
+}
+.lyr-glow-night .moon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 62% 32%, rgb(150 162 190 / .3) 0 1.7px, transparent 2.1px),
+    radial-gradient(circle at 38% 60%, rgb(150 162 190 / .22) 0 2.3px, transparent 2.8px),
+    radial-gradient(circle at 70% 66%, rgb(150 162 190 / .18) 0 1.4px, transparent 1.8px),
+    radial-gradient(circle at 30% 34%, rgb(255 255 255 / .55) 0 2.6px, transparent 3.2px);
+}
+.lyr-glow-night .star {
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0;
+  animation: lyr-twinkle var(--dur, 4s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+.lyr-glow-night .star.bright { box-shadow: 0 0 6px #fff, 0 0 14px rgb(200 220 255 / .8); }
+.lyr-glow-night .galaxy {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(20px);
+  opacity: .3;
+  mix-blend-mode: screen;
+}
+.lyr-glow-night .galaxy-a {
+  width: 58%;
+  height: 74%;
+  left: 4%;
+  top: 4%;
+  background: radial-gradient(ellipse at 42% 42%, rgb(109 125 255 / .45), rgb(168 85 247 / .2) 46%, transparent 72%);
+  animation: lyr-galaxy-drift 24s ease-in-out infinite alternate;
+}
+.lyr-glow-night .galaxy-b {
+  width: 48%;
+  height: 62%;
+  right: 1%;
+  bottom: 0;
+  background: radial-gradient(ellipse at 58% 42%, rgb(77 208 225 / .36), rgb(124 58 237 / .2) 50%, transparent 75%);
+  animation: lyr-galaxy-drift 30s ease-in-out infinite alternate-reverse;
+}
+.lyr-glow-night .shooting {
+  position: absolute;
+  top: 15%;
+  left: -18%;
+  width: 74px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #fff, transparent);
+  filter: drop-shadow(0 0 4px #fff);
+  transform: rotate(22deg);
+  opacity: 0;
+  animation: lyr-shooting 12s ease-in infinite;
+}
+/* Floating saucer, expanded only. */
+.lyr-glow-night .ufo {
+  position: absolute;
+  left: 8%;
+  top: 42%;
+  width: 44px;
+  height: 18px;
+  z-index: 2;
+  animation: lyr-ufo-drift 16s ease-in-out infinite alternate;
+}
+.lyr-glow-night .ufo-body {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 44px;
+  height: 12px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #e8f0ff 0%, #8b9bb4 45%, #3a4659 100%);
+  box-shadow: inset 0 1px 2px #fff, 0 0 14px rgb(180 220 255 / .55);
+}
+.lyr-glow-night .ufo-body i {
+  position: absolute;
+  bottom: 3px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #7fffe0;
+  box-shadow: 0 0 8px #7fffe0;
+  animation: lyr-ufo-blink 1.2s ease-in-out infinite;
+}
+.lyr-glow-night .ufo-body i:nth-child(1) { left: 8px; }
+.lyr-glow-night .ufo-body i:nth-child(2) { left: 20px; animation-delay: .4s; }
+.lyr-glow-night .ufo-body i:nth-child(3) { left: 32px; animation-delay: .8s; }
+.lyr-glow-night .ufo-dome {
+  position: absolute;
+  left: 12px;
+  bottom: 9px;
+  width: 20px;
+  height: 12px;
+  border-radius: 50% 50% 30% 30%;
+  background: radial-gradient(circle at 35% 30%, rgb(210 255 255 / .9), rgb(90 200 220 / .45) 50%, rgb(30 60 80 / .2));
+  border: 1px solid rgb(220 255 255 / .5);
+  box-shadow: 0 0 10px rgb(120 245 238 / .5);
+}
+.lyr-glow-night .ufo-beam {
+  position: absolute;
+  left: 50%;
+  bottom: -18px;
+  width: 30px;
+  height: 26px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgb(120 245 238 / .35), transparent);
+  clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%);
+  filter: blur(4px);
+  opacity: .45;
+  animation: lyr-ufo-beam 2s ease-in-out infinite;
+}
+
+/* Expanded Now Playing: size-aware composition above the dock. */
+.np-now .lyr-wave { height: clamp(64px, 45%, 140px); }
+.np-now .lyr-wave-front-fill { opacity: .3; }
+.np-now .lyr-wave-back-fill { opacity: .16; }
+.np-now .lyr-glow { opacity: .9; }
+.np-now .lyr-glow-silk {
+  opacity: .52;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 22%, #000 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 22%, #000 100%);
+}
+.np-now .lyr-glow-silk i { inset: -18%; filter: blur(14px); opacity: .5; mix-blend-mode: screen; }
+.np-now .lyr-glow-bloom i { inset: 16% 6% 0; filter: blur(42px); opacity: .68; }
+.np-now .lyr-glow-bokeh i { filter: blur(12px); opacity: .5; }
+.np-now .lyr-glow-leaves i { top: -24px; --fall: 260px; --dx-scale: 1.25; }
+.np-now .lyr-glow-night .moonHalo {
+  width: 140px;
+  height: 140px;
+  right: 0;
+  top: -10%;
+  filter: blur(10px);
+}
+.np-now .lyr-glow-night .moon {
+  width: 46px;
+  height: 46px;
+  right: 8%;
+  top: 8%;
+  box-shadow:
+    inset -6px -6px 12px rgb(110 125 160 / .3),
+    0 0 22px 5px rgb(240 246 255 / .8),
+    0 0 70px 24px rgb(220 232 255 / .24);
+  animation: lyr-moon-full 9s ease-in-out infinite;
+}
+.np-now .lyr-glow-night .moon::before { display: none; }
+.np-now .np-glow-wave::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 30%, color-mix(in srgb, var(--accent) 7%, transparent));
+  pointer-events: none;
+}
+@keyframes lyr-galaxy-drift {
+  0% { transform: translate(-2%, 1%) rotate(-3deg) scale(.96); }
+  100% { transform: translate(3%, -2%) rotate(4deg) scale(1.08); }
+}
+@keyframes lyr-shooting {
+  0%, 86% { opacity: 0; transform: translate(0, 0) rotate(22deg); }
+  88% { opacity: 1; }
+  100% { opacity: 0; transform: translate(430px, 168px) rotate(22deg); }
+}
+@keyframes lyr-ufo-drift {
+  0% { transform: translate(-14px, 4px) rotate(-3deg); }
+  100% { transform: translate(36px, -8px) rotate(3deg); }
+}
+@keyframes lyr-ufo-blink {
+  0%, 100% { opacity: .3; }
+  50% { opacity: 1; }
+}
+@keyframes lyr-ufo-beam {
+  0%, 100% { opacity: .25; }
+  50% { opacity: .6; }
+}
+@keyframes lyr-leaf-fall {
+  0% { transform:translate(0,-18px) rotate(0deg); opacity:0; }
+  8% { opacity:.9; }
+  25% { transform:translate(calc(var(--dx,70px) * .26 * var(--dx-scale,1) + var(--sway,10px)), calc(var(--fall,64px) * .22)) rotate(calc(var(--dir,1) * 120deg)); }
+  50% { transform:translate(calc(var(--dx,70px) * .54 * var(--dx-scale,1) - var(--sway,10px)), calc(var(--fall,64px) * .47)) rotate(calc(var(--dir,1) * 240deg)); }
+  75% { transform:translate(calc(var(--dx,70px) * .79 * var(--dx-scale,1) + var(--sway,10px)), calc(var(--fall,64px) * .72)) rotate(calc(var(--dir,1) * 380deg)); }
+  100% { transform:translate(calc(var(--dx,70px) * var(--dx-scale,1)), var(--fall,64px)) rotate(calc(var(--dir,1) * 520deg)); opacity:0; }
+}
+@keyframes lyr-ember-rise {
+  0% { transform:translate(0,4px) scale(.8); opacity:0; }
+  15% { opacity:.9; }
+  60% { opacity:.55; }
+  100% { transform:translate(calc(var(--dx,8px) * var(--dx-scale,1)), var(--rise,-58px)) scale(.4); opacity:0; }
+}
+@keyframes lyr-moon-halo { 0%,100% { opacity:.75; transform:scale(.96); } 50% { opacity:1; transform:scale(1.06); } }
+@keyframes lyr-moon-drift { 0% { transform:translate(0,0); } 100% { transform:translate(-3px,2px); } }
+@keyframes lyr-moon-full {
+  0%,100% { transform: translate(0,0) scale(1); }
+  50% { transform: translate(-6px,4px) scale(1.04); }
+}
+@keyframes lyr-twinkle { 0%,100% { opacity:.12; transform:scale(.65); } 50% { opacity:1; transform:scale(1.15); } }
 
 .lyr-dots { display: inline-flex; align-items: center; gap: 3px; }
 .lyr-dots i {
@@ -304,7 +804,9 @@ body {
   .rec-blink,
   .trend-scroll,
   .lyr-eq i,
+  .lyr-eq-ripple i,
   .lyr-glow i,
+  .lyr-wave,
   .lyr-dots i,
   .anim-word {
     animation: none;
@@ -317,10 +819,16 @@ body {
   animation-duration: 0.3s !important;
 }
 :root[data-motion="reduced"] .lyr-eq i,
+:root[data-motion="reduced"] .lyr-eq-ripple i,
 :root[data-motion="reduced"] .lyr-glow i,
+:root[data-motion="reduced"] .lyr-wave,
 :root[data-motion="reduced"] .lyr-dots i,
 :root[data-motion="reduced"] .anim-word {
   animation-duration: 1.4s !important;
+}
+/* Calm water stays slow; reduced motion must not make it race. */
+:root[data-motion="reduced"] .lyr-wave {
+  animation-duration: 22s !important;
 }
 :root[data-motion="off"] *,
 :root[data-motion="off"] *::before,

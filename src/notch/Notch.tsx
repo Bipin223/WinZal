@@ -16,7 +16,6 @@ import { GamingSatellite } from "./GamingSatellite";
 import { DOCK_HEIGHT, HEADER_HEIGHT, geometry, openGeometry, type NotchGeometry } from "./geometry";
 import { HeaderButton, headerSlot } from "./header";
 import { ClockMeta, CompactClock } from "./ClockFace";
-import { clockMeasured } from "./clockMeasure";
 import { LiveRightInset } from "./liveEdges";
 import { RECORDING_EXTRA, RECORDING_INSET, RecordingBadge, useRecording } from "./recording";
 import { sizeOverride } from "./size";
@@ -55,13 +54,16 @@ export function Notch() {
   const silent = silentMode.use();
   const gamingLive = useGamingLive();
   const measuredGamingWidth = gamingMeasured.use();
-  const measuredClockWidth = clockMeasured.use();
+  const [measuredClockWidth, setMeasuredClockWidth] = useState(0);
+  const clockRow = useRef<HTMLDivElement>(null);
   useGameAutoPower();
   const { tools: toolSettings, display: displaySettings, appearance, gaming } = settings.use();
   // Silent mode is the only ghost; game transparency reuses the Glass alpha (0.62).
   const ghostOpacity = silent && status !== "open" ? 0.28 : 1;
   const materialAlpha = appearance.material === "glass" ? 0.62 : appearance.material === "dark" ? 0.82 : 1;
   const notchAlpha = gaming.transparent && gamingLive ? 0.62 : materialAlpha;
+  // Measured is the truth once the live row exists. The estimate is only for
+  // the first paint; adding both kept a permanent dead gutter around the stats.
   const systemWidth = measuredGamingWidth > 0 ? measuredGamingWidth : gamingWidth(gaming);
   useEffect(() => {
     setSilent(silent && status !== "open");
@@ -121,6 +123,24 @@ export function Notch() {
   const lyricsPill = appearance.lyricsInPill && shownLive === "media";
   const pillLive = floating ? (clockWeather && !lyricsPill ? null : shownLive) : shownLive;
   const clockPill = clockWeather && !pillLive;
+  // Measure the real clock row in the parent so date/day/weather toggles and
+  // face changes resize the pill immediately, without a store subscription race.
+  useLayoutEffect(() => {
+    if (!clockPill || status === "open") return;
+    const el = clockRow.current;
+    if (!el) {
+      setMeasuredClockWidth(0);
+      return;
+    }
+    const report = () => setMeasuredClockWidth(Math.ceil(el.getBoundingClientRect().width + 24));
+    const ro = new ResizeObserver(report);
+    ro.observe(el);
+    report();
+    return () => {
+      ro.disconnect();
+      setMeasuredClockWidth(0);
+    };
+  }, [clockPill, status]);
   // Screen recording gets its own chip at the right end of the closed pill.
   const { recording, since } = useRecording();
   const showRecording = recording && !idleLine && status !== "open";
@@ -148,10 +168,15 @@ export function Notch() {
       ? { ...baseShape, r: Math.min(baseShape.r, 8), ear: Math.min(baseShape.ear, 3) }
       : baseShape;
   const customIsland = !lineView && status !== "open";
+  // Gaming owns its width: it is measured from the live row. The island width
+  // setting is optional extra air, never a subtraction, so it cannot clip or
+  // leave a permanent gap when set to 0.
+  const gamingPill = !lineView && status !== "open" && pillLive === "system";
+  const extraWidth = Math.max(0, appearance.islandWidth);
   const sizedShape = customIsland
     ? {
         ...shape,
-        w: Math.max(80, shape.w + (lyricsPill ? 0 : appearance.islandWidth)),
+        w: Math.max(80, shape.w + (lyricsPill || gamingPill ? 0 : extraWidth)),
         h: lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight,
       }
     : shape;
@@ -181,10 +206,15 @@ export function Notch() {
       : appearance.lyricsPillLength;
   const lyricsExtra = lyricTarget > 0 ? Math.min(360, Math.max(0, lyricTarget - geometry.live.w)) : 0;
 
-  // The row is shrink-0 now, so this is the real width of face + PM + meta.
-  const clockContent = Math.max(measuredClockWidth, 206 + clockExtra);
+  // The row is measured from the real clock face. The shape is exactly that
+  // text plus 24 px (12 px per side) and optional Extra width; toggling date,
+  // day or weather off shrinks it immediately instead of keeping a fixed floor.
+  // Use the measured row as soon as it exists. The old estimate is only for
+  // the first frame; keeping `max(measured, 206…)` was the hidden floor that
+  // stopped the pill from shrinking when date/day/weather were turned off.
+  const clockContent = measuredClockWidth > 0 ? measuredClockWidth : 206 + clockExtra;
   const clockShapeWidth =
-    Math.min(700, Math.max(120, clockContent + appearance.islandWidth + (status === "peek" ? 16 : 0))) +
+    Math.min(740, Math.max(120, clockContent + extraWidth + (status === "peek" ? 16 : 0))) +
     (showRecording ? RECORDING_EXTRA : 0);
   const displayShape = {
     ...finalShape,
@@ -328,7 +358,7 @@ export function Notch() {
           <LiveRightInset.Provider value={rightInset}>
             <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} widthExtra={lyricsPill ? 0 : appearance.islandWidth} height={lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight} systemWidth={systemWidth} />
           </LiveRightInset.Provider>
-          {clockWeather && !idleLine && status !== "open" && !pillLive && <ClosedClock />}
+          {clockWeather && !idleLine && status !== "open" && !pillLive && <ClosedClock rowRef={clockRow} />}
           {!idleLine && <PrivacyDots hideScreen={showRecording} />}
           <AnimatePresence>
             {showRecording && (
@@ -398,28 +428,12 @@ export function Notch() {
 }
 
 /** Windows-island style: the selected clock face in the floating closed pill. */
-function ClosedClock() {
+function ClosedClock({ rowRef }: { rowRef: RefObject<HTMLDivElement | null> }) {
   const now = useMinute();
   const appearance = settings.use().appearance;
   const size = appearance.clockClosedSize;
   const smallSize = Math.max(8, Math.round(size * 0.66));
   const { period } = formatTimeParts(now);
-  const row = useRef<HTMLDivElement>(null);
-
-  // Report the intrinsic row width so the closed notch grows/shrinks with the
-  // selected face instead of using a fixed 206 px base.
-  useLayoutEffect(() => {
-    const el = row.current;
-    if (!el) return;
-    const report = () => clockMeasured.set(Math.ceil(el.scrollWidth + 24));
-    const ro = new ResizeObserver(report);
-    ro.observe(el);
-    report();
-    return () => {
-      ro.disconnect();
-      clockMeasured.set(0);
-    };
-  }, []);
 
   // One-line faces share the baseline with PM and the weather; the two-line
   // Stacked face keeps the side text centered against the block.
@@ -427,7 +441,7 @@ function ClosedClock() {
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-1">
       <div
-        ref={row}
+        ref={rowRef}
         className={`flex w-max shrink-0 ${baseline ? "items-baseline" : "items-center"} gap-2 whitespace-nowrap`}
         style={{ fontWeight: appearance.clockClosedWeight }}
       >

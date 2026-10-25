@@ -173,9 +173,11 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
 
             let inside = if drag_active { rect.grown() } else { rect }.contains(x, y);
             let mut silent = state.silent.load(Ordering::Relaxed);
-            if silent && inside && pressed {
+            // Ghost mode is click-through by definition, so use a forgiving wake
+            // zone: near the edges of a wide gaming pill still counts.
+            if silent && rect.grown().contains(x, y) && pressed {
                 let now = Instant::now();
-                clicks = if now.duration_since(last_click) <= Duration::from_millis(800) { clicks + 1 } else { 1 };
+                clicks = if now.duration_since(last_click) <= Duration::from_millis(1500) { clicks + 1 } else { 1 };
                 last_click = now;
                 if clicks >= 3 {
                     clicks = 0;

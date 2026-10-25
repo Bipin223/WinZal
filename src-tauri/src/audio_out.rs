@@ -9,19 +9,33 @@
 
 use serde::Serialize;
 use windows::core::{interface, GUID, HSTRING, PCWSTR, PWSTR};
-use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
+use windows::Win32::Devices::FunctionDiscovery::{
+    PKEY_Device_DeviceDesc, PKEY_Device_EnumeratorName, PKEY_Device_FriendlyName,
+};
+use windows::Win32::Foundation::PROPERTYKEY;
 use windows::Win32::Media::Audio::{
     eCommunications, eConsole, eMultimedia, eRender, IMMDeviceEnumerator, MMDeviceEnumerator,
-    DEVICE_STATE_ACTIVE,
+    PKEY_AudioEndpoint_FormFactor, DEVICE_STATE_ACTIVE,
 };
-use windows::Win32::System::Com::StructuredStorage::{PropVariantClear, PropVariantToStringAlloc};
-use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CoTaskMemFree, CLSCTX_ALL, COINIT_MULTITHREADED, STGM_READ};
+use windows::Win32::System::Com::StructuredStorage::{
+    PropVariantClear, PropVariantToStringAlloc, PropVariantToUInt32,
+};
+use windows::Win32::System::Com::{
+    CoCreateInstance, CoInitializeEx, CoTaskMemFree, CLSCTX_ALL, COINIT_MULTITHREADED, STGM_READ,
+};
+use windows::Win32::UI::Shell::PropertiesSystem::IPropertyStore;
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioOutput {
     id: String,
+    /// Raw Windows friendly name, kept for sorting and tooltips.
     name: String,
+    /// One-line label shown in the picker: device name for Bluetooth, otherwise
+    /// the output type ("Speaker", "Headphones", "Headset", "Display").
+    label: String,
+    /// `bluetooth`, `headphones`, `headset`, `display` or `speaker`.
+    kind: String,
     is_default: bool,
 }
 
@@ -54,6 +68,63 @@ fn take_pwstr(value: PWSTR) -> String {
     }
 }
 
+fn string_prop(store: &IPropertyStore, key: &PROPERTYKEY) -> String {
+    unsafe {
+        let Ok(mut value) = store.GetValue(key) else {
+            return String::new();
+        };
+        let text = PropVariantToStringAlloc(&value)
+            .map(|p| take_pwstr(p))
+            .unwrap_or_default();
+        let _ = PropVariantClear(&mut value);
+        text
+    }
+}
+
+fn u32_prop(store: &IPropertyStore, key: &PROPERTYKEY) -> Option<u32> {
+    unsafe {
+        let mut value = store.GetValue(key).ok()?;
+        let number = PropVariantToUInt32(&value).ok();
+        let _ = PropVariantClear(&mut value);
+        number
+    }
+}
+
+/// "Headphones (CODE2)" → "CODE2"; names without a parenthetical stay as-is.
+fn parenthetical_name(name: &str) -> String {
+    let trimmed = name.trim();
+    if let (Some(open), Some(close)) = (trimmed.find('('), trimmed.rfind(')')) {
+        if close > open + 1 {
+            let inner = trimmed[open + 1..close].trim();
+            if !inner.is_empty() {
+                return inner.to_string();
+            }
+        }
+    }
+    trimmed.to_string()
+}
+
+/// The picker shows one short line per endpoint. Bluetooth keeps the real
+/// device name (that is what the user picks); wired outputs use their type.
+fn classify(name: &str, enumerator: &str, description: &str, form_factor: u32) -> (String, String) {
+    let enumerator = enumerator.to_ascii_lowercase();
+    let description = description.to_ascii_lowercase();
+    let friendly = name.to_ascii_lowercase();
+    let bluetooth = enumerator.contains("bthenum")
+        || enumerator.contains("bthhfenum")
+        || description.contains("bluetooth")
+        || friendly.contains("bluetooth");
+    if bluetooth {
+        return ("bluetooth".into(), parenthetical_name(name));
+    }
+    match form_factor {
+        3 => ("headphones".into(), "Headphones".into()),
+        5 | 6 => ("headset".into(), "Headset".into()),
+        9 => ("display".into(), "Display".into()),
+        _ => ("speaker".into(), "Speaker".into()),
+    }
+}
+
 fn enumerate() -> windows::core::Result<Vec<AudioOutput>> {
     unsafe {
         // Commands run on their own worker thread; MTA is what the audio APIs want.
@@ -74,18 +145,33 @@ fn enumerate() -> windows::core::Result<Vec<AudioOutput>> {
             if id.is_empty() {
                 continue;
             }
-            let name = device
-                .OpenPropertyStore(STGM_READ)
-                .and_then(|store| store.GetValue(&PKEY_Device_FriendlyName))
-                .map(|mut value| {
-                    let name = PropVariantToStringAlloc(&value).map(|p| take_pwstr(p)).unwrap_or_default();
-                    let _ = PropVariantClear(&mut value);
-                    name
-                })
-                .unwrap_or_else(|_| id.clone());
-            out.push(AudioOutput { id: id.clone(), name, is_default: id == default_id });
+            let store = device.OpenPropertyStore(STGM_READ).ok();
+            let name = store
+                .as_ref()
+                .map(|store| string_prop(store, &PKEY_Device_FriendlyName))
+                .filter(|name| !name.is_empty())
+                .unwrap_or_else(|| id.clone());
+            let enumerator = store
+                .as_ref()
+                .map(|store| string_prop(store, &PKEY_Device_EnumeratorName))
+                .unwrap_or_default();
+            let description = store
+                .as_ref()
+                .map(|store| string_prop(store, &PKEY_Device_DeviceDesc))
+                .unwrap_or_default();
+            let form_factor = store
+                .as_ref()
+                .and_then(|store| u32_prop(store, &PKEY_AudioEndpoint_FormFactor))
+                .unwrap_or(0);
+            let (kind, label) = classify(&name, &enumerator, &description, form_factor);
+            out.push(AudioOutput { id: id.clone(), name, label, kind, is_default: id == default_id });
         }
-        out.sort_by(|a, b| b.is_default.cmp(&a.is_default).then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase())));
+        out.sort_by(|a, b| {
+            b.is_default
+                .cmp(&a.is_default)
+                .then_with(|| a.label.to_lowercase().cmp(&b.label.to_lowercase()))
+                .then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+        });
         Ok(out)
     }
 }
@@ -129,9 +215,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn bluetooth_uses_the_device_name_and_an_icon_kind() {
+        assert_eq!(classify("Headphones (CODE2)", "BTHENUM", "", 3), ("bluetooth".into(), "CODE2".into()));
+        assert_eq!(classify("Headset Earphone (WH-1000XM4)", "BTHHFENUM", "", 5), ("bluetooth".into(), "WH-1000XM4".into()));
+    }
+
+    #[test]
+    fn wired_outputs_use_short_type_labels() {
+        assert_eq!(classify("Speakers (Realtek(R) Audio)", "HDAUDIO", "", 1), ("speaker".into(), "Speaker".into()));
+        assert_eq!(classify("Headphones (HyperX Cloud)", "USB", "", 3), ("headphones".into(), "Headphones".into()));
+        assert_eq!(classify("PHL 275V8", "HDAUDIO", "", 9), ("display".into(), "Display".into()));
+    }
+
+    #[test]
     fn lists_outputs_and_keeps_the_default() {
         let outputs = enumerate().expect("enumerate render endpoints");
         assert!(!outputs.is_empty(), "expected at least one render endpoint");
+        for output in &outputs {
+            println!("{} -> {} ({})", output.name, output.label, output.kind);
+            assert!(!output.label.contains('('), "picker label should not show the parenthetical: {}", output.label);
+        }
         let default = outputs.iter().find(|d| d.is_default).expect("one default endpoint");
         set_default(&default.id).expect("set the already-default endpoint");
     }

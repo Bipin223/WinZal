@@ -19,17 +19,15 @@ export type TypeAxis = { size: number; weight: number };
 export type LyricAnimation =
   | "word"
   | "fill"
-  | "focus"
   | "glitch"
   | "liquid"
-  | "irid"
-  | "stripe"
-  | "cascade"
-  | "dissolve"
-  | "dots"
-  | "duet";
-export type LyricEqualizerStyle = "bars" | "mirror" | "dots" | "ticks" | "capsule";
-export type LyricGlowStyle = "none" | "bloom" | "aurora" | "rings" | "spectrum" | "liquid" | "halo";
+  | "spot"
+  | "letters"
+  | "spark"
+  | "orbit"
+  | "ambient";
+export type LyricEqualizerStyle = "bars" | "mirror" | "ticks";
+export type LyricGlowStyle = "none" | "wave" | "bloom" | "bokeh" | "leaves" | "night";
 
 export const DEFAULT_TYPOGRAPHY: Record<TypeRole, TypeAxis> = {
   caption: { size: 0, weight: 0 },
@@ -289,7 +287,7 @@ const defaults: Settings = {
     lyricsTextWeight: 600,
     lyricsVisualizer: true,
     lyricsVisualizerStyle: "bars",
-    lyricsGlowStyle: "none",
+    lyricsGlowStyle: "wave",
     lyricsAnimation: "word",
     gpuAcceleration: false,
     gpuPreference: "auto",
@@ -373,7 +371,12 @@ settings.set((s) => {
       // supplies the new effects.
       lyricsAnimation: (() => {
         const stored = (s.appearance as { lyricsAnimation?: string } | undefined)?.lyricsAnimation;
-        const valid: LyricAnimation[] = ["word", "fill", "focus", "glitch", "liquid", "irid", "stripe", "cascade", "dissolve", "dots", "duet"];
+        const valid: LyricAnimation[] = ["word", "fill", "glitch", "liquid", "spot", "letters", "spark", "orbit", "ambient"];
+        if (stored === "focus" || stored === "stripe" || stored === "warp") return "spot";
+        if (stored === "dissolve" || stored === "dots" || stored === "cascade") return "letters";
+        if (stored === "sway" || stored === "float") return "ambient";
+        if (stored === "irid") return "fill";
+        if (stored === "duet") return "word";
         return valid.includes(stored as LyricAnimation) ? (stored as LyricAnimation) : "word";
       })(),
       // Old Default / Large / Small / Big / Biggest become one continuous size.
@@ -412,19 +415,28 @@ settings.set((s) => {
       })(),
       lyricsVisualizerStyle: (() => {
         const stored = (s.appearance as { lyricsVisualizerStyle?: string } | undefined)?.lyricsVisualizerStyle;
-        const valid: LyricEqualizerStyle[] = ["bars", "mirror", "dots", "ticks", "capsule"];
+        const valid: LyricEqualizerStyle[] = ["bars", "mirror", "ticks"];
         if (valid.includes(stored as LyricEqualizerStyle)) return stored as LyricEqualizerStyle;
-        if (stored === "dots") return "dots";
         return "bars";
       })(),
       lyricsGlowStyle: (() => {
         const stored = (s.appearance as { lyricsGlowStyle?: string } | undefined)?.lyricsGlowStyle;
-        const valid: LyricGlowStyle[] = ["none", "bloom", "aurora", "rings", "spectrum", "liquid", "halo"];
+        const valid: LyricGlowStyle[] = ["none", "wave", "bloom", "bokeh", "leaves", "night"];
         if (valid.includes(stored as LyricGlowStyle)) return stored as LyricGlowStyle;
+        // Existing picks map to the closest lab glow instead of resetting.
+        switch (stored) {
+          case "aurora": return "bokeh";
+          case "rings": return "bokeh";
+          case "spectrum": return "night";
+          case "embers": return "night";
+          case "silk": return "bloom";
+          case "liquid": return "bloom";
+          case "halo": return "night";
+        }
         const oldViz = (s.appearance as { lyricsVisualizerStyle?: string } | undefined)?.lyricsVisualizerStyle;
-        if (oldViz === "aurora") return "aurora";
-        if (oldViz === "ripple") return "rings";
-        return "none";
+        if (oldViz === "aurora") return "bokeh";
+        if (oldViz === "ripple") return "bokeh";
+        return "wave";
       })(),
       lyricsPillLength: (() => {
         const a = s.appearance as { lyricsPillLength?: number; lyricsPillMinWidth?: number; lyricsPillAuto?: boolean } | undefined;
@@ -446,10 +458,11 @@ settings.set((s) => {
       })(),
       // The experimental RGB accent was removed; fall back to auto.
       accent: s.appearance?.accent === "rgb" ? defaults.appearance.accent : s.appearance?.accent ?? defaults.appearance.accent,
-      // The island width/height sliders are additive; clamp values from older/corrupt files.
+      // Extra width is additive air now: 0 auto-fits exactly, and negative
+      // values from the old fixed-width slider become 0 instead of clipping.
       islandWidth: (() => {
         const value = (s.appearance as { islandWidth?: number } | undefined)?.islandWidth;
-        return typeof value === "number" ? Math.min(214, Math.max(-46, Math.round(value))) : defaults.appearance.islandWidth;
+        return typeof value === "number" ? Math.min(214, Math.max(0, Math.round(value))) : defaults.appearance.islandWidth;
       })(),
       islandHeight: (() => {
         const value = (s.appearance as { islandHeight?: number } | undefined)?.islandHeight;

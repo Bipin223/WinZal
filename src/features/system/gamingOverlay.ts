@@ -22,7 +22,9 @@ export function gamingWidth(g: Settings["gaming"]): number {
   if (g.showGpu && g.showRam) w += 12;
   if (g.style === "bars") w += 60;
   if (g.divider && (g.showFps || g.showCpu) && (g.showGpu || g.showRam)) w += 10;
-  return Math.round(Math.max(180, Math.min(580, w)));
+  // The estimate is only the first paint; add enough air that it can never be
+  // narrower than the real row before the measurement lands.
+  return Math.round(Math.max(180, Math.min(580, w + 24)));
 }
 
 /** GPU counters are only needed for GPU load/temperature. */

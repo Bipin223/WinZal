@@ -28,7 +28,7 @@ The illustrated version is [`manual.html`](manual.html). Open it in a browser fo
 - **Weight** — the clock weight slider below.
 - The preview above shows the real time, period, date sample and temperature, including the Weather/Date/Day toggles.
 
-The pill widens with larger text; use the **Length** slider if you want more room.
+The pill widens with larger text and always fits the clock face, date/day and weather items. **Extra width** is optional air: at 0 it auto-fits the measured row plus 12 px per side, and toggling date/day/weather or changing the clock face resizes it immediately.
 
 ### Clock faces
 
@@ -171,9 +171,9 @@ Idle memory is roughly **10 MB UI + 20 MB helper**, plus WebView2 shared process
 ## Music & lyrics
 
 - Lyrics come from LRCLIB and are cached per track.
-- Transitions: **Word by Word** plus ten lab effects: **Word fill sweep, Word focus, Glitch scramble, Liquid fill, Iridescent, Magic stripe, Spring cascade, Depth dissolve, Interlude dots, Duet split**. Old and new lines never overlap.
+- Transitions: **Word by Word** plus eight effects: **Word fill sweep, Glitch scramble, Liquid fill, Spotlight, Letter bloom, Spark, Orbit and Ambient**. Lines replace in one commit and never overlap. Tracks without synced lyrics show the real media/video title.
 - **Lyrics offset:** ±1 s in 0.1 s steps; positive makes lines appear later.
-- **Equalizer:** Bars, Mirror, LED dots, Ticks or Spring capsules. **Behind glow:** Bloom, Aurora, Rings, Spectrum haze, Liquid or Halo. Both follow the Equalization Accent.
+- **Equalizer:** **Bars, Mirror and Ticks**. **Behind glow:** **Wave, Bloom, Bokeh, Leaves and Night sky**. Wave is a moving ocean swell with a translucent fill below the crest; Night sky has a half moon in the pill and a full moon, random stars, galaxies, a shooting star and a UFO in the expanded panel. Both follow the Equalization Accent. The same visualization continues in the expanded Now Playing panel; one Visualization switch controls both views.
 - **Output device:** the Now Playing mixer lists Windows playback endpoints. Pick speakers, headphones or Bluetooth and Windows switches its default output immediately.
 
 ---

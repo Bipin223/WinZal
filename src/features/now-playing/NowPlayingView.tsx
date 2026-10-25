@@ -9,6 +9,8 @@ import { requestSize } from "../../notch/size";
 import { findTab } from "../../notch/tabs";
 import { MIXER_MAX_ROWS, MIXER_ROW, MixerList, MixerToggle, useMixer } from "./Mixer";
 import { Equalizer } from "./Equalizer";
+import { LyricEqualizer, LyricGlow } from "./LyricVisualizer";
+import { settings } from "../../settings/store";
 import { SelectedDot } from "../../ui/SelectedDot";
 import { t } from "../../i18n";
 
@@ -21,6 +23,7 @@ import { t } from "../../i18n";
  */
 export function NowPlayingView() {
   const np = useNowPlaying();
+  const appearance = settings.use().appearance;
   const mix = useMixer();
   const [mixerOpen, setMixerOpen] = useState(false);
   const [sessionsOpen, setSessionsOpen] = useState(false);
@@ -74,7 +77,20 @@ export function NowPlayingView() {
   if (!np) return <Empty />;
 
   return (
-    <div className="flex h-full flex-col px-5 pt-1 pb-2">
+    <div className="np-now relative h-full overflow-hidden">
+      {appearance.lyricsVisualizer && (
+        <motion.div
+          className={`np-glow np-glow-${appearance.lyricsGlowStyle} pointer-events-none absolute inset-0 origin-top`}
+          initial={{ opacity: 0.55, scaleX: 0.72, scaleY: 0.5, y: -6, filter: "blur(14px)" }}
+          animate={{ opacity: 1, scaleX: 1, scaleY: 1, y: 0, filter: "blur(0px)" }}
+          exit={{ opacity: 0, scaleX: 0.72, scaleY: 0.5, y: -6, filter: "blur(14px)", transition: { duration: 0.2 } }}
+          transition={{ type: "spring", stiffness: 170, damping: 22, mass: 0.9 }}
+          aria-hidden
+        >
+          <LyricGlow style={appearance.lyricsGlowStyle} playing={np.isPlaying} expanded />
+        </motion.div>
+      )}
+      <div className="relative z-10 flex h-full flex-col px-5 pt-1 pb-2">
       <div ref={sessionsBox} className={sessionsOpen ? "flex min-h-0 flex-1 flex-col" : "relative"}>
         <div className="flex items-center gap-3">
           <button
@@ -97,7 +113,12 @@ export function NowPlayingView() {
               </AnimatePresence>
             </div>
           </button>
-          <Equalizer playing={np.isPlaying} height={16} />
+          {appearance.lyricsVisualizer &&
+            (appearance.lyricsVisualizerStyle === "bars" ? (
+              <Equalizer playing={np.isPlaying} height={18} />
+            ) : (
+              <LyricEqualizer style={appearance.lyricsVisualizerStyle} playing={np.isPlaying} />
+            ))}
           <button
             type="button"
             onClick={() => {
@@ -174,6 +195,7 @@ export function NowPlayingView() {
           <AnimatePresence>{mixerOpen && <MixerList key="mixer" data={mix} />}</AnimatePresence>
         </>
       )}
+      </div>
     </div>
   );
 }

@@ -612,7 +612,11 @@ export const mixer = {
 
 export interface AudioOutput {
   id: string;
+  /** Raw Windows friendly name, used for sorting and tooltips. */
   name: string;
+  /** One-line picker label: Bluetooth device name or output type. */
+  label: string;
+  kind: "bluetooth" | "headphones" | "headset" | "display" | "speaker";
   isDefault: boolean;
 }
 

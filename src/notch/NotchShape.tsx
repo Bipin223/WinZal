@@ -37,7 +37,10 @@ export function NotchShape({ geometry, transition, elevated, floating = false, c
   useEffect(() => {
     if (first.current) {
       first.current = false;
-      return;
+      // A clock/stat measurement can land during the initial layout, before this
+      // effect flushes. If the geometry already changed, animate to the measured
+      // size instead of leaving the initial estimate on screen.
+      if (Math.abs(w.get() - geometry.w) < 0.01 && Math.abs(h.get() - geometry.h) < 0.01) return;
     }
     // Settle to within 0.01 px: the live activity follows the width on subpixels, and
     // Motion's default rest threshold ended every spring with a visible ~0.25 px jump.

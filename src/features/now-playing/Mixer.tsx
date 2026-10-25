@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { CaretDown, SpeakerHigh, SpeakerLow, SpeakerNone, SpeakerSimpleSlash } from "@phosphor-icons/react";
+import { Bluetooth, CaretDown, Headphones, Monitor, SpeakerHigh, SpeakerLow, SpeakerNone, SpeakerSimpleSlash } from "@phosphor-icons/react";
 import { content, springs } from "../../design/motion";
 import { holdOpen } from "../../notch/useNotchState";
 import { audioOutputs, mixer, systemControls, type AppVolume, type AudioOutput, type VolumeState } from "../../platform/services";
@@ -77,6 +77,15 @@ export function useMixer(): MixerData {
 function speakerIcon(level: number, muted: boolean) {
   if (muted || level === 0) return SpeakerSimpleSlash;
   return level < 0.34 ? SpeakerNone : level < 0.67 ? SpeakerLow : SpeakerHigh;
+}
+
+/** One icon per endpoint type, so the output picker reads at a glance. */
+function outputIcon(kind: AudioOutput["kind"], size = 12) {
+  const className = "shrink-0 text-label-2";
+  if (kind === "bluetooth") return <Bluetooth size={size} weight="bold" className={className} />;
+  if (kind === "headphones" || kind === "headset") return <Headphones size={size} weight="fill" className={className} />;
+  if (kind === "display") return <Monitor size={size} weight="fill" className={className} />;
+  return <SpeakerHigh size={size} weight="fill" className={className} />;
 }
 
 /**
@@ -264,14 +273,17 @@ export function MixerList({ data }: { data: MixerData }) {
       <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 [scrollbar-width:none]">
         {outputs.length > 0 && (
           <div className="mb-1 flex items-center gap-2 rounded-[8px] px-2 py-1">
-            <SpeakerHigh size={14} weight="fill" className="shrink-0 text-label-2" />
             <span className="shrink-0 text-caption font-medium text-label-2">{t("Output")}</span>
             <div className="ml-auto min-w-0">
               <Select
                 value={currentOutput}
-                options={outputs.map((output) => ({ value: output.id, label: output.name }))}
+                options={outputs.map((output) => ({
+                  value: output.id,
+                  label: output.label,
+                  icon: outputIcon(output.kind),
+                }))}
                 onChange={chooseOutput}
-                width="w-44"
+                width="w-52"
               />
             </div>
           </div>

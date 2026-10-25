@@ -39,8 +39,7 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
       ctx.font = `${Math.max(100, weight - 100)} ${Math.max(8, size - 3)}px ${family}`;
       width = Math.max(width, ctx.measureText(next).width);
     }
-    const effectPad = appearance.lyricsAnimation === "dots" ? 18 : appearance.lyricsAnimation === "focus" ? 10 : 0;
-    lyricsTextWidth.set(Math.ceil(width + effectPad));
+    lyricsTextWidth.set(Math.ceil(width));
   }, [appearance.lyricsInPill, appearance.lyricsLayout, appearance.lyricsTextSize, appearance.lyricsTextWeight, appearance.lyricsAnimation, current, next]);
   return (
     <motion.div
@@ -81,11 +80,12 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
             index={index}
             start={start}
             end={end}
+            np={np}
           />
         ) : (
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.div
-              key={appearance.lyricsInPill && status === "instrumental" ? "instrumental" : appearance.lyricsInPill && status === "music" ? "music" : np.title}
+              key={appearance.lyricsInPill && status === "instrumental" ? "instrumental" : np.title || "music"}
               data-fade-text
               className="max-w-full overflow-hidden whitespace-nowrap text-[11px] leading-none font-semibold text-label"
               initial={{ opacity: 0, transform: "translateY(3px)", filter: "blur(3px)" }}
@@ -93,7 +93,7 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
               exit={{ opacity: 0, transform: "translateY(-3px)", filter: "blur(3px)", transition: content.exit }}
               title={np.title}
             >
-              {appearance.lyricsInPill && status === "instrumental" ? t("Instrumental") : appearance.lyricsInPill && status === "music" ? t("Music") : np.title}
+              {appearance.lyricsInPill && status === "instrumental" ? t("Instrumental") : np.title || t("Music")}
             </motion.div>
           </AnimatePresence>
         )}
@@ -176,6 +176,7 @@ function LyricLine({
   index,
   start,
   end,
+  np,
 }: {
   current: string;
   next: string | null;
@@ -186,28 +187,21 @@ function LyricLine({
   index: number;
   start: number;
   end: number;
+  np: NowPlaying;
 }) {
   const inline = layout === "inline";
-  const enter = { opacity: 0 };
-  const active = { opacity: 1 };
-  const leave = { opacity: 0 };
-  // Start the entrance on the timestamp; the old line's exit is short enough
-  // to keep the wait mode without making the next line feel late.
-  const transition = { duration: 0.18, ease: [0.23, 1, 0.32, 1] as const };
+  // Replace the line in one commit: no exit wait, no overlap, no 180 ms fade
+  // before the new words become readable. The first word is already visible;
+  // the rest of the chosen effect still animates from the exact timestamp.
   const words = current.split(/\s+/).filter(Boolean);
   const stagger = words.length > 1 ? Math.min(0.36, Math.max(0.04, ((end - start) * 0.75) / (words.length - 1))) : 0;
   const nextSize = Math.max(8, size - 3);
   return (
-    // Wait mode: the old line leaves before the next one enters, so the two
-    // never overlap while the pill is expanding.
-    <AnimatePresence mode="wait" initial={false}>
       <motion.div
         key={index}
         className="relative z-10 flex min-w-0 max-w-full flex-col items-center justify-center"
-        initial={enter}
-        animate={active}
-        exit={{ ...leave, transition: { duration: 0.08, ease: [0.4, 0, 1, 1] } }}
-        transition={transition}
+        initial={{ opacity: 0.92, y: 2 }}
+        animate={{ opacity: 1, y: 0, transition: { duration: 0.09, ease: [0.23, 1, 0.32, 1] } }}
       >
         <div className="w-full overflow-hidden py-[1px]">
           <LyricText
@@ -221,9 +215,11 @@ function LyricLine({
                   <motion.span
                     key={`${index}-${i}`}
                     className="inline-block"
-                    initial={{ opacity: 0, y: 7, scale: 0.9, filter: "blur(8px)" }}
+                    // The first word gets a visible (but tiny) delay too, so it
+                    // animates like the rest while still landing on the stamp.
+                    initial={{ opacity: 0.15, y: 5, scale: 0.92, filter: "blur(5px)" }}
                     animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-                    transition={{ ...springs.lyricWord, delay: i * stagger }}
+                    transition={{ ...springs.lyricWord, delay: i * stagger + (i === 0 ? 0.02 : 0) }}
                     style={{ transformOrigin: "50% 90%", transformPerspective: 600 }}
                   >
                     {word}
@@ -234,7 +230,7 @@ function LyricLine({
                 current
               )
             ) : (
-              <LyricEffect animation={animation} text={current} index={index} />
+              <LyricEffect animation={animation} text={current} index={index} start={start} end={end} np={np} />
             )}
           </LyricText>
         </div>
@@ -248,7 +244,6 @@ function LyricLine({
           </span>
         )}
       </motion.div>
-    </AnimatePresence>
   );
 }
 

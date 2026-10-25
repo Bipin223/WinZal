@@ -54,7 +54,7 @@ const DEFAULTS: Appearance = {
   lyricsTextWeight: 600,
   lyricsVisualizer: true,
   lyricsVisualizerStyle: "bars",
-  lyricsGlowStyle: "none",
+  lyricsGlowStyle: "wave",
   lyricsAnimation: "word",
   gpuAcceleration: false,
   gpuPreference: "auto",
@@ -118,8 +118,8 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
                 </div>
               ) : (
                 <div
-                  className="flex items-center justify-center overflow-hidden rounded-full bg-black px-2 shadow-[0_6px_18px_rgb(0_0_0/0.35)] transition-[width,height] duration-200"
-                  style={{ width: 206 + a.islandWidth, height: a.islandHeight }}
+                  className="flex w-fit max-w-full items-center justify-center overflow-hidden rounded-full bg-black px-2 shadow-[0_6px_18px_rgb(0_0_0/0.35)] transition-[width,height] duration-200"
+                  style={{ minWidth: 120 + Math.max(0, a.islandWidth), height: a.islandHeight }}
                 >
                   {a.clockWeather && (
                     <div
@@ -161,16 +161,16 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
             <div className="grid grid-cols-[3fr_2fr] gap-3">
               <div>
                 <div className="flex items-center justify-between text-caption font-medium text-label-2">
-                  <span>{t("Length")}</span>
-                  <span className="tabular text-label-3">{line ? a.lineWidth : 206 + a.islandWidth} px</span>
+                  <span>{line ? t("Length") : t("Extra width")}</span>
+                  <span className="tabular text-label-3">{line ? a.lineWidth : Math.max(0, a.islandWidth)} px</span>
                 </div>
                 <Slider
-                  label={t("Length")}
-                  value={line ? a.lineWidth : 206 + a.islandWidth}
-                  min={line ? 40 : 140}
-                  max={740}
+                  label={line ? t("Length") : t("Extra width")}
+                  value={line ? a.lineWidth : Math.max(0, a.islandWidth)}
+                  min={line ? 40 : 0}
+                  max={line ? 740 : 214}
                   step={1}
-                  onChange={(length) => (line ? set({ lineWidth: length }) : set({ islandWidth: length - 206 }))}
+                  onChange={(length) => (line ? set({ lineWidth: length }) : set({ islandWidth: length }))}
                 />
               </div>
               <div>
