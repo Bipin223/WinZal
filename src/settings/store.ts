@@ -71,7 +71,7 @@ export interface Settings {
     showGpu: boolean;
     showRam: boolean;
     /** How CPU/GPU/RAM values are drawn. */
-    style: "text" | "bars" | "dots";
+    style: "text" | "bars" | "graph";
     /** Switch to Lenovo Custom while a game is in front, then restore. */
     autoPower: boolean;
   };
@@ -113,8 +113,6 @@ export interface Settings {
     /** Closed clock pill: compact or bigger/bolder text (large default). */
     /** Closed pill clock font size in px. */
     clockClosedSize: number;
-    /** Closed pill clock tracking in px (visual text width). */
-    clockClosedTracking: number;
     /** Closed pill clock weight (400–900). */
     clockClosedWeight: number;
     /** Open/extended header clock weight (400–900). */
@@ -131,8 +129,12 @@ export interface Settings {
     lyricsTextSize: number;
     /** Seconds added to lyric timestamps (+ = lines appear later). */
     lyricsOffset: number;
-    /** How much room the closed lyric pill uses: compact, exact fit, or long. */
-    lyricsPillWidth: "compact" | "normal" | "long";
+    /** Extra width added to the lyric pill (independent of the clock pill). */
+    lyricsPillExtraWidth: number;
+    /** Lyric pill height. */
+    lyricsPillHeight: number;
+    /** Lyric text weight. */
+    lyricsTextWeight: number;
     /** Subtle waveform behind the lyric, in the cover's accent color. */
     lyricsVisualizer: boolean;
     /** Visualizer style inside the lyrics pill. */
@@ -240,7 +242,6 @@ const defaults: Settings = {
     musicInPill: true,
     clockAccent: "#ff453a",
     clockClosedSize: 15,
-    clockClosedTracking: 0,
     clockClosedWeight: 800,
     clockOpenWeight: 700,
     clockEmphasis: true,
@@ -249,7 +250,9 @@ const defaults: Settings = {
     motion: 100,
     lyricsTextSize: 12,
     lyricsOffset: 0,
-    lyricsPillWidth: "normal",
+    lyricsPillExtraWidth: 0,
+    lyricsPillHeight: 30,
+    lyricsTextWeight: 600,
     lyricsVisualizer: true,
     lyricsVisualizerStyle: "wave",
     lyricsAnimation: "apple",
@@ -349,10 +352,6 @@ settings.set((s) => {
         return 12;
       })(),
       lyricsVisualizer: s.appearance?.lyricsVisualizer ?? defaults.appearance.lyricsVisualizer,
-      lyricsPillWidth: (() => {
-        const stored = (s.appearance as { lyricsPillWidth?: string } | undefined)?.lyricsPillWidth;
-        return stored === "compact" || stored === "long" ? stored : "normal";
-      })(),
       // Old bold/regular choice became two continuous weight sliders.
       clockClosedWeight: (() => {
         const stored = (s.appearance as { clockClosedWeight?: number } | undefined)?.clockClosedWeight;
@@ -363,10 +362,6 @@ settings.set((s) => {
         const legacy = s.appearance as { clockClosedSize?: number; clockText?: string } | undefined;
         if (typeof legacy?.clockClosedSize === "number") return Math.min(24, Math.max(10, legacy.clockClosedSize));
         return legacy?.clockText === "compact" ? 13 : 15;
-      })(),
-      clockClosedTracking: (() => {
-        const stored = (s.appearance as { clockClosedTracking?: number } | undefined)?.clockClosedTracking;
-        return typeof stored === "number" ? Math.min(2, Math.max(-2, stored)) : 0;
       })(),
       clockOpenWeight: (() => {
         const legacy = s.appearance as { clockOpenWeight?: number; clockBold?: boolean } | undefined;
@@ -465,7 +460,7 @@ function migrateGaming(old: unknown): Settings["gaming"] {
     showTemps: legacy.showTemps !== false && !minimal,
     showGpu: legacy.showGpu !== false && !minimal,
     showRam: legacy.showRam !== false && !minimal,
-    style: legacy.style === "bars" || legacy.style === "dots" ? legacy.style : "text",
+    style: legacy.style === "bars" ? "bars" : legacy.style === "dots" || legacy.style === "graph" ? "graph" : "text",
     autoPower: legacy.autoPower === true,
   };
 }

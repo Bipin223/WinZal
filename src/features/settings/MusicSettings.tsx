@@ -55,6 +55,9 @@ export function MusicSettings() {
         </Row>
         {a.lyricsInPill && (
           <>
+            <div className="px-3 pt-3">
+              <LyricsPillPreview />
+            </div>
             <Row label={t("Zeilen-Layout")}>
               <Segmented
                 id="lyrics-layout"
@@ -96,18 +99,46 @@ export function MusicSettings() {
                 </span>
               </div>
             </Row>
-            <Row label={t("Pillenbreite")}>
-              <Segmented
-                id="lyrics-pill-width"
-                size="sm"
-                value={a.lyricsPillWidth}
-                onChange={(lyricsPillWidth) => set({ lyricsPillWidth })}
-                options={[
-                  { value: "compact", label: t("Kompakt") },
-                  { value: "normal", label: t("Normal") },
-                  { value: "long", label: t("Lang") },
-                ]}
-              />
+            <Row label={t("Weight")}>
+              <div className="flex w-44 items-center gap-2">
+                <Slider
+                  label={t("Weight")}
+                  value={a.lyricsTextWeight}
+                  min={400}
+                  max={900}
+                  step={50}
+                  onChange={(lyricsTextWeight) => set({ lyricsTextWeight })}
+                />
+                <span className="tabular w-11 shrink-0 text-right text-caption text-label-3">{a.lyricsTextWeight}</span>
+              </div>
+            </Row>
+            <Row label={t("Pill width")}>
+              <div className="flex w-44 items-center gap-2">
+                <Slider
+                  label={t("Pill width")}
+                  value={a.lyricsPillExtraWidth}
+                  min={0}
+                  max={100}
+                  step={2}
+                  onChange={(lyricsPillExtraWidth) => set({ lyricsPillExtraWidth })}
+                />
+                <span className="tabular w-11 shrink-0 text-right text-caption text-label-3">
+                  {a.lyricsPillExtraWidth === 0 ? t("Default") : `+${a.lyricsPillExtraWidth} px`}
+                </span>
+              </div>
+            </Row>
+            <Row label={t("Pill height")}>
+              <div className="flex w-44 items-center gap-2">
+                <Slider
+                  label={t("Pill height")}
+                  value={a.lyricsPillHeight}
+                  min={24}
+                  max={44}
+                  step={1}
+                  onChange={(lyricsPillHeight) => set({ lyricsPillHeight })}
+                />
+                <span className="tabular w-11 shrink-0 text-right text-caption text-label-3">{a.lyricsPillHeight} px</span>
+              </div>
             </Row>
             <Row label={t("Visualisierung")}>
               <Switch label={t("Visualisierung")} checked={a.lyricsVisualizer} onChange={(lyricsVisualizer) => set({ lyricsVisualizer })} />
@@ -178,5 +209,35 @@ export function MusicSettings() {
         )}
       </Group>
     </>
+  );
+}
+
+/** Live preview of the closed lyric pill. */
+function LyricsPillPreview() {
+  const a = settings.use().appearance;
+  return (
+    <div className="flex h-16 items-center justify-center rounded-[10px] bg-fill-2 px-2">
+      <div
+        className="flex max-w-full items-center gap-2 overflow-hidden rounded-full bg-black px-3"
+        style={{
+          height: a.lyricsPillHeight,
+          paddingLeft: 10 + a.lyricsPillExtraWidth / 2,
+          paddingRight: 10 + a.lyricsPillExtraWidth / 2,
+        }}
+      >
+        <span className="size-5 shrink-0 rounded-[5px] bg-white/15" />
+        <span
+          className="relative z-10 truncate whitespace-nowrap text-white"
+          style={{ fontSize: a.lyricsTextSize, fontWeight: a.lyricsTextWeight }}
+        >
+          When you light the candle
+        </span>
+        <span className="flex shrink-0 items-end gap-[2px]">
+          {[5, 9, 7].map((h, i) => (
+            <span key={i} className="w-[2px] rounded-full bg-white/60" style={{ height: h }} />
+          ))}
+        </span>
+      </div>
+    </div>
   );
 }

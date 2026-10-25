@@ -769,5 +769,8 @@
   "Title": "Title",
   "Weather colors": "Weather colors",
   "Text size": "Text size",
-  "Text width": "Text width"
+  "Text width": "Text width",
+  "Pill width": "Pill width",
+  "Pill height": "Pill height",
+  "Graph": "Graph"
 }

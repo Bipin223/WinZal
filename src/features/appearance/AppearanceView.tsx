@@ -35,7 +35,6 @@ const DEFAULTS: Appearance = {
   musicInPill: true,
   clockAccent: "#ff453a",
   clockClosedSize: 15,
-  clockClosedTracking: 0,
   clockClosedWeight: 800,
   clockOpenWeight: 700,
   clockEmphasis: true,
@@ -44,7 +43,9 @@ const DEFAULTS: Appearance = {
   motion: 100,
   lyricsTextSize: 12,
   lyricsOffset: 0,
-  lyricsPillWidth: "normal",
+  lyricsPillExtraWidth: 0,
+  lyricsPillHeight: 30,
+  lyricsTextWeight: 600,
   lyricsVisualizer: true,
   lyricsVisualizerStyle: "wave",
   lyricsAnimation: "apple",
@@ -115,7 +116,7 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
                   {a.clockWeather && (
                     <div
                       className="flex items-center gap-1 whitespace-nowrap"
-                      style={{ letterSpacing: `${a.clockClosedTracking}px`, fontWeight: a.clockClosedWeight }}
+                      style={{ fontWeight: a.clockClosedWeight }}
                     >
                       <span style={{ fontSize: `${a.clockClosedSize}px`, color: "#fff" }}>
                         <ClockTime
@@ -177,39 +178,19 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
             </div>
             {!line && (
               <>
-                <div className="mt-2 grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="flex items-center justify-between text-caption font-medium text-label-2">
-                      <span>{t("Text size")}</span>
-                      <span className="tabular text-label-3">{a.clockClosedSize.toFixed(1)} px</span>
-                    </div>
-                    <Slider
-                      label={t("Text size")}
-                      value={a.clockClosedSize}
-                      min={10}
-                      max={24}
-                      step={0.5}
-                      onChange={(clockClosedSize) => set({ clockClosedSize })}
-                    />
+                <div className="mt-2">
+                  <div className="flex items-center justify-between text-caption font-medium text-label-2">
+                    <span>{t("Text size")}</span>
+                    <span className="tabular text-label-3">{a.clockClosedSize.toFixed(1)} px</span>
                   </div>
-                  <div>
-                    <div className="flex items-center justify-between text-caption font-medium text-label-2">
-                      <span>{t("Text width")}</span>
-                      <span className="tabular text-label-3">
-                        {a.clockClosedTracking === 0
-                          ? t("Default")
-                          : `${a.clockClosedTracking > 0 ? "+" : ""}${a.clockClosedTracking.toFixed(1)} px`}
-                      </span>
-                    </div>
-                    <Slider
-                      label={t("Text width")}
-                      value={a.clockClosedTracking}
-                      min={-2}
-                      max={2}
-                      step={0.1}
-                      onChange={(clockClosedTracking) => set({ clockClosedTracking })}
-                    />
-                  </div>
+                  <Slider
+                    label={t("Text size")}
+                    value={a.clockClosedSize}
+                    min={10}
+                    max={24}
+                    step={0.5}
+                    onChange={(clockClosedSize) => set({ clockClosedSize })}
+                  />
                 </div>
                 <div className="mt-2">
                   <div className="flex items-center justify-between text-caption font-medium text-label-2">
@@ -353,7 +334,6 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
               // Clock styling lives on the Notch page; Appearance reset leaves it alone.
               clockAccent: a.clockAccent,
               clockClosedSize: a.clockClosedSize,
-              clockClosedTracking: a.clockClosedTracking,
               clockEmphasis: a.clockEmphasis,
               clockClosedWeight: a.clockClosedWeight,
               clockOpenWeight: a.clockOpenWeight,
@@ -368,7 +348,9 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
               lyricsTextSize: a.lyricsTextSize,
               lyricsOffset: a.lyricsOffset,
               motion: a.motion,
-              lyricsPillWidth: a.lyricsPillWidth,
+              lyricsPillExtraWidth: a.lyricsPillExtraWidth,
+              lyricsPillHeight: a.lyricsPillHeight,
+              lyricsTextWeight: a.lyricsTextWeight,
               lyricsVisualizer: a.lyricsVisualizer,
               lyricsVisualizerStyle: a.lyricsVisualizerStyle,
               lyricsAnimation: a.lyricsAnimation,

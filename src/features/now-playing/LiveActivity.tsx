@@ -31,14 +31,15 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
     if (!ctx) return;
     const family = getComputedStyle(document.body).fontFamily;
     const size = appearance.lyricsTextSize;
-    ctx.font = `600 ${size}px ${family}`;
+    const weight = appearance.lyricsTextWeight;
+    ctx.font = `${weight} ${size}px ${family}`;
     let width = ctx.measureText(current).width;
     if (appearance.lyricsLayout === "lines" && next) {
-      ctx.font = `500 ${Math.max(8, size - 3)}px ${family}`;
+      ctx.font = `${Math.max(100, weight - 100)} ${Math.max(8, size - 3)}px ${family}`;
       width = Math.max(width, ctx.measureText(next).width);
     }
     lyricsTextWidth.set(Math.ceil(width));
-  }, [appearance.lyricsInPill, appearance.lyricsLayout, appearance.lyricsTextSize, current, next]);
+  }, [appearance.lyricsInPill, appearance.lyricsLayout, appearance.lyricsTextSize, appearance.lyricsTextWeight, current, next]);
   return (
     <motion.div
       className="absolute inset-0 flex items-center gap-2 px-[9px]"
@@ -73,6 +74,7 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
             next={next}
             layout={appearance.lyricsLayout}
             size={appearance.lyricsTextSize}
+            weight={appearance.lyricsTextWeight}
             animation={appearance.lyricsAnimation}
             index={index}
             start={start}
@@ -161,6 +163,7 @@ function LyricLine({
   next,
   layout,
   size,
+  weight,
   animation,
   index,
   start,
@@ -170,6 +173,7 @@ function LyricLine({
   next: string | null;
   layout: "inline" | "lines";
   size: number;
+  weight: number;
   animation: "apple" | "word" | "reveal" | "kinetic";
   index: number;
   start: number;
@@ -219,9 +223,9 @@ function LyricLine({
       >
         <div className="w-full overflow-hidden py-[1px]">
           <LyricText
-            className="font-semibold text-label"
-            resetKey={`${index}-${inline}-${size}`}
-            style={{ fontSize: `${size}px`, lineHeight: inline ? `${Math.round(size + 2)}px` : `${Math.round(size + 1)}px` }}
+            className="text-label"
+            resetKey={`${index}-${inline}-${size}-${weight}`}
+            style={{ fontSize: `${size}px`, fontWeight: weight, lineHeight: inline ? `${Math.round(size + 2)}px` : `${Math.round(size + 1)}px` }}
           >
             {wordMode && words.length > 1
               ? words.map((word, i) => (
@@ -247,8 +251,8 @@ function LyricLine({
         {!inline && next && (
           <span
             data-fade-text
-            className="max-w-full truncate font-medium text-label-4"
-            style={{ fontSize: `${nextSize}px`, lineHeight: `${Math.max(9, size - 2)}px` }}
+            className="max-w-full truncate text-label-4"
+            style={{ fontSize: `${nextSize}px`, fontWeight: Math.max(100, weight - 100), lineHeight: `${Math.max(9, size - 2)}px` }}
           >
             {next}
           </span>

@@ -116,7 +116,7 @@ export function Notch() {
   const clockWeather = appearance.clockWeather;
   // Lyrics only make sense when the media pill is visible, so they win over the clock
   // in the floating island (otherwise the whole lyrics option would do nothing there).
-  const lyricsPill = floating && appearance.lyricsInPill && shownLive === "media";
+  const lyricsPill = appearance.lyricsInPill && shownLive === "media";
   const pillLive = floating ? (clockWeather && !lyricsPill ? null : shownLive) : shownLive;
   const clockPill = clockWeather && !pillLive;
   // Screen recording gets its own chip at the right end of the closed pill.
@@ -147,7 +147,11 @@ export function Notch() {
       : baseShape;
   const customIsland = !lineView && status !== "open";
   const sizedShape = customIsland
-    ? { ...shape, w: Math.max(80, shape.w + appearance.islandWidth), h: appearance.islandHeight }
+    ? {
+        ...shape,
+        w: Math.max(80, shape.w + (lyricsPill ? appearance.lyricsPillExtraWidth : appearance.islandWidth)),
+        h: lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight,
+      }
     : shape;
   const tightHit = lineView;
   const finalShape = floating
@@ -168,13 +172,7 @@ export function Notch() {
   // Grow or shrink to the line, with three levels of breathing room. `normal`
   // is the text-fit width; compact caps long lines, long adds extra air.
   const lyricPill = appearance.lyricsInPill && pillLive === "media" && !idleLine && status !== "open";
-  const lyricTarget = !lyricPill || lyricWidth <= 0
-    ? 0
-    : appearance.lyricsPillWidth === "compact"
-      ? Math.min(300, lyricWidth + 72)
-      : appearance.lyricsPillWidth === "long"
-        ? lyricWidth + 126
-        : lyricWidth + 78;
+  const lyricTarget = !lyricPill || lyricWidth <= 0 ? 0 : lyricWidth + 78;
   const lyricsExtra = lyricTarget > 0 ? Math.min(360, lyricTarget - geometry.live.w) : 0;
   const displayShape = {
     ...finalShape,
@@ -316,7 +314,7 @@ export function Notch() {
           floating={floating}
         >
           <LiveRightInset.Provider value={rightInset}>
-            <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} widthExtra={appearance.islandWidth} height={appearance.islandHeight} systemWidth={systemWidth} />
+            <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} widthExtra={lyricsPill ? appearance.lyricsPillExtraWidth : appearance.islandWidth} height={lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight} systemWidth={systemWidth} />
           </LiveRightInset.Provider>
           {clockWeather && !idleLine && status !== "open" && !pillLive && <ClosedClock />}
           {!idleLine && <PrivacyDots hideScreen={showRecording} />}
@@ -404,7 +402,7 @@ function ClosedClock() {
   const iconSize = Math.max(12, Math.round(size * 0.95));
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-      <div className="flex items-center gap-1" style={{ letterSpacing: `${appearance.clockClosedTracking}px`, fontWeight: appearance.clockClosedWeight }}>
+      <div className="flex items-center gap-1" style={{ fontWeight: appearance.clockClosedWeight }}>
         <span style={{ fontSize: `${size}px` }}>
           <ClockTime
             time={time}

@@ -693,6 +693,14 @@ function GamingSettings() {
   const g = settings.use().gaming;
   const setG = (patch: Partial<Settings["gaming"]>) => updateSettings((cur) => ({ gaming: { ...cur.gaming, ...patch } }));
   const width = gamingWidth(g);
+  const left = g.showFps || g.showCpu;
+  const right = g.showGpu || g.showRam;
+  const scale = width > 430 ? 430 / width : 1;
+  const sample = {
+    cpu: [18, 24, 21, 30, 28, 36, 33, 37],
+    gpu: [30, 38, 34, 44, 40, 52, 47, 48],
+    ram: [52, 55, 54, 58, 60, 63, 67, 69],
+  };
   const flags: { key: "showFps" | "showCpu" | "showTemps" | "showGpu" | "showRam"; label: string }[] = [
     { key: "showFps", label: "FPS" },
     { key: "showCpu", label: "CPU" },
@@ -703,30 +711,39 @@ function GamingSettings() {
   const styles: { value: Settings["gaming"]["style"]; label: string }[] = [
     { value: "text", label: t("Text") },
     { value: "bars", label: t("Bars") },
-    { value: "dots", label: t("Dots") },
+    { value: "graph", label: t("Graph") },
   ];
   return (
     <Group title={t("Gaming")} id="settings-gaming">
       <div className="px-3 pt-3 pb-2">
-        <div className="relative flex h-16 items-center justify-center rounded-[10px] bg-fill-2 px-2">
-          <span className="absolute top-1.5 right-2 text-[9px] font-semibold tracking-wide text-label-4 uppercase">
+        <div className="relative flex h-16 items-center justify-center overflow-hidden rounded-[10px] bg-fill-2 px-2">
+          <span className="absolute top-1.5 right-2 z-10 text-[9px] font-semibold tracking-wide text-label-4 uppercase">
             {g.mode === "games" ? t("On") : t("Off")}
           </span>
           <div
-            className={`flex items-center justify-between rounded-full bg-black px-3 text-white ${g.mode === "games" ? "" : "opacity-50"}`}
-            style={{ width: Math.min(width, 430), maxWidth: "100%", height: 30 }}
+            className={`flex origin-center items-center gap-2 rounded-full bg-black px-3 text-white ${
+              left && right ? "justify-between" : "justify-center"
+            } ${g.mode === "games" ? "" : "opacity-50"}`}
+            style={{ width, height: 30, transform: `scale(${scale})` }}
           >
-            {g.showFps && <FpsStat f={{ value: 64, error: null }} preview />}
-            {g.showCpu && (
-              <GamingStat label="CPU" value={37} temp={g.showTemps ? 28 : null} kind={g.style} preview />
+            {left && (
+              <div className="flex shrink-0 items-center gap-2">
+                {g.showFps && <FpsStat f={{ value: 64, error: null }} preview />}
+                {g.showCpu && (
+                  <GamingStat label="CPU" value={37} temp={g.showTemps ? 28 : null} kind={g.style} preview data={sample.cpu} />
+                )}
+              </div>
             )}
-            {g.showGpu && (
-              <GamingStat label="GPU" value={48} temp={g.showTemps ? 81 : null} kind={g.style} preview />
+            {right && (
+              <div className="flex shrink-0 items-center gap-2">
+                {g.showGpu && (
+                  <GamingStat label="GPU" value={48} temp={g.showTemps ? 81 : null} kind={g.style} preview data={sample.gpu} />
+                )}
+                {g.showGpu && g.showRam && <span aria-hidden className="h-3 w-px shrink-0 self-center bg-white/15" />}
+                {g.showRam && <GamingStat label="RAM" value={69} kind={g.style} preview data={sample.ram} />}
+              </div>
             )}
-            {g.showRam && <GamingStat label="RAM" value={69} kind={g.style} preview />}
-            {!g.showFps && !g.showCpu && !g.showGpu && !g.showRam && (
-              <span aria-hidden className="mx-auto size-1 rounded-full bg-white/40" />
-            )}
+            {!left && !right && <span aria-hidden className="size-1 rounded-full bg-white/40" />}
           </div>
         </div>
       </div>
@@ -755,7 +772,7 @@ function GamingSettings() {
               }`}
             >
               <div className="flex h-8 items-center justify-center rounded-[7px] bg-black">
-                <GamingStat label="CPU" value={37} kind={style.value} preview />
+                <GamingStat label="CPU" value={37} kind={style.value} preview data={sample.cpu} />
               </div>
               <div className="mt-1 text-center text-[9px] font-medium text-label">{style.label}</div>
               {g.style === style.value && <SelectedDot className="absolute top-1.5 right-1.5" />}
