@@ -115,6 +115,7 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
             let y = (cursor.y - origin.y as f64) / scale;
             let rect = *state.rect.lock().unwrap();
             let dragging = unsafe { GetAsyncKeyState(VK_LBUTTON.0 as i32) } as u16 & 0x8000 != 0;
+            let pressed = dragging && !was_down;
             // Edge distance to the hit zone; a held button keeps the fast poll (drags).
             let dx = (rect.x - x).max(x - (rect.x + rect.w)).max(0.0);
             let dy = (rect.y - y).max(y - (rect.y + rect.h)).max(0.0);
@@ -137,7 +138,7 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
 
             let inside = if drag_active { rect.grown() } else { rect }.contains(x, y);
             let mut silent = state.silent.load(Ordering::Relaxed);
-            if silent && inside && dragging && !was_down {
+            if silent && inside && pressed {
                 let now = Instant::now();
                 clicks = if now.duration_since(last_click) <= Duration::from_millis(800) { clicks + 1 } else { 1 };
                 last_click = now;

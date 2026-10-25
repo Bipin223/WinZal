@@ -714,7 +714,7 @@ function GamingSettings() {
           </span>
           <div
             className={`flex items-center justify-between rounded-full bg-black px-3 text-white ${g.mode === "games" ? "" : "opacity-50"}`}
-            style={{ width: Math.min(width, 380), maxWidth: "100%", height: 30 }}
+            style={{ width: Math.min(width, 430), maxWidth: "100%", height: 30 }}
           >
             {g.showFps && <FpsStat f={{ value: 64, error: null }} preview />}
             {g.showCpu && (

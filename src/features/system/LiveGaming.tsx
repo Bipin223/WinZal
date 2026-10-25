@@ -65,7 +65,7 @@ export function FpsStat({ f, preview = false }: { f: { value: number | null; err
   const label = preview ? "text-white/45" : "text-label-3";
   const value = preview ? "text-white" : "text-label";
   return (
-    <span className="flex items-baseline gap-1">
+    <span className="flex shrink-0 items-baseline gap-1 whitespace-nowrap">
       <span className={`tabular flex w-[26px] justify-end text-footnote font-semibold ${value}`}>
         {f.error === "no-admin" ? (
           <LockSimple size={11} weight="bold" className={`self-center ${preview ? "text-white/40" : "text-label-3"}`} />
@@ -104,7 +104,7 @@ export function GamingStat({
 
   if (kind === "bars") {
     return (
-      <span className="flex items-center gap-1.5">
+      <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
         <span className={`text-caption font-medium ${labelClass}`}>{label}</span>
         <span className={`relative h-[3px] w-7 overflow-hidden rounded-full ${trackClass}`}>
           <span className="block h-full rounded-full transition-[width,background-color] duration-500 ease-out" style={{ width: `${used}%`, backgroundColor: color }} />
@@ -118,7 +118,7 @@ export function GamingStat({
   if (kind === "dots") {
     const filled = Math.round(used / 20);
     return (
-      <span className="flex items-center gap-1.5">
+      <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
         <span className={`text-caption font-medium ${labelClass}`}>{label}</span>
         <span className="flex items-center gap-[2px]">
           {[0, 1, 2, 3, 4].map((i) => (
@@ -132,7 +132,7 @@ export function GamingStat({
   }
 
   return (
-    <span className="flex items-baseline gap-1.5">
+    <span className="flex shrink-0 items-baseline gap-1.5 whitespace-nowrap">
       <span className={`text-caption font-medium ${labelClass}`}>{label}</span>
       <span className={`tabular w-[34px] text-right text-footnote font-semibold transition-colors duration-300 ${valueClass}`} style={{ color: value === null ? undefined : color }}>
         {value === null ? "—" : `${Math.round(used)}%`}
