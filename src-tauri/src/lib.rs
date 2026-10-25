@@ -235,6 +235,7 @@ pub fn run() {
             hit_test::spawn(app.handle().clone(), window.clone());
             display::spawn(app.handle().clone(), window);
             ambient::spawn_energy_watch();
+            ambient::restore_power(app.handle().clone());
             media::spawn(app.handle().clone());
             clipboard::spawn(app.handle().clone());
             audio::spawn(app.handle().clone(), &app.state::<audio::AudioState>());

@@ -193,6 +193,8 @@ struct FpsShared {
     /// Lenovo active-cooling / fan boost: 0 off, 1 on.
     fan_cooling: AtomicU32,
     fan_cooling_at: AtomicU64,
+    /// WinZal Custom selected: performance mode + active cooling applied.
+    custom_active: AtomicU32,
     /// Power-mode request from the notch: seq << 8 | mode (0 = none).
     power_req: AtomicU32,
     /// Helper answer: seq << 8 | (1 ok, 2 failed) (0 = idle).
@@ -311,6 +313,15 @@ pub(crate) fn lenovo_fan_cooling() -> Option<u8> {
         }
         Some((*shared).fan_cooling.load(Ordering::Relaxed).min(1) as u8)
     }
+}
+
+/// True while WinZal Custom (performance + active cooling) is applied.
+pub(crate) fn lenovo_custom_active() -> bool {
+    let Some(shared) = shared() else { return false };
+    if !helper_alive(shared) {
+        return false;
+    }
+    unsafe { (*shared).custom_active.load(Ordering::Relaxed) == 1 }
 }
 
 /// Ask the elevated helper to set Lenovo's thermal mode. Blocks until the
@@ -607,6 +618,7 @@ pub fn run_helper(mut main_pid: u32) -> ! {
         (*shared).lenovo_mode_at.store(0, Ordering::Relaxed);
         (*shared).fan_cooling.store(0, Ordering::Relaxed);
         (*shared).fan_cooling_at.store(0, Ordering::Relaxed);
+        (*shared).custom_active.store(0, Ordering::Relaxed);
         (*shared).power_req.store(0, Ordering::Relaxed);
         (*shared).power_ack.store(0, Ordering::Relaxed);
         for entry in (*shared).entries.iter() {
@@ -803,6 +815,7 @@ fn temp_loop(shared_addr: usize) {
                     (*shared).lenovo_mode_at.store(GetTickCount64(), Ordering::Relaxed);
                     (*shared).fan_cooling.store(applied_cooling, Ordering::Relaxed);
                     (*shared).fan_cooling_at.store(GetTickCount64(), Ordering::Relaxed);
+                    (*shared).custom_active.store((mode == 4) as u32, Ordering::Relaxed);
                 }
                 1
             } else {
@@ -830,6 +843,10 @@ fn temp_loop(shared_addr: usize) {
                 unsafe {
                     (*shared).lenovo_mode.store(mode as u32, Ordering::Relaxed);
                     (*shared).lenovo_mode_at.store(GetTickCount64(), Ordering::Relaxed);
+                    // Do not touch `custom_active` here: Lenovo's EC can report the
+                    // base fan mode (usually Balanced) while the custom cooling
+                    // combination is still applied. The flag is owned by mode
+                    // requests and survives readbacks.
                 }
             }
             if let Some(cooling) = cooling {

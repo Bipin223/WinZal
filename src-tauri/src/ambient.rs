@@ -3,9 +3,10 @@
 
 use std::os::windows::process::CommandExt;
 use std::process::Command;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde::Serialize;
+use tauri::Manager;
 use windows::core::{GUID, PCWSTR};
 use windows::Devices::Bluetooth::{BluetoothConnectionStatus, BluetoothDevice};
 use windows::Devices::Enumeration::DeviceInformation;
@@ -547,7 +548,7 @@ fn energy_status() -> Result<Energy, String> {
     let plugged = ac_connected();
     let mode = crate::fps::lenovo_mode();
     let cooling = crate::fps::lenovo_fan_cooling();
-    let mut scheme = if mode == Some(4) || (mode == Some(3) && cooling == Some(1)) {
+    let mut scheme = if crate::fps::lenovo_custom_active() || mode == Some(4) || (mode == Some(3) && cooling == Some(1)) {
         "custom"
     } else {
         match mode {
@@ -576,7 +577,8 @@ pub fn spawn_energy_watch() {
             }
             battery_reads = battery_reads.saturating_add(1);
             if battery_reads == 2 {
-                let custom = crate::fps::lenovo_mode() == Some(4)
+                let custom = crate::fps::lenovo_custom_active()
+                    || crate::fps::lenovo_mode() == Some(4)
                     || (crate::fps::lenovo_mode() == Some(3) && crate::fps::lenovo_fan_cooling() == Some(1));
                 if custom {
                     let _ = set_overlay(&BALANCED);
@@ -597,8 +599,36 @@ pub fn energy_get() -> Result<Energy, String> {
 /// Set a power mode. Saver/Balanced/Max use the Windows overlay plus Lenovo's
 /// fan mode. Custom is Lenovo's own fourth thermal mode on the Balanced plan.
 #[tauri::command]
-pub async fn energy_set(mode: String) -> Result<Energy, String> {
-    tauri::async_runtime::spawn_blocking(move || apply_energy(&mode)).await.map_err(|error| error.to_string())?
+pub async fn energy_set(mode: String, app: tauri::AppHandle) -> Result<Energy, String> {
+    let requested = mode.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || apply_energy(&mode)).await.map_err(|error| error.to_string())??;
+    if let Ok(dir) = app.path().app_data_dir() {
+        let _ = std::fs::write(dir.join("power-mode"), requested);
+    }
+    Ok(result)
+}
+
+/// Re-apply a previously chosen Custom mode after a restart (task-only helper,
+/// never a surprise UAC prompt at login).
+pub fn restore_power(app: tauri::AppHandle) {
+    std::thread::spawn(move || {
+        let Ok(dir) = app.path().app_data_dir() else { return };
+        let stored = std::fs::read_to_string(dir.join("power-mode")).unwrap_or_default();
+        if stored.trim() != "custom" {
+            return;
+        }
+        let _ = crate::fps::start_helper_task_only();
+        let deadline = Instant::now() + Duration::from_secs(15);
+        while !crate::fps::helper_ready() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(300));
+        }
+        if !crate::fps::helper_ready() {
+            return;
+        }
+        let _ = activate_plan(&BALANCED_PLAN);
+        let _ = set_overlay(&BALANCED);
+        let _ = crate::fps::lenovo_set_mode(4);
+    });
 }
 
 fn apply_energy(mode: &str) -> Result<Energy, String> {

@@ -1,5 +1,23 @@
 [
   {
+    "version": "1.7.5",
+    "date": "2026-10-25",
+    "items": [
+      {
+        "de": "Custom bleibt jetzt wirklich aktiv: WinZal merkt sich die Auswahl, setzt Lenovo-Leistung + aktive Kühlung und stellt sie nach App- oder PC-Neustarts wieder her – kein Zurückspringen auf Max mehr",
+        "en": "Custom now really stays active: WinZal remembers the choice, applies Lenovo performance + active cooling and restores it after app or PC restarts – no snapping back to Max"
+      },
+      {
+        "de": "Notch und Display sind wieder getrennte Seiten: Notch = Idle-Stil und Größe, Display = Sichtbarkeit, Monitor/Position, DND, Gaming/FPS, Aufnahme-Punkte und Präsentationsmodus",
+        "en": "Notch and Display are separate pages again: Notch = idle style and size, Display = visibility, monitor/position, DND, gaming/FPS, recording dots and presentation mode"
+      },
+      {
+        "de": "Weitere lange Hilfetexte in den Einstellungen entfernt; die Oberfläche bleibt ruhig und aufgeräumt",
+        "en": "Removed more long helper texts from Settings; the UI stays calm and clean"
+      }
+    ]
+  },
+  {
     "version": "1.7.4",
     "date": "2026-10-25",
     "items": [

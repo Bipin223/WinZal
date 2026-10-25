@@ -45,12 +45,13 @@ import { between, changelog, itemText, markSeen, useUnseen } from "../../lib/cha
 import { privacy, togglePresentation, usePresenting } from "../privacy/store";
 import { locale, t, tBackend } from "../../i18n";
 
-type PageId = "general" | "notch" | "appearance" | "music" | "tools" | "timer" | "ai" | "discord" | "about";
+type PageId = "general" | "notch" | "appearance" | "display" | "music" | "tools" | "timer" | "ai" | "discord" | "about";
 
 const pages: { id: PageId; label: string; icon: Icon }[] = [
   { id: "general", label: "Allgemein", icon: SlidersHorizontal },
   { id: "notch", label: "Notch", icon: Monitor },
   { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "display", label: "Display", icon: Monitor },
   { id: "music", label: "Musik", icon: MusicNotesSimple },
   { id: "tools", label: "Tools", icon: SquaresFour },
   { id: "timer", label: "Timer", icon: Timer },
@@ -63,12 +64,12 @@ const pages: { id: PageId; label: string; icon: Icon }[] = [
 const sectionPage: Record<string, PageId> = {
   weather: "general",
   updates: "general",
-  display: "notch",
+  display: "display",
   appearance: "appearance",
   notch: "notch",
   music: "music",
   lyrics: "music",
-  presentation: "notch",
+  presentation: "display",
   alarm: "timer",
   ask: "ai",
   usage: "ai",
@@ -85,6 +86,7 @@ const PAGE_HEIGHT: Record<PageId, number> = {
   general: 460,
   notch: 460,
   appearance: 460,
+  display: 460,
   music: 460,
   tools: 460,
   timer: 460,
@@ -161,14 +163,14 @@ export function SettingsView() {
                 <Updates />
               </>
             )}
-            {page === "notch" && (
+            {page === "notch" && <AppearanceView mode="notch" />}
+            {page === "appearance" && <AppearanceView mode="appearance" />}
+            {page === "display" && (
               <>
-                <AppearanceView mode="notch" />
                 <Display />
                 <Presentation />
               </>
             )}
-            {page === "appearance" && <AppearanceView mode="appearance" />}
             {page === "music" && <MusicSettings />}
             {page === "tools" && (
               <>
