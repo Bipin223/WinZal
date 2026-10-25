@@ -269,10 +269,10 @@ function Updates() {
           </motion.div>
         )}
       </AnimatePresence>
-      <Row label={t("Automatisch suchen")} hint={t("Beim Start und einmal täglich, anonym bei GitHub – ohne deine Daten")}>
+      <Row label={t("Automatisch suchen")}>
         <Switch label={t("Automatisch suchen")} checked={auto} onChange={(on) => updateSettings({ updates: { ...updates, auto: on } })} />
       </Row>
-      <Row label={t("Automatisch installieren")} hint={t("Signierte Updates im Hintergrund installieren; WinZal startet danach neu.")}>
+      <Row label={t("Automatisch installieren")}>
         <Switch label={t("Automatisch installieren")} checked={install} onChange={(on) => updateSettings({ updates: { ...updates, install: on } })} />
       </Row>
     </Group>
@@ -442,10 +442,7 @@ function Ask() {
           options={effortLevels}
         />
       </Row>
-      <Row
-        label={t("Chats speichern")}
-        hint={t("Bis zu drei Chats lokal auf diesem PC. Aus: nichts wird geschrieben; vorhandene Chats bleiben im Verlauf lesbar und löschbar.")}
-      >
+      <Row label={t("Chats speichern")}>
         <Switch
           label={t("Chats speichern")}
           checked={s.ask.saveHistory}
@@ -634,7 +631,6 @@ function GamingApps() {
 
   return (
     <Group title={t("FPS-Spiel")} id="settings-gaming-apps">
-      <div className="px-3 py-2 text-caption text-label-3">{t("FPS erscheint nur für Genshin Impact oder eine eigene .exe.")}</div>
       <Row label="Genshin Impact" hint={t("Immer enthalten")}>
         <SelectedDot />
       </Row>
@@ -717,7 +713,7 @@ function Discord() {
   return (
     <>
       <Group title={t("Rich Presence")} id="settings-discord">
-        <Row label={t("Rich Presence")} hint={t("Aktuellen Song auf Discord anzeigen")}>
+        <Row label={t("Rich Presence")}>
           <Switch
             label={t("Rich Presence")}
             checked={s.discord.presence}
@@ -726,10 +722,7 @@ function Discord() {
         </Row>
         {s.discord.presence && (
           <>
-            <Row
-              label={t("Wird angezeigt nach „Listening to“")}
-              hint={t("Song name, artist or the app name")}
-            >
+            <Row label={t("Wird angezeigt nach „Listening to“")}>
               <Segmented<"title" | "artist" | "app">
                 id="discord-status"
                 size="sm"
@@ -742,21 +735,12 @@ function Discord() {
                 ]}
               />
             </Row>
-            <Row
-              label={t("App-Name")}
-              hint={t("Ersetzt WinZal überall, wo der App-Name erscheint. Leer lassen, um ihn zu behalten.")}
-            >
+            <Row label={t("App-Name")}>
               <div className="flex items-center gap-1.5">
                 <TextField value={name} onChange={setName} onSubmit={saveName} placeholder="WinZal" width="w-40" />
                 {name.trim() !== s.discord.appName && <Button onClick={saveName}>{t("Sichern")}</Button>}
               </div>
             </Row>
-            <div className="px-3 py-2 text-caption text-label-3">
-              {t("Leer lassen, um den Namen deiner Discord-App zu verwenden; ein Wert hier überschreibt ihn.")}
-            </div>
-            <div className="px-3 py-2 text-caption text-label-3">
-              {t("Die Karte zeigt zusätzlich die Buttons „Listen on YouTube Music“ und „Get WinZal“.")}
-            </div>
           </>
         )}
       </Group>
@@ -773,9 +757,6 @@ function Discord() {
           </div>
         </Row>
         <SecretRow name="discord.secret" label={t("Client-Secret")} onSaved={reconnectDiscord} />
-        <div className="px-3 py-2 text-caption text-label-3">
-          {t("discord.com/developers → New Application → OAuth2: Client-ID und Client-Secret kopieren und unter Redirects http://localhost eintragen und speichern. Beim ersten Verbinden fragt Discord einmal nach.")}
-        </div>
       </Group>
     </>
   );
@@ -896,9 +877,9 @@ function FpsUnlockRow() {
     };
   }, []);
   const hint = {
-    idle: t("Einmalige Windows-Abfrage – schaltet FPS und CPU-Temperatur frei"),
+    idle: t("Einmalige Windows-Abfrage – bleibt nach Neustarts aktiv, schaltet FPS, CPU-Temperatur und Lenovo-Lüfter frei"),
     busy: t("Bitte die Windows-Abfrage bestätigen …"),
-    ok: t("Freigeschaltet – FPS und CPU-Temperatur laufen"),
+    ok: t("Freigeschaltet – bleibt nach Neustarts aktiv"),
     relogin: t("Fertig – einmal ab- und wieder anmelden, dann laufen die FPS"),
     cancelled: t("Abgebrochen"),
     failed: t("Hat nicht geklappt – noch einmal versuchen oder WinZal als Administrator starten"),

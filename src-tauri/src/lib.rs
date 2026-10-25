@@ -238,6 +238,12 @@ pub fn run() {
             media::spawn(app.handle().clone());
             clipboard::spawn(app.handle().clone());
             audio::spawn(app.handle().clone(), &app.state::<audio::AudioState>());
+            // If the one-time unlock created the logon task, bring the helper back
+            // after an app restart without a UAC prompt.
+            std::thread::spawn(|| {
+                std::thread::sleep(std::time::Duration::from_secs(3));
+                let _ = fps::start_helper_task_only();
+            });
 
             // If another app owns the shortcut, the notch still runs, just without it.
             let _ = app.global_shortcut().register(shortcut);

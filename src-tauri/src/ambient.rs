@@ -3,11 +3,10 @@
 
 use std::os::windows::process::CommandExt;
 use std::process::Command;
-use std::sync::OnceLock;
 use std::time::Duration;
 
 use serde::Serialize;
-use windows::core::GUID;
+use windows::core::{GUID, PCWSTR};
 use windows::Devices::Bluetooth::{BluetoothConnectionStatus, BluetoothDevice};
 use windows::Devices::Enumeration::DeviceInformation;
 use windows::Devices::Radios::{Radio, RadioAccessStatus, RadioKind, RadioState};
@@ -16,9 +15,13 @@ use windows::Win32::Devices::Bluetooth::{
     BLUETOOTH_ADDRESS, BLUETOOTH_ADDRESS_0, BLUETOOTH_DEVICE_INFO, BLUETOOTH_FIND_RADIO_PARAMS,
     BLUETOOTH_SERVICE_ENABLE, BLUETOOTH_SERVICE_DISABLE,
 };
-use windows::Win32::Foundation::{CloseHandle, LocalFree, ERROR_SUCCESS, HANDLE, HLOCAL, LPARAM, WPARAM};
+use windows::Win32::Foundation::{CloseHandle, ERROR_SUCCESS, HANDLE, LPARAM, WPARAM};
+use windows::Win32::NetworkManagement::WiFi::{
+    dot11_BSS_type_any, wlan_connection_mode_profile, WlanCloseHandle, WlanConnect, WlanEnumInterfaces, WlanFreeMemory,
+    WlanOpenHandle, WLAN_CONNECTION_PARAMETERS, WLAN_INTERFACE_INFO_LIST,
+};
 use windows::Win32::System::Power::{
-    GetSystemPowerStatus, PowerGetActiveScheme, PowerSetActiveScheme, SetSuspendState, SYSTEM_POWER_STATUS,
+    GetSystemPowerStatus, PowerSetActiveScheme, SetSuspendState, SYSTEM_POWER_STATUS,
 };
 use windows::Win32::System::Shutdown::LockWorkStation;
 use windows::Win32::System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED};
@@ -240,6 +243,48 @@ pub async fn wifi_networks() -> Result<Vec<WifiNetwork>, String> {
     .map_err(|e| e.to_string())?
 }
 
+/// Connect the first wireless interface using Windows' WLAN API. This is the
+/// same path the taskbar uses and avoids `netsh` profile/quoting quirks.
+fn wlan_connect(profile: &str) -> Result<(), String> {
+    unsafe {
+        let mut negotiated = 0u32;
+        let mut client = HANDLE::default();
+        let status = WlanOpenHandle(2, None, &mut negotiated, &mut client);
+        if status != 0 {
+            return Err(format!("wlan-open:{status}"));
+        }
+        let mut list: *mut WLAN_INTERFACE_INFO_LIST = std::ptr::null_mut();
+        let status = WlanEnumInterfaces(client, None, &mut list);
+        if status != 0 || list.is_null() {
+            let _ = WlanCloseHandle(client, None);
+            return Err(format!("wlan-interfaces:{status}"));
+        }
+        let count = (*list).dwNumberOfItems as usize;
+        let interfaces = std::slice::from_raw_parts((*list).InterfaceInfo.as_ptr(), count);
+        let Some(interface) = interfaces.first() else {
+            WlanFreeMemory(list as *const _);
+            let _ = WlanCloseHandle(client, None);
+            return Err("wlan-no-interface".into());
+        };
+        let wide: Vec<u16> = profile.encode_utf16().chain(Some(0)).collect();
+        let params = WLAN_CONNECTION_PARAMETERS {
+            wlanConnectionMode: wlan_connection_mode_profile,
+            strProfile: PCWSTR(wide.as_ptr()),
+            pDot11Ssid: std::ptr::null_mut(),
+            pDesiredBssidList: std::ptr::null_mut(),
+            dot11BssType: dot11_BSS_type_any,
+            dwFlags: 0,
+        };
+        let status = WlanConnect(client, &interface.InterfaceGuid, &params, None);
+        WlanFreeMemory(list as *const _);
+        let _ = WlanCloseHandle(client, None);
+        if status != 0 {
+            return Err(format!("wlan-connect:{status}"));
+        }
+    }
+    Ok(())
+}
+
 /// Connect to a visible network that already has a Windows profile.
 /// New networks use the native password prompt through `ms-availablenetworks:`.
 #[tauri::command]
@@ -250,18 +295,20 @@ pub async fn wifi_connect(ssid: String) -> Result<Network, String> {
             .find(|p| p.eq_ignore_ascii_case(&ssid))
             .ok_or("This network is not saved yet")?;
 
-        let status = Command::new("netsh")
-            .args([
-                "wlan",
-                "connect",
-                &format!("name={profile}"),
-                &format!("ssid={ssid}"),
-            ])
-            .creation_flags(CREATE_NO_WINDOW)
-            .output()
-            .map_err(|e| e.to_string())?;
-        if !status.status.success() {
-            return Err(String::from_utf8_lossy(&status.stdout).trim().to_string());
+        if wlan_connect(&profile).is_err() {
+            let status = Command::new("netsh")
+                .args([
+                    "wlan",
+                    "connect",
+                    &format!("name={profile}"),
+                    &format!("ssid={ssid}"),
+                ])
+                .creation_flags(CREATE_NO_WINDOW)
+                .output()
+                .map_err(|e| e.to_string())?;
+            if !status.status.success() {
+                return Err(String::from_utf8_lossy(&status.stdout).trim().to_string());
+            }
         }
 
         for _ in 0..20 {
@@ -432,9 +479,6 @@ const EFFICIENCY: GUID = GUID::from_u128(0x961cc777_2547_4f9d_8174_7d86181b8a7a)
 const BALANCED: GUID = GUID::from_u128(0);
 const PERFORMANCE: GUID = GUID::from_u128(0xded574b5_45a0_4f42_8737_46345c09c238);
 const BALANCED_PLAN: GUID = GUID::from_u128(0x381b4222_f694_41f0_9685_ff5bb260df2e);
-const CUSTOM_PLAN: GUID = GUID::from_u128(0xb6f5e3a1_7c2d_4e8f_9a10_6d5c4b3a2918);
-const BALANCED_PLAN_STR: &str = "381b4222-f694-41f0-9685-ff5bb260df2e";
-const CUSTOM_PLAN_STR: &str = "b6f5e3a1-7c2d-4e8f-9a10-6d5c4b3a2918";
 
 #[link(name = "powrprof", kind = "raw-dylib")]
 extern "system" {
@@ -489,17 +533,6 @@ fn ac_connected() -> bool {
     status.ACLineStatus != 0
 }
 
-fn active_plan() -> Option<GUID> {
-    let mut plan: *mut GUID = std::ptr::null_mut();
-    let error = unsafe { PowerGetActiveScheme(None, &mut plan) };
-    if error != ERROR_SUCCESS || plan.is_null() {
-        return None;
-    }
-    let guid = unsafe { *plan };
-    let _ = unsafe { LocalFree(Some(HLOCAL(plan as *mut _))) };
-    Some(guid)
-}
-
 fn activate_plan(plan: &GUID) -> Result<(), String> {
     let error = unsafe { PowerSetActiveScheme(None, Some(plan)) };
     if error == ERROR_SUCCESS {
@@ -509,55 +542,18 @@ fn activate_plan(plan: &GUID) -> Result<(), String> {
     }
 }
 
-fn powercfg(args: &[&str]) -> bool {
-    Command::new("powercfg").args(args).creation_flags(CREATE_NO_WINDOW).status().map(|status| status.success()).unwrap_or(false)
-}
-
-/// Create/refresh WinZal's fourth mode: a copy of Balanced with processor
-/// throttling opened up and active cooling. No admin required; once per run.
-fn ensure_custom_plan() -> Result<(), String> {
-    static ONCE: OnceLock<Result<(), String>> = OnceLock::new();
-    ONCE.get_or_init(|| {
-        let list = Command::new("powercfg")
-            .arg("/list")
-            .creation_flags(CREATE_NO_WINDOW)
-            .output()
-            .map_err(|error| error.to_string())?;
-        let text = String::from_utf8_lossy(&list.stdout).to_lowercase();
-        if !text.contains(CUSTOM_PLAN_STR) {
-            if !powercfg(&["/duplicatescheme", BALANCED_PLAN_STR, CUSTOM_PLAN_STR]) {
-                return Err("Could not create the custom power plan".into());
-            }
-        }
-        let _ = powercfg(&["/changename", CUSTOM_PLAN_STR, "WinZal Custom"]);
-        let processor = "54533251-82be-4824-96c1-47b60b740d00";
-        let min = "893dee8e-2bef-41e0-89c6-b55d0929964c";
-        let max = "bc5038f7-23e0-4960-96da-33abaf5935ec";
-        let cooling = "94d3a615-a899-4ac5-ae2b-e4d8f634367f";
-        for (command, policy) in [("/setacvalueindex", "1"), ("/setdcvalueindex", "0")] {
-            let _ = powercfg(&[command, CUSTOM_PLAN_STR, processor, min, "5"]);
-            let _ = powercfg(&[command, CUSTOM_PLAN_STR, processor, max, "100"]);
-            let _ = powercfg(&[command, CUSTOM_PLAN_STR, processor, cooling, policy]);
-        }
-        Ok(())
-    })
-    .clone()
-}
-
 fn energy_status() -> Result<Energy, String> {
     let guid = effective_overlay()?;
     let plugged = ac_connected();
-    let active = active_plan();
-    let mut scheme = if plugged && active == Some(CUSTOM_PLAN) {
+    let mode = crate::fps::lenovo_mode();
+    let cooling = crate::fps::lenovo_fan_cooling();
+    let mut scheme = if mode == Some(4) || (mode == Some(3) && cooling == Some(1)) {
         "custom"
     } else {
-        // A Lenovo thermal mode is more specific than the Windows overlay when
-        // the elevated helper is running (e.g. after Fn+Q).
-        match crate::fps::lenovo_mode() {
+        match mode {
             Some(1) => "saver",
             Some(2) => "balanced",
             Some(3) => "max",
-            Some(4) => "custom",
             _ => overlay_name(&guid),
         }
     };
@@ -567,14 +563,28 @@ fn energy_status() -> Result<Energy, String> {
     Ok(Energy { saver: scheme == "saver", scheme, plugged, custom: true })
 }
 
-/// Keep the promise of only two modes on battery: if the custom plan was left
-/// active when the charger disappeared, glide back to Balanced.
+/// Keep the promise of only two modes on battery: if Lenovo's custom thermal
+/// mode is active when the charger disappears, glide back to Balanced.
 pub fn spawn_energy_watch() {
-    std::thread::spawn(|| loop {
-        std::thread::sleep(Duration::from_secs(2));
-        if !ac_connected() && active_plan() == Some(CUSTOM_PLAN) {
-            let _ = activate_plan(&BALANCED_PLAN);
-            let _ = set_overlay(&BALANCED);
+    std::thread::spawn(|| {
+        let mut battery_reads = 0u8;
+        loop {
+            std::thread::sleep(Duration::from_secs(2));
+            if ac_connected() {
+                battery_reads = 0;
+                continue;
+            }
+            battery_reads = battery_reads.saturating_add(1);
+            if battery_reads == 2 {
+                let custom = crate::fps::lenovo_mode() == Some(4)
+                    || (crate::fps::lenovo_mode() == Some(3) && crate::fps::lenovo_fan_cooling() == Some(1));
+                if custom {
+                    let _ = set_overlay(&BALANCED);
+                    if crate::fps::helper_ready() {
+                        let _ = crate::fps::lenovo_set_mode(2);
+                    }
+                }
+            }
         }
     });
 }
@@ -584,9 +594,8 @@ pub fn energy_get() -> Result<Energy, String> {
     energy_status()
 }
 
-/// Set a power mode. Saver/Balanced/Max use the Windows overlay (and Lenovo's
-/// fan mode when the helper is already running). Custom is WinZal's own power
-/// plan: Balanced internals with processor throttling open and active cooling.
+/// Set a power mode. Saver/Balanced/Max use the Windows overlay plus Lenovo's
+/// fan mode. Custom is Lenovo's own fourth thermal mode on the Balanced plan.
 #[tauri::command]
 pub async fn energy_set(mode: String) -> Result<Energy, String> {
     tauri::async_runtime::spawn_blocking(move || apply_energy(&mode)).await.map_err(|error| error.to_string())?
@@ -598,39 +607,32 @@ fn apply_energy(mode: &str) -> Result<Energy, String> {
     if !plugged && matches!(mode, "max" | "custom") {
         return Err("plugged".into());
     }
+
+    if mode == "custom" {
+        if !crate::fps::ensure_helper_for_power() || !crate::fps::helper_ready() {
+            return Err("helper".into());
+        }
+        // Custom is Lenovo's own thermal mode. Keep Windows on its stable
+        // Balanced plan; the old custom power plan was reset by Windows.
+        activate_plan(&BALANCED_PLAN)?;
+        set_overlay(&BALANCED)?;
+        crate::fps::lenovo_set_mode(4).map_err(|_| "lenovo".to_string())?;
+        return energy_status();
+    }
+
     let overlay = match mode {
         "saver" => EFFICIENCY,
         "balanced" => BALANCED,
         "max" => PERFORMANCE,
-        "custom" => PERFORMANCE,
         other => return Err(format!("Unknown power mode: {other}")),
     };
-    if mode == "custom" {
-        ensure_custom_plan()?;
-        // Windows re-applies the performance overlay to the Balanced plan. Set the
-        // overlay first and activate the custom plan last, otherwise Custom snaps
-        // straight back to Max/Balanced after a restart.
-        set_overlay(&PERFORMANCE)?;
-        std::thread::sleep(Duration::from_millis(120));
-        activate_plan(&CUSTOM_PLAN)?;
-        if active_plan() != Some(CUSTOM_PLAN) {
-            activate_plan(&CUSTOM_PLAN)?;
-        }
-        if active_plan() != Some(CUSTOM_PLAN) {
-            return Err("custom-switch-failed".into());
-        }
-    } else {
-        activate_plan(&BALANCED_PLAN)?;
-        set_overlay(&overlay)?;
-    }
+    activate_plan(&BALANCED_PLAN)?;
+    set_overlay(&overlay)?;
 
-    // Keep Lenovo's fan profile in sync when the helper is already running.
-    // Custom uses Performance cooling as well; it does not pretend to be
-    // Vantage's purple fan curve, it is WinZal's own fourth power plan.
     let thermal = match mode {
         "saver" => 1,
         "balanced" => 2,
-        "max" | "custom" => 3,
+        "max" => 3,
         _ => 0,
     };
     if thermal != 0 && crate::fps::helper_ready() {

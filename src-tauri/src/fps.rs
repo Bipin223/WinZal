@@ -19,6 +19,9 @@
 
 use std::collections::HashMap;
 use std::os::windows::ffi::OsStrExt;
+use std::os::windows::process::CommandExt;
+use std::path::Path;
+use std::process::Command;
 use std::sync::atomic::{AtomicPtr, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::thread;
@@ -44,6 +47,8 @@ use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThre
 
 const SESSION: &str = "NotchFps";
 const HELPER_SESSION: &str = "NotchFpsHelper";
+const HELPER_TASK: &str = "WinZalFpsHelper";
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 /// Fixed session GUID.
 const SESSION_GUID: GUID = GUID::from_u128(0x6f3e2a41_8c5d_4b7e_9a12_4c4e6f746368);
 const DXGI: GUID = GUID::from_u128(0xca11c036_0102_4a2d_a6ad_f03cfed5d3c9);
@@ -185,6 +190,9 @@ struct FpsShared {
     /// Lenovo thermal mode read by the elevated helper: 1 quiet … 4 custom.
     lenovo_mode: AtomicU32,
     lenovo_mode_at: AtomicU64,
+    /// Lenovo active-cooling / fan boost: 0 off, 1 on.
+    fan_cooling: AtomicU32,
+    fan_cooling_at: AtomicU64,
     /// Power-mode request from the notch: seq << 8 | mode (0 = none).
     power_req: AtomicU32,
     /// Helper answer: seq << 8 | (1 ok, 2 failed) (0 = idle).
@@ -287,6 +295,21 @@ pub(crate) fn lenovo_mode() -> Option<u8> {
         }
         let mode = (*shared).lenovo_mode.load(Ordering::Relaxed);
         (1..=4).contains(&mode).then_some(mode as u8)
+    }
+}
+
+/// Lenovo active-cooling flag: 0 off, 1 on. `None` when unavailable.
+pub(crate) fn lenovo_fan_cooling() -> Option<u8> {
+    let shared = shared()?;
+    if !helper_alive(shared) {
+        return None;
+    }
+    unsafe {
+        let at = (*shared).fan_cooling_at.load(Ordering::Relaxed);
+        if at == 0 || GetTickCount64().saturating_sub(at) > 6000 {
+            return None;
+        }
+        Some((*shared).fan_cooling.load(Ordering::Relaxed).min(1) as u8)
     }
 }
 
@@ -398,8 +421,53 @@ fn find_entry<'a>(shared: &'a FpsShared, pid: u32) -> &'a FpsEntry {
 
 // ── Elevated helper ─────────────────────────────────────────────────────────
 
+/// Creates the logon task once (from the already elevated helper) so the user
+/// only approves UAC on the first unlock. The task starts `--fps-helper 0`,
+/// which waits for the notch process and then owns the ETW session.
+fn ensure_helper_task(exe: &Path) {
+    let exists = Command::new("schtasks")
+        .args(["/Query", "/TN", HELPER_TASK])
+        .creation_flags(CREATE_NO_WINDOW)
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false);
+    if exists {
+        return;
+    }
+
+    let user = match (std::env::var("USERDOMAIN"), std::env::var("USERNAME")) {
+        (Ok(domain), Ok(name)) if !domain.is_empty() => format!("{domain}\\{name}"),
+        (_, Ok(name)) => name,
+        _ => return,
+    };
+    let exe = exe.display().to_string().replace('\'', "''");
+    let user = user.replace('\'', "''");
+    let script = format!(
+        "$ErrorActionPreference='Stop'\r\n\
+         $action=New-ScheduledTaskAction -Execute '{exe}' -Argument '--fps-helper 0'\r\n\
+         $trigger=New-ScheduledTaskTrigger -AtLogOn -User '{user}'\r\n\
+         $principal=New-ScheduledTaskPrincipal -UserId '{user}' -LogonType Interactive -RunLevel Highest\r\n\
+         $settings=New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Days 3650) -MultipleInstances IgnoreNew\r\n\
+         Register-ScheduledTask -TaskName '{HELPER_TASK}' -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force\r\n"
+    );
+    let dir = std::env::var_os("LOCALAPPDATA")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(std::env::temp_dir)
+        .join("app.winzal");
+    let _ = std::fs::create_dir_all(&dir);
+    let path = dir.join("install-fps-task.ps1");
+    if std::fs::write(&path, script).is_ok() {
+        let _ = Command::new("powershell.exe")
+            .args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File"])
+            .arg(&path)
+            .creation_flags(CREATE_NO_WINDOW)
+            .status();
+        let _ = std::fs::remove_file(&path);
+    }
+}
+
 /// Starts the helper elevated (one UAC prompt) and waits until its ETW session is live.
-fn start_helper() -> &'static str {
+fn start_helper_elevated() -> &'static str {
     let Some(shared) = shared() else { return "failed" };
     if helper_alive(shared) {
         return "ok";
@@ -451,10 +519,59 @@ fn start_helper() -> &'static str {
     "failed"
 }
 
-/// Is the elevated FPS helper alive right now (e.g. after a previous unlock)?
+/// Start the pre-created logon task without UAC. Returns false when the task is
+/// missing or the current user is not allowed to run it.
+fn start_helper_from_task() -> bool {
+    if helper_ready() {
+        return true;
+    }
+    let ran = Command::new("schtasks")
+        .args(["/Run", "/TN", HELPER_TASK])
+        .creation_flags(CREATE_NO_WINDOW)
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false);
+    if !ran {
+        return false;
+    }
+    let deadline = Instant::now() + Duration::from_secs(8);
+    while Instant::now() < deadline {
+        thread::sleep(Duration::from_millis(150));
+        if helper_ready() {
+            return true;
+        }
+    }
+    false
+}
+
+fn start_helper() -> &'static str {
+    if helper_ready() {
+        return "ok";
+    }
+    if start_helper_from_task() {
+        return "ok";
+    }
+    start_helper_elevated()
+}
+
+/// Starts the task-only helper at app startup, never showing a UAC prompt.
+pub fn start_helper_task_only() -> bool {
+    helper_ready() || start_helper_from_task()
+}
+
+/// Custom power also needs Lenovo's elevated thermal mode. Try the existing
+/// task first, then fall back to the one-time UAC prompt.
+pub(crate) fn ensure_helper_for_power() -> bool {
+    start_helper() == "ok"
+}
+
+/// Is the elevated FPS helper alive right now? If the logon task exists, this
+/// also restarts it silently after an app restart.
 #[tauri::command]
-pub fn fps_helper_ready() -> bool {
-    helper_ready()
+pub async fn fps_helper_ready() -> bool {
+    tauri::async_runtime::spawn_blocking(|| helper_ready() || start_helper_task_only())
+        .await
+        .unwrap_or(false)
 }
 
 /// One-time helper start from the UI. Returns ok | cancelled | failed (relogin kept
@@ -465,12 +582,21 @@ pub async fn fps_unlock() -> &'static str {
 }
 
 /// Runs in the elevated process (`--fps-helper <main-pid>`), before Tauri starts.
-pub fn run_helper(main_pid: u32) -> ! {
+pub fn run_helper(mut main_pid: u32) -> ! {
     let Some(shared) = (unsafe { open_mapping(true) }) else { std::process::exit(2) };
+    if helper_alive(shared) {
+        // The logon task and a manual unlock can race; one helper is enough.
+        std::process::exit(0);
+    }
     HELPER_SHARED.store(shared, Ordering::Release);
+    if let Ok(exe) = std::env::current_exe() {
+        ensure_helper_task(&exe);
+    }
     unsafe {
         (*shared).helper_pid.store(GetCurrentProcessId(), Ordering::Relaxed);
-        (*shared).main_pid.store(main_pid, Ordering::Relaxed);
+        if main_pid != 0 {
+            (*shared).main_pid.store(main_pid, Ordering::Relaxed);
+        }
         (*shared).heartbeat.store(0, Ordering::Relaxed);
         (*shared).error.store(0, Ordering::Relaxed);
         (*shared).stop.store(0, Ordering::Relaxed);
@@ -479,6 +605,8 @@ pub fn run_helper(main_pid: u32) -> ! {
         (*shared).temp_at.store(0, Ordering::Relaxed);
         (*shared).lenovo_mode.store(0, Ordering::Relaxed);
         (*shared).lenovo_mode_at.store(0, Ordering::Relaxed);
+        (*shared).fan_cooling.store(0, Ordering::Relaxed);
+        (*shared).fan_cooling_at.store(0, Ordering::Relaxed);
         (*shared).power_req.store(0, Ordering::Relaxed);
         (*shared).power_ack.store(0, Ordering::Relaxed);
         for entry in (*shared).entries.iter() {
@@ -488,6 +616,23 @@ pub fn run_helper(main_pid: u32) -> ! {
             for count in &entry.counts {
                 count.store(0, Ordering::Relaxed);
             }
+        }
+    }
+
+    // A logon task can start before the notch. Wait for it to publish its pid,
+    // then attach the lifetime watcher to that process.
+    if main_pid == 0 {
+        let deadline = Instant::now() + Duration::from_secs(30);
+        loop {
+            main_pid = unsafe { (*shared).main_pid.load(Ordering::Relaxed) };
+            if main_pid != 0 {
+                break;
+            }
+            if Instant::now() >= deadline {
+                unsafe { (*shared).heartbeat.store(0, Ordering::Relaxed) };
+                std::process::exit(2);
+            }
+            thread::sleep(Duration::from_millis(250));
         }
     }
 
@@ -635,15 +780,33 @@ fn temp_loop(shared_addr: usize) {
         if request != 0 {
             let seq = request >> 8;
             let mode = (request & 0xFF) as u8;
-            let result = match &lenovo {
-                Some(l) if (1..=4).contains(&mode) && l.set_mode(mode).is_ok() => {
-                    unsafe {
-                        (*shared).lenovo_mode.store(mode as u32, Ordering::Relaxed);
-                        (*shared).lenovo_mode_at.store(GetTickCount64(), Ordering::Relaxed);
-                    }
-                    1
+            let (attempt, applied_mode, applied_cooling) = match &lenovo {
+                Some(l) if mode == 4 => {
+                    // Lenovo "Custom" = Performance fan curve + active cooling.
+                    let result = l.set_mode(3).and_then(|_| l.set_fan_cooling(true));
+                    (result, 3u32, 1u32)
                 }
-                _ => 2,
+                Some(l) if (1..=3).contains(&mode) => {
+                    let result = l.set_mode(mode);
+                    if result.is_ok() {
+                        let _ = l.set_fan_cooling(false);
+                    }
+                    let cooling = if result.is_ok() { l.fan_cooling().unwrap_or(0) as u32 } else { 0 };
+                    (result, mode as u32, cooling)
+                }
+                Some(_) => (Err("invalid mode".to_string()), 0, 0),
+                None => (Err("no lenovo provider".to_string()), 0, 0),
+            };
+            let result = if attempt.is_ok() {
+                unsafe {
+                    (*shared).lenovo_mode.store(applied_mode, Ordering::Relaxed);
+                    (*shared).lenovo_mode_at.store(GetTickCount64(), Ordering::Relaxed);
+                    (*shared).fan_cooling.store(applied_cooling, Ordering::Relaxed);
+                    (*shared).fan_cooling_at.store(GetTickCount64(), Ordering::Relaxed);
+                }
+                1
+            } else {
+                2
             };
             unsafe {
                 (*shared).power_ack.store((seq << 8) | result, Ordering::Relaxed);
@@ -654,9 +817,11 @@ fn temp_loop(shared_addr: usize) {
         if last_read.elapsed() > Duration::from_secs(2) {
             last_read = Instant::now();
             let mut mode = None;
+            let mut cooling = None;
             let (mut cpu, mut gpu) = match lenovo.as_ref() {
                 Some(l) => {
                     mode = l.mode();
+                    cooling = l.fan_cooling();
                     l.temps()
                 }
                 None => (None, None),
@@ -665,6 +830,12 @@ fn temp_loop(shared_addr: usize) {
                 unsafe {
                     (*shared).lenovo_mode.store(mode as u32, Ordering::Relaxed);
                     (*shared).lenovo_mode_at.store(GetTickCount64(), Ordering::Relaxed);
+                }
+            }
+            if let Some(cooling) = cooling {
+                unsafe {
+                    (*shared).fan_cooling.store(cooling as u32, Ordering::Relaxed);
+                    (*shared).fan_cooling_at.store(GetTickCount64(), Ordering::Relaxed);
                 }
             }
             if gpu.is_none() {

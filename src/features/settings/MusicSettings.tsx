@@ -78,10 +78,7 @@ export function MusicSettings() {
                 <span className="tabular w-11 shrink-0 text-right text-caption text-label-3">{a.lyricsTextSize.toFixed(1)} px</span>
               </div>
             </Row>
-            <Row
-              label={t("Pillenbreite")}
-              hint={t("Kompakt kürzt lange Zeilen, Normal passt sich dem Text an, Lang lässt mehr Luft")}
-            >
+            <Row label={t("Pillenbreite")}>
               <Segmented
                 id="lyrics-pill-width"
                 size="sm"

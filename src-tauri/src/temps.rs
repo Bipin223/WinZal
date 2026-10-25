@@ -91,28 +91,68 @@ impl Lenovo {
     /// Sets the Lenovo thermal mode (the purple Custom mode is 4). Returns an
     /// error when the model does not expose SetSmartFanMode.
     pub fn set_mode(&self, mode: u8) -> Result<(), String> {
-        let method = "SetSmartFanMode";
-        let instance = self.wmi.get_object(&self.path).map_err(|error| format!("{method} instance: {error:?}"))?;
-        let (input, _) = instance.get_method_in_out(method).map_err(|error| format!("{method} signature: {error:?}"))?;
-        let Some(signature) = input else { return Err(format!("{method} has no input")) };
+        self.set_method("SetSmartFanMode", mode as u32)
+    }
+
+    /// Lenovo active-cooling / fan boost switch.
+    pub fn fan_cooling(&self) -> Option<u8> {
+        self.call("GetFanCoolingStatus").and_then(|value| u8::try_from(value).ok())
+    }
+
+    pub fn set_fan_cooling(&self, on: bool) -> Result<(), String> {
+        self.set_method("SetFanCooling", on as u32)
+    }
+
+    fn set_method(&self, method: &str, value: u32) -> Result<(), String> {
+        let mut signature = None;
+        let mut why = String::new();
+        if let Ok(instance) = self.wmi.get_object(&self.path) {
+            match instance.get_method_in_out(method) {
+                Ok((Some(input), _)) => signature = Some(input),
+                Ok((None, _)) => why = "instance: no input signature".into(),
+                Err(error) => why = format!("instance: {error:?}"),
+            }
+        } else {
+            why = "instance object failed".into();
+        }
+        if signature.is_none() {
+            match self.wmi.get_object("\\\\.\\ROOT\\wmi:LENOVO_GAMEZONE_DATA") {
+                Ok(class) => match class.get_method_in_out(method) {
+                    Ok((Some(input), _)) => signature = Some(input),
+                    Ok((None, _)) => why.push_str("; class: no input signature"),
+                    Err(error) => why.push_str(&format!("; class: {error:?}")),
+                },
+                Err(error) => why.push_str(&format!("; class object: {error:?}")),
+            }
+        }
+        let diagnostics = || {
+            format!(
+                "support={:?} current={:?} thermal={:?} cooling={:?}",
+                self.call("IsSupportSmartFan"),
+                self.call("GetSmartFanMode"),
+                self.call("GetThermalMode"),
+                self.call("GetFanCoolingStatus")
+            )
+        };
+        let Some(signature) = signature else {
+            return Err(format!("{method} signature: {why}; {}", diagnostics()));
+        };
         let params = signature.spawn_instance().map_err(|error| format!("{method} params: {error:?}"))?;
-        // Models disagree on the CIM type of Data (uint8/uint32). Try the usual
-        // two; the provider ignores the extra field on the output.
-        let mut last = String::from("no input type accepted");
-        for value in [Variant::UI4(mode as u32), Variant::UI1(mode)] {
-            if let Err(error) = params.put_property("Data", value) {
+        let mut last = format!("no input type accepted ({why})");
+        for candidate in [Variant::UI4(value), Variant::UI1(value as u8)] {
+            if let Err(error) = params.put_property("Data", candidate) {
                 last = format!("{method} Data: {error:?}");
                 continue;
             }
             match self.wmi.exec_method(&self.path, method, Some(&params)) {
                 Ok(_) => {
-                    trace(&format!("{method} -> {mode}"));
+                    trace(&format!("{method} -> {value}"));
                     return Ok(());
                 }
                 Err(error) => last = format!("{method} exec: {error:?}"),
             }
         }
-        Err(last)
+        Err(format!("{last}; {}", diagnostics()))
     }
 
     fn call(&self, method: &str) -> Option<u32> {

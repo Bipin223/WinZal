@@ -653,6 +653,8 @@
   "Anheften": "Pin",
   "Appearance": "Appearance",
   "Alle außer Pins löschen": "Clear all except pins",
+  "Einmalige Windows-Abfrage – bleibt nach Neustarts aktiv, schaltet FPS, CPU-Temperatur und Lenovo-Lüfter frei": "One-time Windows prompt – stays unlocked after restarts and enables FPS, CPU temperature and Lenovo fan modes",
+  "Freigeschaltet – bleibt nach Neustarts aktiv": "Unlocked – stays active after restarts",
   "Schaltet Windows' Do Not Disturb. 3× schnell auf die Notch klicken schaltet ebenfalls um.": "Toggles Windows Do Not Disturb. Triple-click the notch to toggle it too.",
   "Ask AI": "Ask AI",
   "Audio sessions": "Audio sessions",

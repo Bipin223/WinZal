@@ -85,7 +85,6 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
       {mode === "notch" && (
         <>
       <Section label={t("Geschlossen")}>
-        <div className="mb-1.5 text-caption text-label-3">{t("The notch shows music, timers and more")}</div>
         <Choice
           label={t("Idle Appearance")}
           value={display.idleStyle}
@@ -97,9 +96,6 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
         />
       </Section>
       <Section label={line ? t("Line size") : t("Notch size")}>
-        <div className="mb-1.5 text-caption text-label-3">
-          {line ? t("Length and thickness of the line") : t("Length and width of the notch – including music and more")}
-        </div>
         <div className="mb-2 flex h-11 items-center justify-center rounded-[10px] bg-fill-2">
           <div
             className="rounded-full bg-black shadow-[0_6px_18px_rgb(0_0_0/0.35)] transition-[width,height] duration-200"

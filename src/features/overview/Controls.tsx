@@ -19,6 +19,7 @@ import {
   type IconWeight,
 } from "@phosphor-icons/react";
 import { springs } from "../../design/motion";
+import { setPromptMode } from "../../platform/native";
 import {
   systemControls,
   type BluetoothPeer,
@@ -303,11 +304,6 @@ function WifiTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
 
   const connect = async (network: WifiNetwork) => {
     if (connecting) return;
-    if (!network.known) {
-      onClose();
-      void systemControls.openUri("ms-availablenetworks:");
-      return;
-    }
     setConnecting(network.ssid);
     setError(null);
     busyRef.current = true;
@@ -316,8 +312,18 @@ function WifiTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
       setNet(await systemControls.wifiConnect(network.ssid));
       onClose();
     } catch (e) {
-      setError(String(e));
-      void loadNetworks();
+      const message = String(e);
+      if (message.includes("not saved")) {
+        // A new network needs Windows' password UI. Drop the notch below it so
+        // the Quick Settings network panel is actually usable, then restore.
+        onClose();
+        void setPromptMode(true);
+        void systemControls.openUri("ms-availablenetworks:");
+        window.setTimeout(() => void setPromptMode(false), 15_000);
+      } else {
+        setError(message);
+        void loadNetworks();
+      }
     } finally {
       busyRef.current = false;
       settle.current = Date.now() + 3000;
@@ -388,11 +394,6 @@ function WifiTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
             )}
           </div>
           {error && <div className="px-2.5 pt-1 pb-1 text-[9px] leading-[12px] text-[#ff9f0a]">{error}</div>}
-          {networks?.some((n) => !n.known) && (
-            <div className="border-t border-separator px-2.5 py-1.5 text-[9px] leading-[12px] text-label-4">
-              {t("New networks open Windows to enter the password.")}
-            </div>
-          )}
         </div>
       )}
     </div>

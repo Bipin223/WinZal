@@ -1,5 +1,35 @@
 [
   {
+    "version": "1.7.4",
+    "date": "2026-10-25",
+    "items": [
+      {
+        "de": "FPS einmal freischalten reicht: Die App legt eine Windows-Anmeldeaufgabe an, die den Helfer nach jedem Neustart ohne weitere UAC-Abfrage startet – FPS, Temperaturen und Lüftermodi bleiben freigeschaltet",
+        "en": "Unlock FPS once: the app creates a Windows logon task that starts the helper after every restart without another UAC prompt – FPS, temperatures and fan modes stay unlocked"
+      },
+      {
+        "de": "Custom-Power nutzt jetzt Lenovo's eigenen Custom-Lüftermodus (4) und startet den Helfer beim ersten Auswählen automatisch; bleibt der Modus auf dem Modell nicht verfügbar, wird Performance (3) verwendet",
+        "en": "Custom power now uses Lenovo's own custom fan mode (4) and starts the helper automatically the first time you choose it; if the model does not expose it, Performance (3) is used"
+      },
+      {
+        "de": "Die FPS-Zeile zeigt nach einem Neustart wieder „Freigeschaltet“, sobald die Anmeldeaufgabe den Helfer gestartet hat",
+        "en": "The FPS row shows “Unlocked” again after a restart once the logon task has started the helper"
+      },
+      {
+        "de": "WLAN verbindet gespeicherte Netze jetzt über dieselbe Windows-WLAN-API wie die Taskleiste; bei neuen Netzen gibt die Notch kurz den obersten Platz frei, damit der Windows-Passwortdialog bedienbar ist",
+        "en": "Wi-Fi now connects saved networks through the same Windows WLAN API as the taskbar; for new networks the notch briefly gives up its topmost slot so the Windows password dialog is usable"
+      },
+      {
+        "de": "Custom ist jetzt ein reiner Lenovo-Modus: Er nutzt Lenovo-Thermalmodus 4 auf dem stabilen Windows-Balanced-Plan; der alte WinZal-Power-Plan wird nicht mehr erstellt und vom System entfernt",
+        "en": "Custom is now a Lenovo-only mode: it uses Lenovo thermal mode 4 on the stable Windows Balanced plan; the old WinZal power plan is no longer created and is removed from the system"
+      },
+      {
+        "de": "Lange Hilfetexte in den Einstellungen entfernt (Discord-Entwickleranleitung, doppelte FPS-Hinweise, Update-/Speicher-Romane) für eine ruhigere, aufgeräumte Oberfläche",
+        "en": "Removed long helper texts from Settings (Discord developer instructions, duplicate FPS notes, update/save paragraphs) for a calmer, cleaner UI"
+      }
+    ]
+  },
+  {
     "version": "1.7.2",
     "date": "2026-10-25",
     "items": [

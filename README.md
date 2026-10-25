@@ -59,14 +59,14 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 
 - FPS, CPU, GPU and RAM in the closed notch. The overlay triggers only for **Genshin Impact** (global `GenshinImpact.exe` or CN `YuanShen.exe`) and any custom `.exe` you add — no other app list.
 - A separate circular equalizer satellite appears next to the FPS pill when music is playing.
-- FPS comes from a real ETW trace. Windows only allows that for administrators, so WinZal starts a tiny elevated helper with **one UAC prompt per run**. The app itself stays non-admin.
+- FPS comes from a real ETW trace. Windows only allows that for administrators, so WinZal starts a tiny elevated helper with **one UAC prompt once** (a Windows logon task keeps the helper ready after restarts). The app itself stays non-admin.
 - CPU/GPU temperatures come from Lenovo's GameZone sensors through the same helper when available.
 
 ### Power modes
 
 - **Saver**, **Balanced**, **Max** and a purple **Custom** mode in the Overview power tile.
 - On AC power all four are available; on battery only **Saver** and **Balanced** are shown.
-- **Max** is the former High mode. **Custom** is a WinZal power plan: a Balanced base with processor throttling open, 100 % maximum processor state and active cooling. It does not overwrite Lenovo Vantage's fan curve.
+- **Max** is the former High mode. **Custom** is a WinZal power plan: a Balanced base with processor throttling open, 100 % maximum processor state and active cooling, plus Lenovo's custom fan profile when the helper is running. It does not overwrite Lenovo Vantage's fan curve.
 - Lenovo fan modes are kept in sync when the elevated helper is running.
 - Right-click the tile for Windows power settings.
 
@@ -114,7 +114,7 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 
 ## Install
 
-1. Download **WinZal_1.7.2_x64-setup.exe** from the [latest release](https://github.com/Bipin223/WinZal/releases/latest).
+1. Download **WinZal_1.7.4_x64-setup.exe** from the [latest release](https://github.com/Bipin223/WinZal/releases/latest).
 2. Run it. It installs for your user only; Node, Rust or administrator rights are not needed.
 3. WinZal starts with Windows. The notch appears at the top of the screen and the tray icon keeps it reachable.
 
@@ -126,7 +126,7 @@ The installer is not code-signed, so Windows SmartScreen may warn on first launc
 
 WinZal **1.6.2 and newer** check a signed `latest.json` from GitHub shortly after startup and once a day. By default they also **install a found update automatically** after a short pause and restart. Turn either behavior off under **Settings → Updates**; a manual check always lets you read the changelog and click **Install** yourself.
 
-If you are on **1.6.1 or older**, install **1.7.2 manually once**; after that, future signed updates can install themselves. Settings and local data are preserved because the app ID stays the same.
+If you are on **1.6.1 or older**, install **1.7.4 manually once**; after that, future signed updates can install themselves. Settings and local data are preserved because the app ID stays the same.
 
 Updates are in-place upgrades: only the app files are replaced. Settings, vault, notes, to-dos and saved Ask chats live in the Windows app-data folder, outside the installation directory, and are never removed by an update.
 
