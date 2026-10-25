@@ -114,7 +114,7 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 
 ## Install
 
-1. Download **WinZal_1.7.1_x64-setup.exe** from the [latest release](https://github.com/Bipin223/WinZal/releases/latest).
+1. Download **WinZal_1.7.2_x64-setup.exe** from the [latest release](https://github.com/Bipin223/WinZal/releases/latest).
 2. Run it. It installs for your user only; Node, Rust or administrator rights are not needed.
 3. WinZal starts with Windows. The notch appears at the top of the screen and the tray icon keeps it reachable.
 
@@ -126,7 +126,7 @@ The installer is not code-signed, so Windows SmartScreen may warn on first launc
 
 WinZal **1.6.2 and newer** check a signed `latest.json` from GitHub shortly after startup and once a day. By default they also **install a found update automatically** after a short pause and restart. Turn either behavior off under **Settings → Updates**; a manual check always lets you read the changelog and click **Install** yourself.
 
-If you are on **1.6.1 or older**, install **1.7.1 manually once**; after that, future signed updates can install themselves. Settings and local data are preserved because the app ID stays the same.
+If you are on **1.6.1 or older**, install **1.7.2 manually once**; after that, future signed updates can install themselves. Settings and local data are preserved because the app ID stays the same.
 
 Updates are in-place upgrades: only the app files are replaced. Settings, vault, notes, to-dos and saved Ask chats live in the Windows app-data folder, outside the installation directory, and are never removed by an update.
 
@@ -148,7 +148,7 @@ Saved Ask conversations live in the app data folder as one small JSON file per c
 
 ## Settings and integrations
 
-Settings are grouped into **General**, **Notch**, **Appearance**, **Music**, **Tools**, **Timer**, **AI**, **Discord** and **About**. The Notch page holds idle style, live length/width sliders, visibility, DND, gaming/FPS and presentation mode; **Appearance** holds theme, island style, material, corners, accents, clock, interaction and performance. The Discord page holds Rich Presence and call setup. You can reorder or hide tools, choose the monitor, hide the notch in fullscreen apps, enable autostart and switch the language.
+Settings are grouped into **General**, **Notch**, **Appearance**, **Music**, **Tools**, **Timer**, **AI**, **Discord** and **About**. The Notch page holds idle style, live length/width sliders for the notch or line, visibility, DND, gaming/FPS and presentation mode; **Appearance** holds theme, island style, material, corners, accents, clock, interaction and performance. The Discord page holds Rich Presence and call setup. You can reorder or hide tools, choose the monitor, hide the notch in fullscreen apps, enable autostart and switch the language.
 
 **Discord.** Create an application at [discord.com/developers](https://discord.com/developers), copy its **Client ID** and **Client Secret** into **Settings → Discord**, add `http://localhost` as an OAuth2 redirect, then join a call. Discord asks for confirmation once.
 

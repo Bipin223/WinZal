@@ -15,6 +15,20 @@ export function setPinned(pinned: boolean) {
   if (isNative) void invoke("set_pinned", { pinned });
 }
 
+/**
+ * Drops the notch below the Windows Hello credential prompt while it is open,
+ * then restores it as always-on-top. Without this the always-on-top notch
+ * covers the Hello dialog and its input field.
+ */
+export async function setPromptMode(active: boolean): Promise<void> {
+  if (!isNative) return;
+  try {
+    await invoke("notch_prompt_mode", { active });
+  } catch {
+    // A failed z-order change must never block unlocking.
+  }
+}
+
 /** Cursor over the hit zone; comes from the Rust poll instead of DOM events. */
 export function onNativeHover(handler: (inside: boolean) => void): () => void {
   if (!isNative) return () => {};
@@ -61,11 +75,6 @@ export function trimMemory() {
   if (isNative) void invoke("trim_memory");
 }
 
-/** Focus mode: window fully click-through (Rust only counts clicks to exit). */
-export function setPassthrough(on: boolean) {
-  if (isNative) void invoke("set_passthrough", { on });
-}
-
 /** Mirrors focus mode into the tray menu's check item. */
 export function syncFocusTray(on: boolean) {
   if (isNative) void invoke("tray_focus", { on });
@@ -75,12 +84,5 @@ export function syncFocusTray(on: boolean) {
 export function onFocusFromTray(handler: (on: boolean) => void): () => void {
   if (!isNative) return () => {};
   const off = listen<boolean>("notch://focus-set", (e) => handler(e.payload));
-  return () => void off.then((f) => f());
-}
-
-/** Three quick clicks on the notch in focus mode. */
-export function onFocusExit(handler: () => void): () => void {
-  if (!isNative) return () => {};
-  const off = listen("notch://focus-exit", handler);
   return () => void off.then((f) => f());
 }

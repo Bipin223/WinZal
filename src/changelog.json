@@ -1,5 +1,31 @@
 [
   {
+    "version": "1.7.2",
+    "date": "2026-10-25",
+    "items": [
+      {
+        "de": "Line hat jetzt eigene Längen- und Dicken-Regler: beim Wechsel zwischen Notch und Line merkt sich jede Ansicht ihre eigene Größe, inklusive passender Vorschau",
+        "en": "Line now has its own length and thickness sliders: switching between Notch and Line remembers each look's own size, with a matching preview"
+      },
+      {
+        "de": "Windows Hello erscheint jetzt über der Notch und nimmt Eingaben an; die Notch gibt während des Hello-Dialogs kurz den Always-on-top-Platz frei",
+        "en": "Windows Hello now appears above the notch and accepts input; the notch temporarily gives up its always-on-top slot while the Hello dialog is open"
+      },
+      {
+        "de": "Custom-Power-Modus bleibt nach einem Neustart aktiv: Windows' Performance-Overlay setzt den eigenen Plan nicht mehr auf Balanced/Max zurück",
+        "en": "Custom power mode now stays active after a restart: Windows' performance overlay no longer resets the custom plan to Balanced/Max"
+      },
+      {
+        "de": "Nach einem Neustart startet nur noch die aktuelle Version; alte portable Kopien werden entfernt, Autostart und Startmenü zeigen auf die neue Installation",
+        "en": "After a restart only the current version starts; old portable copies are removed and autostart plus the Start menu point to the new installation"
+      },
+      {
+        "de": "Alte Fokus-Durchklick-Reste und ungenutzte Dateien entfernt; das Markenbild wurde verkleinert – weniger Ballast, ruhigere Animationen und ein kleineres Paket",
+        "en": "Removed the old focus click-through leftovers and unused files; the brand image is compressed – less baggage, calmer animations and a smaller package"
+      }
+    ]
+  },
+  {
     "version": "1.7.1",
     "date": "2026-10-25",
     "items": [

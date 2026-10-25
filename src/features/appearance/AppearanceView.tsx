@@ -25,6 +25,8 @@ const DEFAULTS: Appearance = {
   style: "dynamic",
   islandWidth: 0,
   islandHeight: 30,
+  lineWidth: 150,
+  lineThickness: 5,
   dragAnimation: true,
   clockWeather: true,
   musicInPill: true,
@@ -52,6 +54,7 @@ function fillWithAlpha(hex: string, alpha: number): string {
 export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | "notch" }) {
   const a = settings.use().appearance;
   const display = settings.use().display;
+  const line = display.idleStyle === "line";
   const themeLight = useThemeLight();
   const set = (patch: Partial<Appearance>) => updateSettings({ appearance: { ...a, ...patch } });
   const [restarting, setRestarting] = useState(false);
@@ -93,28 +96,44 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
           onChange={(idleStyle) => updateSettings((current) => ({ display: { ...current.display, idleStyle: idleStyle as "notch" | "line" } }))}
         />
       </Section>
-      <Section label={t("Notch size")}>
-        <div className="mb-1.5 text-caption text-label-3">{t("Length and width of the notch – including music and more")}</div>
+      <Section label={line ? t("Line size") : t("Notch size")}>
+        <div className="mb-1.5 text-caption text-label-3">
+          {line ? t("Length and thickness of the line") : t("Length and width of the notch – including music and more")}
+        </div>
         <div className="mb-2 flex h-11 items-center justify-center rounded-[10px] bg-fill-2">
           <div
             className="rounded-full bg-black shadow-[0_6px_18px_rgb(0_0_0/0.35)] transition-[width,height] duration-200"
-            style={{ width: 206 + a.islandWidth, height: a.islandHeight }}
+            style={{ width: line ? a.lineWidth : 206 + a.islandWidth, height: line ? a.lineThickness : a.islandHeight }}
           />
         </div>
         <div className="grid grid-cols-[3fr_2fr] gap-3">
           <div>
             <div className="flex items-center justify-between text-caption font-medium text-label-2">
               <span>{t("Length")}</span>
-              <span className="tabular text-label-3">{206 + a.islandWidth} px</span>
+              <span className="tabular text-label-3">{line ? a.lineWidth : 206 + a.islandWidth} px</span>
             </div>
-            <Slider label={t("Length")} value={206 + a.islandWidth} min={160} max={420} step={1} onChange={(length) => set({ islandWidth: length - 206 })} />
+            <Slider
+              label={t("Length")}
+              value={line ? a.lineWidth : 206 + a.islandWidth}
+              min={line ? 100 : 160}
+              max={420}
+              step={1}
+              onChange={(length) => (line ? set({ lineWidth: length }) : set({ islandWidth: length - 206 }))}
+            />
           </div>
           <div>
             <div className="flex items-center justify-between text-caption font-medium text-label-2">
               <span>{t("Width")}</span>
-              <span className="tabular text-label-3">{a.islandHeight} px</span>
+              <span className="tabular text-label-3">{line ? a.lineThickness : a.islandHeight} px</span>
             </div>
-            <Slider label={t("Width")} value={a.islandHeight} min={26} max={40} step={1} onChange={(islandHeight) => set({ islandHeight })} />
+            <Slider
+              label={t("Width")}
+              value={line ? a.lineThickness : a.islandHeight}
+              min={line ? 2 : 26}
+              max={line ? 12 : 40}
+              step={1}
+              onChange={(width) => (line ? set({ lineThickness: width }) : set({ islandHeight: width }))}
+            />
           </div>
         </div>
       </Section>
@@ -222,6 +241,8 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
               // Notch size lives on the Notch page; Appearance reset leaves it alone.
               islandWidth: a.islandWidth,
               islandHeight: a.islandHeight,
+              lineWidth: a.lineWidth,
+              lineThickness: a.lineThickness,
               gpuAcceleration: a.gpuAcceleration,
               // Music lives in its own settings page; Appearance reset leaves it alone.
               musicInPill: a.musicInPill,

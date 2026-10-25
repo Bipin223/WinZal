@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { createStore } from "../lib/store";
-import { isNative, keyboardFocus } from "./native";
+import { isNative, keyboardFocus, setPromptMode } from "./native";
 import { holdOpen } from "../notch/useNotchState";
 import { showcase } from "../dev/showcase-data";
 
@@ -85,6 +85,7 @@ export const vault = {
  */
 async function withHello<T>(action: () => Promise<T>): Promise<T> {
   holdOpen(true);
+  await setPromptMode(true);
   let released = false;
   const release = () => {
     if (released) return;
@@ -95,6 +96,7 @@ async function withHello<T>(action: () => Promise<T>): Promise<T> {
   try {
     return await action();
   } finally {
+    await setPromptMode(false);
     keyboardFocus(true);
     window.addEventListener("pointermove", release);
     window.setTimeout(release, 15_000);

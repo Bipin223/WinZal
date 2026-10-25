@@ -607,11 +607,22 @@ fn apply_energy(mode: &str) -> Result<Energy, String> {
     };
     if mode == "custom" {
         ensure_custom_plan()?;
+        // Windows re-applies the performance overlay to the Balanced plan. Set the
+        // overlay first and activate the custom plan last, otherwise Custom snaps
+        // straight back to Max/Balanced after a restart.
+        set_overlay(&PERFORMANCE)?;
+        std::thread::sleep(Duration::from_millis(120));
         activate_plan(&CUSTOM_PLAN)?;
+        if active_plan() != Some(CUSTOM_PLAN) {
+            activate_plan(&CUSTOM_PLAN)?;
+        }
+        if active_plan() != Some(CUSTOM_PLAN) {
+            return Err("custom-switch-failed".into());
+        }
     } else {
         activate_plan(&BALANCED_PLAN)?;
+        set_overlay(&overlay)?;
     }
-    set_overlay(&overlay)?;
 
     // Keep Lenovo's fan profile in sync when the helper is already running.
     // Custom uses Performance cooling as well; it does not pretend to be

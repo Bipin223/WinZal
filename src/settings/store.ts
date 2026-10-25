@@ -56,6 +56,10 @@ export interface Settings {
     islandWidth: number;
     /** Closed island height in px (music and live activities included). */
     islandHeight: number;
+    /** Length of the thin idle line in px. */
+    lineWidth: number;
+    /** Thickness of the thin idle line in px. */
+    lineThickness: number;
     /** Squeeze/bounce while dragging the notch. */
     dragAnimation: boolean;
     /** Show time + weather in the closed island. */
@@ -147,6 +151,8 @@ const defaults: Settings = {
     style: "dynamic",
     islandWidth: 0,
     islandHeight: 30,
+    lineWidth: 150,
+    lineThickness: 5,
     dragAnimation: true,
     clockWeather: true,
     musicInPill: true,
@@ -257,6 +263,16 @@ settings.set((s) => {
       islandHeight: (() => {
         const value = (s.appearance as { islandHeight?: number } | undefined)?.islandHeight;
         return typeof value === "number" ? Math.min(40, Math.max(26, Math.round(value))) : defaults.appearance.islandHeight;
+      })(),
+      // The line keeps its own length and thickness, so switching Notch/Line
+      // restores the size that belongs to that look.
+      lineWidth: (() => {
+        const value = (s.appearance as { lineWidth?: number } | undefined)?.lineWidth;
+        return typeof value === "number" ? Math.min(420, Math.max(100, Math.round(value))) : defaults.appearance.lineWidth;
+      })(),
+      lineThickness: (() => {
+        const value = (s.appearance as { lineThickness?: number } | undefined)?.lineThickness;
+        return typeof value === "number" ? Math.min(12, Math.max(2, Math.round(value))) : defaults.appearance.lineThickness;
       })(),
     },
     discord: { ...defaults.discord, ...s.discord },

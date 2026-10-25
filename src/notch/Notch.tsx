@@ -106,21 +106,26 @@ export function Notch() {
   // The idle line never passes through the small notch: line → slightly bigger line on
   // hover → open, and straight back to the line on close.
   const lineIdle = idleLine && !alert;
-  const baseShape =
-    lineIdle && status === "closed"
-      ? geometry.line
-      : lineIdle && status === "peek"
-        ? geometry.linePeek
-        : shapeFor(status, pillLive, size);
+  const lineView = lineIdle && status !== "open";
+  const linePeek = status === "peek";
+  const lineHeight = appearance.lineThickness + (linePeek ? 2 : 0);
+  const baseShape = lineView
+    ? {
+        ...(linePeek ? geometry.linePeek : geometry.line),
+        w: appearance.lineWidth + (linePeek ? 16 : 0),
+        h: lineHeight,
+        r: lineHeight / 2,
+      }
+    : shapeFor(status, pillLive, size);
   const shape =
-    appearance.corners === "squared" && baseShape.r > 5
+    !lineView && appearance.corners === "squared" && baseShape.r > 5
       ? { ...baseShape, r: Math.min(baseShape.r, 8), ear: Math.min(baseShape.ear, 3) }
       : baseShape;
-  const customIsland = baseShape !== geometry.line && baseShape !== geometry.linePeek && status !== "open";
+  const customIsland = !lineView && status !== "open";
   const sizedShape = customIsland
     ? { ...shape, w: Math.max(80, shape.w + appearance.islandWidth), h: appearance.islandHeight }
     : shape;
-  const tightHit = baseShape === geometry.line || baseShape === geometry.linePeek;
+  const tightHit = lineView;
   const finalShape = floating
     ? {
         ...sizedShape,

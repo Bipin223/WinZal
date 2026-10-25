@@ -112,7 +112,6 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             hit_test::set_hit_rect,
             hit_test::set_pinned,
-            hit_test::set_passthrough,
             media::media_get,
             lyrics::lyrics_get,
             media::media_control,
@@ -131,6 +130,7 @@ pub fn run() {
             clipboard::clipboard_preview,
             clipboard::clipboard_paste_files,
             keyboard_focus,
+            notch_prompt_mode,
             set_webview_render_mode,
             audio::audio_levels,
             ai::ai_chat,
@@ -271,6 +271,13 @@ fn keyboard_focus(focus: bool, window: WebviewWindow, state: State<'_, FocusStat
         let _ = unsafe { SetForegroundWindow(HWND(*previous as *mut _)) };
         *previous = 0;
     }
+}
+
+/// Windows Hello shows its own secure prompt. Drop the notch's always-on-top
+/// flag while the prompt is open, then restore it, so the Hello field is usable.
+#[tauri::command]
+fn notch_prompt_mode(active: bool, window: WebviewWindow) {
+    let _ = window.set_always_on_top(!active);
 }
 
 #[tauri::command]
