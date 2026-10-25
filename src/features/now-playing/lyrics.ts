@@ -20,6 +20,12 @@ export interface LyricsDisplay {
   status: "loading" | "lyrics" | "instrumental" | "music";
 }
 
+/**
+ * Switch the index this early so the old line's short exit finishes exactly on
+ * the timestamp. The line list still uses wait mode, so the two never overlap.
+ */
+const LYRIC_LEAD = 0.08;
+
 /** Parse once per track, even when the pill closes and reopens. */
 const parsed = new Map<string, Line[]>();
 const meta = new Map<string, { instrumental: boolean; hasLyrics: boolean }>();
@@ -91,25 +97,37 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, track]);
 
-  // While playing, four tiny checks per second; no per-frame React work.
+  // While playing, wake exactly at the next line boundary (and at least twice a
+  // second so seeking still works). This removes the old 250 ms quantization
+  // without adding a per-frame timer.
   useEffect(() => {
     if (!enabled || lines.length === 0) return;
-    const update = () => {
+    let alive = true;
+    let timer: number | undefined;
+    const schedule = () => {
+      if (!alive) return;
       const now = npRef.current;
       if (!now) return;
-      const next = indexAt(lines, livePosition(now) - offset);
+      const position = livePosition(now) - offset + LYRIC_LEAD;
+      const next = indexAt(lines, position);
       setIndex((prev) => (prev === next ? prev : next));
+      if (!now.isPlaying) return;
+      const upcoming = lines.find((line) => line.at > position);
+      // 12 ms early covers the timer + render; cap the idle recheck at 250 ms.
+      const wait = upcoming ? Math.max(0, (upcoming.at - position) * 1000 - 12) : 250;
+      timer = window.setTimeout(schedule, Math.min(250, wait));
     };
-    update();
-    if (!playing) return;
-    const id = window.setInterval(update, 250);
-    return () => window.clearInterval(id);
+    schedule();
+    return () => {
+      alive = false;
+      window.clearTimeout(timer);
+    };
   }, [enabled, lines, playing, offset]);
 
   // Paused: still follow a seek once, but do not keep a 250 ms timer alive.
   useEffect(() => {
     if (!enabled || playing || !np || lines.length === 0) return;
-    const next = indexAt(lines, livePosition(np) - offset);
+    const next = indexAt(lines, livePosition(np) - offset + LYRIC_LEAD);
     setIndex((prev) => (prev === next ? prev : next));
   }, [enabled, playing, lines, np?.position, offset]);
 

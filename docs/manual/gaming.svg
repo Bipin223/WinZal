@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="300" viewBox="0 0 900 300">
-  <rect width="900" height="300" fill="#0b0b0c"/>
-  <text x="450" y="26" text-anchor="middle" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" letter-spacing="2.4">GAMING OVERLAY · TEXT / BARS / GRAPH</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="220" viewBox="0 0 900 220">
+  <rect width="900" height="220" fill="#0b0b0c"/>
+  <text x="450" y="26" text-anchor="middle" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" letter-spacing="2.4">GAMING OVERLAY · TEXT / BARS</text>
 
   <text x="42" y="76" fill="#5f5f65" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" letter-spacing="1.6">TEXT</text>
   <rect x="130" y="52" width="620" height="40" rx="20" fill="#000" stroke="#242426"/>
@@ -16,26 +16,22 @@
   <text x="670" y="78" fill="#f2f2f4" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="12" font-weight="700">69%</text>
 
   <text x="42" y="156" fill="#5f5f65" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" letter-spacing="1.6">BARS</text>
-  <rect x="130" y="132" width="530" height="40" rx="20" fill="#000" stroke="#242426"/>
-  <text x="160" y="158" fill="#f2f2f4" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="12" font-weight="700">64</text>
+  <rect x="130" y="132" width="560" height="40" rx="20" fill="#000" stroke="#242426"/>
+  <text x="160" y="158" fill="#f2f2f4" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="12" font-weight="700">54</text>
   <text x="182" y="157" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">FPS</text>
   <text x="222" y="157" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">CPU</text>
-  <rect x="252" y="151" width="46" height="3" rx="1.5" fill="#242426"/><rect x="252" y="151" width="17" height="3" rx="1.5" fill="#30d158"/>
-  <text x="390" y="157" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">GPU</text>
-  <rect x="420" y="151" width="46" height="3" rx="1.5" fill="#242426"/><rect x="420" y="151" width="22" height="3" rx="1.5" fill="#ff9f0a"/>
-  <text x="540" y="157" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">RAM</text>
-  <rect x="570" y="151" width="46" height="3" rx="1.5" fill="#242426"/><rect x="570" y="151" width="32" height="3" rx="1.5" fill="#f2f2f4"/>
+  <text x="252" y="157" fill="#f2f2f4" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" font-weight="700">35%</text>
 
-  <text x="42" y="236" fill="#5f5f65" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" letter-spacing="1.6">GRAPH</text>
-  <rect x="130" y="212" width="530" height="40" rx="20" fill="#000" stroke="#242426"/>
-  <text x="160" y="238" fill="#f2f2f4" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="12" font-weight="700">64</text>
-  <text x="182" y="237" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">FPS</text>
-  <text x="222" y="237" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">CPU</text>
-  <polyline points="252,238 258,236 264,237 270,232 276,234 284,229" fill="none" stroke="#30d158" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="390" y="237" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">GPU</text>
-  <polyline points="420,238 426,235 432,236 438,231 444,233 452,228" fill="none" stroke="#ff9f0a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="540" y="237" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">RAM</text>
-  <polyline points="570,238 576,236 582,237 588,232 594,234 602,229" fill="none" stroke="#f2f2f4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="320" y="140" width="64" height="3" rx="1.5" fill="#242426"/><rect x="320" y="140" width="22" height="3" rx="1.5" fill="#f2f2f4"/>
+  <rect x="320" y="146" width="64" height="3" rx="1.5" fill="#242426"/><rect x="320" y="146" width="64" height="3" rx="1.5" fill="#ff453a"/>
+  <rect x="320" y="152" width="64" height="3" rx="1.5" fill="#242426"/><rect x="320" y="152" width="60" height="3" rx="1.5" fill="#ff453a"/>
 
-  <text x="450" y="284" text-anchor="middle" fill="#5f5f65" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10">remove stats → the pill shrinks to fit</text>
+  <text x="440" y="157" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">GPU</text>
+  <text x="470" y="157" fill="#ff453a" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" font-weight="700">100%</text>
+  <text x="512" y="157" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9">· 86°</text>
+  <path d="M556 148 L556 160" stroke="#2c2c2e" stroke-width="1"/>
+  <text x="576" y="157" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">RAM</text>
+  <text x="606" y="157" fill="#ff453a" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" font-weight="700">95%</text>
+
+  <text x="450" y="204" text-anchor="middle" fill="#5f5f65" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10">the central meter and text share the measured notch width</text>
 </svg>

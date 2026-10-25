@@ -2,7 +2,8 @@ import { useLayoutEffect, useState } from "react";
 import { settings, updateSettings, type Settings } from "../../settings/store";
 import { t } from "../../i18n";
 import { LyricAnimationPreview } from "../now-playing/LyricAnimationPreview";
-import { LyricVisualizer, type LyricVisualizerStyle } from "../now-playing/LyricVisualizer";
+import { LyricEqualizer, LyricGlow } from "../now-playing/LyricVisualizer";
+import { Equalizer } from "../now-playing/Equalizer";
 import { SelectedDot } from "../../ui/SelectedDot";
 import { Group, Row, Segmented, Slider, Switch } from "../../ui/controls";
 import { ACCENTS, Swatches } from "../appearance/AppearanceView";
@@ -16,19 +17,34 @@ export function MusicSettings() {
   const a = settings.use().appearance;
   const set = (patch: Partial<typeof a>) => updateSettings((cur) => ({ appearance: { ...cur.appearance, ...patch } }));
   const [hoverAnim, setHoverAnim] = useState<string | null>(null);
-  const [hoverViz, setHoverViz] = useState<string | null>(null);
-  const visualizers: { value: LyricVisualizerStyle; label: string }[] = [
-    { value: "wave", label: t("Welle") },
-    { value: "pulse", label: t("Puls") },
-    { value: "dots", label: t("Punkte") },
-    { value: "ripple", label: t("Wasserring") },
-    { value: "aurora", label: t("Aurora") },
+  const equalizers: { value: Settings["appearance"]["lyricsVisualizerStyle"]; label: string }[] = [
+    { value: "bars", label: "Bars" },
+    { value: "mirror", label: "Mirror" },
+    { value: "dots", label: "LED dots" },
+    { value: "ticks", label: "Ticks" },
+    { value: "capsule", label: "Spring capsules" },
+  ];
+  const glows: { value: Settings["appearance"]["lyricsGlowStyle"]; label: string }[] = [
+    { value: "none", label: t("None") },
+    { value: "bloom", label: "Bloom" },
+    { value: "aurora", label: "Aurora" },
+    { value: "rings", label: "Rings" },
+    { value: "spectrum", label: "Spectrum haze" },
+    { value: "liquid", label: "Liquid" },
+    { value: "halo", label: "Halo" },
   ];
   const animations: { value: Settings["appearance"]["lyricsAnimation"]; label: string }[] = [
-    { value: "apple", label: t("Apple Music") },
     { value: "word", label: t("Word by Word") },
-    { value: "kinetic", label: t("Kinetic") },
-    { value: "reveal", label: t("Reveal") },
+    { value: "fill", label: "Word fill sweep" },
+    { value: "focus", label: "Word focus" },
+    { value: "glitch", label: "Glitch scramble" },
+    { value: "liquid", label: "Liquid fill" },
+    { value: "irid", label: "Iridescent" },
+    { value: "stripe", label: "Magic stripe" },
+    { value: "cascade", label: "Spring cascade" },
+    { value: "dissolve", label: "Depth dissolve" },
+    { value: "dots", label: "Interlude dots" },
+    { value: "duet", label: "Duet split" },
   ];
 
   return (
@@ -160,26 +176,56 @@ export function MusicSettings() {
             </Row>
             {a.lyricsVisualizer && (
               <div className="px-3 pb-3">
-                <div className="mb-1.5 text-footnote text-label-2">{t("Stil")}</div>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {visualizers.map((visualizer) => (
+                <div className="mb-1.5 text-footnote text-label-2">Equalizer</div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {equalizers.map((equalizer) => (
                     <button
-                      key={visualizer.value}
+                      key={equalizer.value}
                       type="button"
-                      onClick={() => set({ lyricsVisualizerStyle: visualizer.value })}
-                      onPointerEnter={() => setHoverViz(visualizer.value)}
-                      onPointerLeave={() => setHoverViz((v) => (v === visualizer.value ? null : v))}
+                      onClick={() => set({ lyricsVisualizerStyle: equalizer.value })}
                       className={`relative overflow-hidden rounded-[10px] border p-1 transition-colors ${
-                        a.lyricsVisualizerStyle === visualizer.value
+                        a.lyricsVisualizerStyle === equalizer.value
                           ? "border-label bg-fill-2"
                           : "border-separator bg-fill-1 hover:bg-fill-2"
                       }`}
                     >
-                      <div className="h-8 overflow-hidden rounded-[7px] bg-black">
-                        <LyricVisualizer style={visualizer.value} playing={hoverViz === visualizer.value} preview />
+                      <div className="flex h-8 items-center justify-center overflow-hidden rounded-[7px] bg-black">
+                        {equalizer.value === "bars" ? (
+                          <Equalizer playing height={16} />
+                        ) : (
+                          <LyricEqualizer style={equalizer.value} playing preview />
+                        )}
                       </div>
-                      <div className="mt-1 text-center text-[9px] font-medium text-label">{visualizer.label}</div>
-                      {a.lyricsVisualizerStyle === visualizer.value && (
+                      <div className="mt-1 text-center text-[9px] font-medium text-label">{equalizer.label}</div>
+                      {a.lyricsVisualizerStyle === equalizer.value && (
+                        <SelectedDot className="absolute top-1.5 right-1.5" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-2 mb-1.5 text-footnote text-label-2">Behind glow</div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {glows.map((glow) => (
+                    <button
+                      key={glow.value}
+                      type="button"
+                      onClick={() => set({ lyricsGlowStyle: glow.value })}
+                      className={`relative overflow-hidden rounded-[10px] border p-1 transition-colors ${
+                        a.lyricsGlowStyle === glow.value
+                          ? "border-label bg-fill-2"
+                          : "border-separator bg-fill-1 hover:bg-fill-2"
+                      }`}
+                    >
+                      <div className="relative h-7 overflow-hidden rounded-[7px] bg-black">
+                        {glow.value !== "none" && (
+                          <LyricGlow style={glow.value} playing />
+                        )}
+                        <span className="absolute inset-0 flex items-center justify-center text-[8px] font-semibold text-white/80">
+                          {glow.value === "none" ? t("None") : ""}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-center text-[8px] font-medium text-label">{glow.label}</div>
+                      {a.lyricsGlowStyle === glow.value && (
                         <SelectedDot className="absolute top-1.5 right-1.5" />
                       )}
                     </button>
@@ -242,15 +288,16 @@ function LyricsPillPreview() {
     setTextWidth(ctx.measureText("When you light the candle").width);
   }, [a.lyricsTextSize, a.lyricsTextWeight]);
   const width = a.lyricsPillAuto
-    ? Math.max(a.lyricsPillMinWidth, Math.min(a.lyricsPillLength, textWidth + 78))
+    ? Math.max(a.lyricsPillMinWidth, Math.min(a.lyricsPillLength, textWidth + (a.lyricsVisualizer ? 108 : 78)))
     : a.lyricsPillLength;
   const scale = Math.min(1, 430 / Math.max(1, width));
   return (
     <div className="flex h-16 items-center justify-center overflow-hidden rounded-[10px] bg-fill-2 px-2">
       <div
-        className="flex origin-center items-center justify-between gap-2 overflow-hidden rounded-full bg-black px-3"
+        className="relative flex origin-center items-center justify-between gap-2 overflow-hidden rounded-full bg-black px-3"
         style={{ width, height: a.lyricsPillHeight, transform: `scale(${scale})` }}
       >
+        {a.lyricsVisualizer && <LyricGlow style={a.lyricsGlowStyle} playing />}
         <span className="size-5 shrink-0 rounded-[5px] bg-white/15" />
         <span
           className="relative z-10 truncate whitespace-nowrap text-white"
@@ -258,11 +305,12 @@ function LyricsPillPreview() {
         >
           When you light the candle
         </span>
-        <span className="flex shrink-0 items-end gap-[2px]">
-          {[5, 9, 7].map((h, i) => (
-            <span key={i} className="w-[2px] rounded-full bg-white/60" style={{ height: h }} />
+        {a.lyricsVisualizer &&
+          (a.lyricsVisualizerStyle === "bars" ? (
+            <Equalizer playing height={14} />
+          ) : (
+            <LyricEqualizer style={a.lyricsVisualizerStyle} playing preview />
           ))}
-        </span>
       </div>
     </div>
   );

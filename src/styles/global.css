@@ -116,152 +116,18 @@ body {
   }
 }
 
-/* Lyrics pill visualizers. All CSS-only; no per-frame JavaScript. */
-.lyric-wave {
-  animation: lyric-wave-flow 3.6s linear infinite;
-}
-@keyframes lyric-wave-flow {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-.lyric-pulse {
-  animation: lyric-pulse 2.6s ease-in-out infinite;
-  transform-origin: 50% 100%;
-}
-@keyframes lyric-pulse {
-  0%,
-  100% {
-    transform: scaleY(0.45);
-    opacity: 0.18;
-  }
-  50% {
-    transform: scaleY(1);
-    opacity: 0.42;
-  }
-}
-
-.lyric-dot {
-  opacity: 0.3;
-  animation: lyric-dot 2.8s ease-in-out infinite;
-}
-@keyframes lyric-dot {
-  0%,
-  100% {
-    transform: translateY(0);
-    opacity: 0.22;
-  }
-  50% {
-    transform: translateY(-4px);
-    opacity: 0.7;
-  }
-}
-
-.lyric-ripple {
-  position: absolute;
-  bottom: -2px;
-  left: 50%;
-  width: 26px;
-  height: 8px;
-  margin-left: -13px;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  opacity: 0;
-  animation: lyric-ripple 3.2s ease-out infinite;
-}
-@keyframes lyric-ripple {
-  0% {
-    transform: scale(0.3);
-    opacity: 0.45;
-  }
-  80%,
-  100% {
-    transform: scale(2.8);
-    opacity: 0;
-  }
-}
-
-.lyric-aurora {
-  opacity: 0.3;
-  animation: lyric-aurora 6s ease-in-out infinite alternate;
-}
-.lyric-aurora-delay {
-  opacity: 0.2;
-  animation-delay: -3s;
-}
-@keyframes lyric-aurora {
-  from {
-    transform: translateX(-6%) scaleY(0.8);
-    opacity: 0.22;
-  }
-  to {
-    transform: translateX(6%) scaleY(1.1);
-    opacity: 0.42;
-  }
-}
-
-.lyric-paused * {
-  animation-play-state: paused !important;
-}
-
 /* Settings previews for the lyric transition picker. */
-.anim-preview,
 .anim-word {
   display: inline-block;
   animation-duration: 3.6s;
   animation-iteration-count: infinite;
   animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
 }
-.anim-apple {
-  animation-name: anim-apple;
-}
-.anim-reveal {
-  animation-name: anim-reveal;
-}
 .anim-word {
   animation-name: anim-word;
 }
-.anim-kinetic {
-  animation-name: anim-kinetic;
-}
-@keyframes anim-apple {
-  0%,
-  6% {
-    opacity: 0;
-    transform: translateY(10px) scale(0.94);
-  }
-  18%,
-  76% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  88%,
-  100% {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.97);
-  }
-}
-@keyframes anim-reveal {
-  0%,
-  6% {
-    opacity: 0;
-    clip-path: inset(0 100% 0 0);
-  }
-  18%,
-  76% {
-    opacity: 1;
-    clip-path: inset(0 0 0 0);
-  }
-  88%,
-  100% {
-    opacity: 0;
-    clip-path: inset(0 0 0 100%);
-  }
-}
+
+
 @keyframes anim-word {
   0%,
   8% {
@@ -282,39 +148,165 @@ body {
     transform: translateY(-2px);
   }
 }
-@keyframes anim-kinetic {
-  0%,
-  6% {
-    opacity: 0;
-    filter: blur(7px);
-    transform: perspective(220px) rotateX(-70deg) translateY(8px) scale(0.9);
-  }
-  22%,
-  74% {
-    opacity: 1;
-    filter: blur(0);
-    transform: perspective(220px) rotateX(0deg) translateY(0) scale(1);
-  }
-  88%,
-  100% {
-    opacity: 0;
-    filter: blur(5px);
-    transform: perspective(220px) rotateX(45deg) translateY(-6px) scale(0.96);
-  }
+
+
+/* ------------------------------------------------------------------ */
+/* Lyric lab: six equalizers, six glows and a small interlude dot row. */
+.lyr-eq {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 40px;
+  height: 20px;
+  flex: 0 0 auto;
+  overflow: hidden;
 }
+.lyr-eq i {
+  display: block;
+  width: 2.5px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--accent);
+  transform-origin: bottom;
+  animation: lyr-eq-bar 1.2s ease-in-out infinite;
+}
+.lyr-eq-preview {
+  width: 54px;
+  height: 24px;
+}
+.lyr-eq-mirror i:nth-child(1),
+.lyr-eq-mirror i:nth-child(5) { width: 3px; }
+.lyr-eq-mirror i:nth-child(2),
+.lyr-eq-mirror i:nth-child(4) { width: 3px; }
+.lyr-eq-ticks { gap: 1.5px; }
+.lyr-eq-ticks i { width: 1.5px; border-radius: 1px; }
+.lyr-eq-capsule { gap: 3px; }
+.lyr-eq-capsule i { width: 5px; border-radius: 999px; animation: lyr-eq-capsule 1.35s cubic-bezier(.34,1.56,.64,1) infinite; }
+.lyr-eq-dots { gap: 4px; }
+.lyr-eq-col { display: flex; flex-direction: column-reverse; gap: 2px; }
+.lyr-eq-dots i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+  animation: lyr-eq-dot 1.15s ease-in-out infinite;
+}
+.lyr-eq-dots i:nth-child(2) { background: var(--accent); }
+.lyr-paused, .lyr-paused * { animation-play-state: paused !important; }
+
+@keyframes lyr-eq-bar {
+  0%, 100% { transform: scaleY(.35); opacity: .55; }
+  45% { transform: scaleY(1); opacity: 1; }
+}
+@keyframes lyr-eq-capsule {
+  0%, 100% { transform: scaleY(.4); }
+  50% { transform: scaleY(1); }
+}
+@keyframes lyr-eq-dot {
+  0%, 100% { opacity: .18; transform: scale(.7); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+/* behind glows */
+.lyr-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+}
+.lyr-glow i { position: absolute; display: block; }
+.lyr-glow-bloom i {
+  inset: 8% 4%;
+  background:
+    radial-gradient(55% 120% at 28% 50%, color-mix(in srgb, var(--accent) 55%, transparent), transparent 70%),
+    radial-gradient(50% 110% at 74% 50%, rgba(255, 178, 96, .4), transparent 72%);
+  filter: blur(18px);
+  animation: lyr-glow-breathe 3.4s ease-in-out infinite;
+}
+.lyr-glow-aurora i {
+  width: 58%; height: 150%; left: 2%; top: -20%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+  filter: blur(24px);
+  mix-blend-mode: screen;
+  animation: lyr-glow-drift-a 9s ease-in-out infinite alternate;
+}
+.lyr-glow-aurora i:nth-child(2) {
+  width: 52%; height: 140%; left: auto; right: 2%; top: -15%;
+  background: rgba(255, 170, 90, .32);
+  animation-name: lyr-glow-drift-b;
+  animation-duration: 12s;
+}
+.lyr-glow-rings i {
+  left: 50%; top: 50%; width: 150px; height: 64px; margin: -32px 0 0 -75px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  animation: lyr-glow-ring 3.6s ease-out infinite;
+}
+.lyr-glow-rings i:nth-child(2) { animation-delay: 1.8s; border-color: rgba(255, 196, 107, .4); }
+.lyr-glow-spectrum { display: flex; align-items: flex-end; justify-content: center; gap: 7px; padding: 0 6%; filter: blur(12px); opacity: .55; }
+.lyr-glow-spectrum i {
+  position: relative;
+  width: 9px; height: 70%;
+  border-radius: 6px;
+  transform-origin: bottom;
+  background: linear-gradient(180deg, #ffc46b, var(--accent));
+  animation: lyr-glow-spectrum 1.7s ease-in-out infinite;
+}
+.lyr-glow-liquid i {
+  inset: 6% 4%;
+  border-radius: 45% 55% 60% 40% / 52% 46% 54% 48%;
+  background: conic-gradient(from 0deg, color-mix(in srgb, var(--accent) 55%, transparent), rgba(255, 180, 100, .32), color-mix(in srgb, var(--accent) 55%, transparent));
+  filter: blur(22px);
+  opacity: .75;
+  animation: lyr-glow-morph 14s ease-in-out infinite;
+}
+.lyr-glow-halo i {
+  left: 8%; right: 8%; top: 20%; height: 60%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 60%, transparent), transparent 70%);
+  filter: blur(18px);
+  opacity: .5;
+  animation: lyr-glow-halo 7s ease-in-out infinite;
+}
+.lyr-glow-halo i:nth-child(2) {
+  background: radial-gradient(closest-side, rgba(255, 180, 100, .5), transparent 70%);
+  animation-delay: -3.5s;
+}
+
+@keyframes lyr-glow-breathe { 0%,100% { opacity:.55; transform:scaleX(.95); } 50% { opacity:1; transform:scaleX(1.05); } }
+@keyframes lyr-glow-drift-a { 0% { transform:translate(-8%,4%) scale(.9); } 100% { transform:translate(12%,-6%) scale(1.15); } }
+@keyframes lyr-glow-drift-b { 0% { transform:translate(10%,-4%) scale(1.1); } 100% { transform:translate(-10%,6%) scale(.9); } }
+@keyframes lyr-glow-ring { 0% { transform:scale(.55); opacity:0; } 18% { opacity:.55; } 100% { transform:scale(3.1); opacity:0; } }
+@keyframes lyr-glow-spectrum { 0%,100% { transform:scaleY(.22); } 50% { transform:scaleY(1); } }
+@keyframes lyr-glow-morph {
+  0%,100% { border-radius:45% 55% 60% 40%/52% 46% 54% 48%; transform:rotate(0) scale(1); }
+  50% { border-radius:58% 42% 44% 56%/45% 58% 42% 55%; transform:rotate(8deg) scale(1.06); }
+}
+@keyframes lyr-glow-halo { 0%,100% { transform:translateX(-12%) scale(.92); } 50% { transform:translateX(12%) scale(1.08); } }
+
+.lyr-dots { display: inline-flex; align-items: center; gap: 3px; }
+.lyr-dots i {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+  animation: lyr-dot-pulse 1.5s ease-in-out infinite;
+}
+.lyr-dots i:nth-child(2) { animation-delay: .18s; }
+.lyr-dots i:nth-child(3) { animation-delay: .36s; }
+@keyframes lyr-dot-pulse { 0%,100% { opacity:.2; transform:scale(.65); } 45% { opacity:1; transform:scale(1); } }
 
 @media (prefers-reduced-motion: reduce) {
   .privacy-dot[data-pulse],
   .rec-blink,
   .trend-scroll,
-  .lyric-wave,
-  .lyric-pulse,
-  .lyric-dot,
-  .lyric-ripple,
-  .lyric-aurora,
-  .anim-preview,
-  .anim-word,
-  .anim-kinetic {
+  .lyr-eq i,
+  .lyr-glow i,
+  .lyr-dots i,
+  .anim-word {
     animation: none;
   }
 }
@@ -324,13 +316,10 @@ body {
   transition-duration: 0.12s !important;
   animation-duration: 0.3s !important;
 }
-:root[data-motion="reduced"] .lyric-wave,
-:root[data-motion="reduced"] .lyric-pulse,
-:root[data-motion="reduced"] .lyric-ripple,
-:root[data-motion="reduced"] .lyric-aurora,
-:root[data-motion="reduced"] .anim-preview,
-:root[data-motion="reduced"] .anim-word,
-:root[data-motion="reduced"] .anim-kinetic {
+:root[data-motion="reduced"] .lyr-eq i,
+:root[data-motion="reduced"] .lyr-glow i,
+:root[data-motion="reduced"] .lyr-dots i,
+:root[data-motion="reduced"] .anim-word {
   animation-duration: 1.4s !important;
 }
 :root[data-motion="off"] *,

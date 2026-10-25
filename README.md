@@ -46,7 +46,7 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 - **Five clock faces** — **Stacked**, **Split**, **Scatter**, **Classic** and **Word**. Pick one visually in **Settings → Notch → Clock faces**; **Classic** stays the default. The expanded Overview and the closed pill both use the selected face, with a compact version in the closed pill.
 - **Clock controls**: continuous closed-pill text size (10–24 px), weight, emphasized hour and a tinted first digit (red by default).
 - **Live music**: cover, title and a real audio-driven equalizer in the closed pill. The first app that starts playing keeps the pill; if it pauses or stops, the next playing app takes over automatically.
-- **Synced lyrics** from LRCLIB, optional. One line or current + next line, **Apple Music (default) / Word by word / Reveal** animations, and a continuous **10–15 px text-size slider**, weight, minimum width, **pill length** and **auto width** (on by default). The pill grows with the line and shrinks back, never below the minimum or beyond the length; instrumental tracks say **Instrumental**, tracks without synced lyrics say **Music**. The pill uses an ease-in-out curve when it grows or shrinks. Choose **Wave**, **Pulse**, **Dots**, **Ripple** or **Aurora** as a visualizer, each with a live preview in Settings → Music; Wave is the default and every style follows the cover accent.
+- **Synced lyrics** from LRCLIB, optional. One line or current + next line, **Word by Word** plus ten new animations: **Word fill sweep, Word focus, Glitch scramble, Liquid fill, Iridescent, Magic stripe, Spring cascade, Depth dissolve, Interlude dots, Duet split**, and a continuous **10–15 px text-size slider**, weight, minimum width, **pill length** and **auto width** (on by default). The pill grows with the line and shrinks back, never below the minimum or beyond the length; instrumental tracks say **Instrumental**, tracks without synced lyrics say **Music**. The pill uses an ease-in-out curve when it grows or shrinks. Choose one of five equalizers (**Bars, Mirror, LED dots, Ticks, Spring capsules**) and one of six behind-glows (**Bloom, Aurora, Rings, Spectrum haze, Liquid, Halo**) in Settings → Music; both follow the Equalization Accent.
 - **Appearance**: **Dark**, **Light**, **System** or **Custom** theme. Custom has a full in-app HSV color picker with HEX/RGB fields; text, menus and icons switch between dark and light automatically. Island style, material, corners, clock weight and any color for the equalization or clock accent.
 - **Notch size**: live **Length** and **Width** sliders for the closed island, including music and live activities, with a black-pill preview that updates while you drag.
 - **Privacy dots** for microphone and camera (green) and screen recording (red), plus a recording badge.
@@ -66,7 +66,7 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 
 - FPS, CPU, GPU and RAM in the closed notch. The overlay triggers only for **Genshin Impact** (global `GenshinImpact.exe` or CN `YuanShen.exe`) and any custom `.exe` you add — no other app list.
 - A separate circular equalizer satellite appears next to the FPS pill when music is playing.
-- **Text, Bars or Graph** stats. Bars and Graph drop the percentage text to keep the pill compact; Graph auto-scales the last samples so load changes read as a pulse. An optional **divider line** separates the left and right groups, and the pill width follows the real row instead of a fixed gap.
+- **Text or Bars** stats. Bars adds a central stacked CPU/GPU/RAM meter while the text values stay at the sides. An optional **divider line** separates the groups, and the pill width follows the real row instead of a fixed gap.
 - FPS comes from a real ETW trace. Windows only allows that for administrators, so WinZal starts a tiny elevated helper with **one UAC prompt once** (a Windows logon task keeps the helper ready after restarts). The app itself stays non-admin.
 - CPU/GPU temperatures come from Lenovo's GameZone sensors through the same helper when available.
 
@@ -152,7 +152,7 @@ Saved Ask conversations live in the app data folder as one small JSON file per c
 | Do not disturb | Triple-click the notch, or use the moon button, Settings or the tray menu |
 | Add files | Drag files onto the notch, or paste with **Ctrl + V** |
 | Power mode | Click the battery tile in Overview, or right-click it for Windows settings |
-| Lyrics | **Settings → Music** for layout, the 10-15 px text-size slider, **auto width** (default on) and pill height, one of three previewed animations (Apple Music default, Word by word, Reveal) and one of five previewed visualizer styles |
+| Lyrics | **Settings → Music** for layout, the 10-15 px text-size slider, **auto width** (default on) and pill height, Word by Word plus ten lab animations, five equalizer styles and six behind-glows |
 | Clock face | **Settings → Notch → Clock faces** |
 
 ## Settings and integrations

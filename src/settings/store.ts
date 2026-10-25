@@ -15,6 +15,22 @@ export interface AskProviderConfig {
 export type TypeRole = "caption" | "footnote" | "body" | "title" | "display";
 export type TypeAxis = { size: number; weight: number };
 
+/** Lyric entrance effects; `word` is the retained original. */
+export type LyricAnimation =
+  | "word"
+  | "fill"
+  | "focus"
+  | "glitch"
+  | "liquid"
+  | "irid"
+  | "stripe"
+  | "cascade"
+  | "dissolve"
+  | "dots"
+  | "duet";
+export type LyricEqualizerStyle = "bars" | "mirror" | "dots" | "ticks" | "capsule";
+export type LyricGlowStyle = "none" | "bloom" | "aurora" | "rings" | "spectrum" | "liquid" | "halo";
+
 export const DEFAULT_TYPOGRAPHY: Record<TypeRole, TypeAxis> = {
   caption: { size: 0, weight: 0 },
   footnote: { size: 0, weight: 0 },
@@ -72,7 +88,7 @@ export interface Settings {
     showGpu: boolean;
     showRam: boolean;
     /** How CPU/GPU/RAM values are drawn. */
-    style: "text" | "bars" | "graph";
+    style: "text" | "bars";
     /** Thin separator between the left (FPS/CPU) and right (GPU/RAM) groups. */
     divider: boolean;
     /** Switch to Lenovo Custom while a game is in front, then restore. */
@@ -148,10 +164,12 @@ export interface Settings {
     lyricsTextWeight: number;
     /** Subtle waveform behind the lyric, in the cover's accent color. */
     lyricsVisualizer: boolean;
-    /** Visualizer style inside the lyrics pill. */
-    lyricsVisualizerStyle: "wave" | "pulse" | "dots" | "ripple" | "aurora";
-    /** Line change animation: Apple Music-style scale/slide, word reveal, or line reveal. */
-    lyricsAnimation: "apple" | "word" | "reveal" | "kinetic";
+    /** Equalizer style at the right of the lyrics pill. */
+    lyricsVisualizerStyle: LyricEqualizerStyle;
+    /** Soft light layer behind the lyric. */
+    lyricsGlowStyle: LyricGlowStyle;
+    /** Line entrance effect. */
+    lyricsAnimation: LyricAnimation;
     /** true = hardware acceleration (smoother, more RAM); false = software/CPU (less RAM, more CPU). */
     gpuAcceleration: boolean;
     /** GPU mode when acceleration is on: auto, integrated, or discrete. */
@@ -270,8 +288,9 @@ const defaults: Settings = {
     lyricsPillHeight: 30,
     lyricsTextWeight: 600,
     lyricsVisualizer: true,
-    lyricsVisualizerStyle: "wave",
-    lyricsAnimation: "apple",
+    lyricsVisualizerStyle: "bars",
+    lyricsGlowStyle: "none",
+    lyricsAnimation: "word",
     gpuAcceleration: false,
     gpuPreference: "auto",
   },
@@ -350,15 +369,12 @@ settings.set((s) => {
         const stored = (s.appearance as { themeColor?: string } | undefined)?.themeColor;
         return typeof stored === "string" && /^#[0-9a-f]{6}$/i.test(stored) ? stored : defaults.appearance.themeColor;
       })(),
-      // The old "blur" line option is now the word-by-word reveal. Removed
-      // Current / Slide / Scale variants fall back to the Apple transition.
+      // Only the word-by-word effect survives from the old set; the animation lab
+      // supplies the new effects.
       lyricsAnimation: (() => {
         const stored = (s.appearance as { lyricsAnimation?: string } | undefined)?.lyricsAnimation;
-        if (stored === "word" || stored === "blur") return "word" as const;
-        if (stored === "reveal") return "reveal" as const;
-        if (stored === "kinetic") return "kinetic" as const;
-        if (stored === "roll") return "kinetic" as const;
-        return "apple" as const;
+        const valid: LyricAnimation[] = ["word", "fill", "focus", "glitch", "liquid", "irid", "stripe", "cascade", "dissolve", "dots", "duet"];
+        return valid.includes(stored as LyricAnimation) ? (stored as LyricAnimation) : "word";
       })(),
       // Old Default / Large / Small / Big / Biggest become one continuous size.
       lyricsTextSize: (() => {
@@ -394,7 +410,22 @@ settings.set((s) => {
         const stored = (s.appearance as { clockSplitHeight?: number } | undefined)?.clockSplitHeight;
         return typeof stored === "number" ? Math.min(100, Math.max(20, Math.round(stored))) : defaults.appearance.clockSplitHeight;
       })(),
-      lyricsVisualizerStyle: s.appearance?.lyricsVisualizerStyle ?? defaults.appearance.lyricsVisualizerStyle,
+      lyricsVisualizerStyle: (() => {
+        const stored = (s.appearance as { lyricsVisualizerStyle?: string } | undefined)?.lyricsVisualizerStyle;
+        const valid: LyricEqualizerStyle[] = ["bars", "mirror", "dots", "ticks", "capsule"];
+        if (valid.includes(stored as LyricEqualizerStyle)) return stored as LyricEqualizerStyle;
+        if (stored === "dots") return "dots";
+        return "bars";
+      })(),
+      lyricsGlowStyle: (() => {
+        const stored = (s.appearance as { lyricsGlowStyle?: string } | undefined)?.lyricsGlowStyle;
+        const valid: LyricGlowStyle[] = ["none", "bloom", "aurora", "rings", "spectrum", "liquid", "halo"];
+        if (valid.includes(stored as LyricGlowStyle)) return stored as LyricGlowStyle;
+        const oldViz = (s.appearance as { lyricsVisualizerStyle?: string } | undefined)?.lyricsVisualizerStyle;
+        if (oldViz === "aurora") return "aurora";
+        if (oldViz === "ripple") return "rings";
+        return "none";
+      })(),
       lyricsPillLength: (() => {
         const a = s.appearance as { lyricsPillLength?: number; lyricsPillMinWidth?: number; lyricsPillAuto?: boolean } | undefined;
         if (typeof a?.lyricsPillLength === "number") return Math.min(640, Math.max(284, Math.round(a.lyricsPillLength)));
@@ -497,7 +528,7 @@ function migrateGaming(old: unknown): Settings["gaming"] {
     showTemps: legacy.showTemps !== false && !minimal,
     showGpu: legacy.showGpu !== false && !minimal,
     showRam: legacy.showRam !== false && !minimal,
-    style: legacy.style === "bars" ? "bars" : legacy.style === "dots" || legacy.style === "graph" ? "graph" : "text",
+    style: legacy.style === "bars" || legacy.style === "dots" || legacy.style === "graph" ? "bars" : "text",
     divider: legacy.divider === true,
     autoPower: legacy.autoPower === true,
   };

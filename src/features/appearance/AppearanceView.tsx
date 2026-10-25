@@ -53,8 +53,9 @@ const DEFAULTS: Appearance = {
   lyricsPillHeight: 30,
   lyricsTextWeight: 600,
   lyricsVisualizer: true,
-  lyricsVisualizerStyle: "wave",
-  lyricsAnimation: "apple",
+  lyricsVisualizerStyle: "bars",
+  lyricsGlowStyle: "none",
+  lyricsAnimation: "word",
   gpuAcceleration: false,
   gpuPreference: "auto",
 };
@@ -379,6 +380,7 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
               lyricsTextWeight: a.lyricsTextWeight,
               lyricsVisualizer: a.lyricsVisualizer,
               lyricsVisualizerStyle: a.lyricsVisualizerStyle,
+              lyricsGlowStyle: a.lyricsGlowStyle,
               lyricsAnimation: a.lyricsAnimation,
             },
           })

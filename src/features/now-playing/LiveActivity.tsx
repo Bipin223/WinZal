@@ -5,11 +5,12 @@ import { artwork as artworkSwap, content, springs } from "../../design/motion";
 import { useSmoothArtwork } from "./artwork";
 import { media, type NowPlaying } from "../../platform/media";
 import { Equalizer } from "./Equalizer";
-import { LyricVisualizer } from "./LyricVisualizer";
+import { LyricEqualizer, LyricGlow } from "./LyricVisualizer";
 import { useLyrics } from "./lyrics";
+import { LyricEffect } from "./LyricEffect";
 import { lyricsTextWidth } from "./lyricsWidth";
 import { LiveEdge } from "../../notch/liveEdges";
-import { settings } from "../../settings/store";
+import { settings, type LyricAnimation } from "../../settings/store";
 import { t } from "../../i18n";
 
 /**
@@ -38,8 +39,9 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
       ctx.font = `${Math.max(100, weight - 100)} ${Math.max(8, size - 3)}px ${family}`;
       width = Math.max(width, ctx.measureText(next).width);
     }
-    lyricsTextWidth.set(Math.ceil(width));
-  }, [appearance.lyricsInPill, appearance.lyricsLayout, appearance.lyricsTextSize, appearance.lyricsTextWeight, current, next]);
+    const effectPad = appearance.lyricsAnimation === "dots" ? 18 : appearance.lyricsAnimation === "focus" ? 10 : 0;
+    lyricsTextWidth.set(Math.ceil(width + effectPad));
+  }, [appearance.lyricsInPill, appearance.lyricsLayout, appearance.lyricsTextSize, appearance.lyricsTextWeight, appearance.lyricsAnimation, current, next]);
   return (
     <motion.div
       className="absolute inset-0 flex items-center gap-2 px-[9px]"
@@ -47,6 +49,9 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
       animate={{ opacity: 1, filter: "blur(0px)", transition: content.enter }}
       exit={{ opacity: 0, filter: "blur(4px)", transition: content.exit }}
     >
+      {appearance.lyricsInPill && current && appearance.lyricsVisualizer && (
+        <LyricGlow style={appearance.lyricsGlowStyle} playing={np.isPlaying} />
+      )}
       <LiveEdge side="left">
         <button
           type="button"
@@ -65,9 +70,6 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
         </button>
       </LiveEdge>
       <FadeBox fade={!appearance.lyricsInPill || !current}>
-        {appearance.lyricsInPill && current && appearance.lyricsVisualizer && (
-          <LyricVisualizer style={appearance.lyricsVisualizerStyle} playing={np.isPlaying} />
-        )}
         {appearance.lyricsInPill && current ? (
           <LyricLine
             current={current}
@@ -96,9 +98,15 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
           </AnimatePresence>
         )}
       </FadeBox>
-      <LiveEdge side="right">
-        <Equalizer playing={np.isPlaying} fps={48} />
-      </LiveEdge>
+      {appearance.lyricsVisualizer && (
+        <LiveEdge side="right">
+          {appearance.lyricsVisualizerStyle === "bars" ? (
+            <Equalizer playing={np.isPlaying} fps={48} />
+          ) : (
+            <LyricEqualizer style={appearance.lyricsVisualizerStyle} playing={np.isPlaying} />
+          )}
+        </LiveEdge>
+      )}
     </motion.div>
   );
 }
@@ -174,38 +182,18 @@ function LyricLine({
   layout: "inline" | "lines";
   size: number;
   weight: number;
-  animation: "apple" | "word" | "reveal" | "kinetic";
+  animation: LyricAnimation;
   index: number;
   start: number;
   end: number;
 }) {
   const inline = layout === "inline";
-  const kinetic = animation === "kinetic";
-  const wordMode = animation === "word" || kinetic;
-  const motions = {
-    apple: {
-      enter: { opacity: 0, y: 10, scale: 0.94, filter: "blur(6px)" },
-      active: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" },
-      leave: { opacity: 0, y: -8, scale: 0.97, filter: "blur(5px)" },
-    },
-    word: {
-      enter: { opacity: 0 },
-      active: { opacity: 1 },
-      leave: { opacity: 0 },
-    },
-    kinetic: {
-      enter: { opacity: 0 },
-      active: { opacity: 1 },
-      leave: { opacity: 0 },
-    },
-    reveal: {
-      enter: { opacity: 0, clipPath: "inset(0 100% 0 0)" },
-      active: { opacity: 1, clipPath: "inset(0 0% 0 0)" },
-      leave: { opacity: 0, clipPath: "inset(0 0 0 100%)" },
-    },
-  }[animation];
-  const { enter, active, leave } = motions;
-  const transition = animation === "apple" ? { ...springs.lyrics, delay: 0.06 } : { ...content.enter, delay: 0.08 };
+  const enter = { opacity: 0 };
+  const active = { opacity: 1 };
+  const leave = { opacity: 0 };
+  // Start the entrance on the timestamp; the old line's exit is short enough
+  // to keep the wait mode without making the next line feel late.
+  const transition = { duration: 0.18, ease: [0.23, 1, 0.32, 1] as const };
   const words = current.split(/\s+/).filter(Boolean);
   const stagger = words.length > 1 ? Math.min(0.36, Math.max(0.04, ((end - start) * 0.75) / (words.length - 1))) : 0;
   const nextSize = Math.max(8, size - 3);
@@ -218,34 +206,36 @@ function LyricLine({
         className="relative z-10 flex min-w-0 max-w-full flex-col items-center justify-center"
         initial={enter}
         animate={active}
-        exit={{ ...leave, transition: { duration: 0.15, ease: [0.4, 0, 1, 1] } }}
+        exit={{ ...leave, transition: { duration: 0.08, ease: [0.4, 0, 1, 1] } }}
         transition={transition}
       >
         <div className="w-full overflow-hidden py-[1px]">
           <LyricText
             className="text-label"
-            resetKey={`${index}-${inline}-${size}-${weight}`}
+            resetKey={`${index}-${animation}-${inline}-${size}-${weight}`}
             style={{ fontSize: `${size}px`, fontWeight: weight, lineHeight: inline ? `${Math.round(size + 2)}px` : `${Math.round(size + 1)}px` }}
           >
-            {wordMode && words.length > 1
-              ? words.map((word, i) => (
+            {animation === "word" ? (
+              words.length > 1 ? (
+                words.map((word, i) => (
                   <motion.span
                     key={`${index}-${i}`}
                     className="inline-block"
-                    initial={
-                      kinetic
-                        ? { opacity: 0, y: 12, scale: 0.9, rotateX: -70, filter: "blur(9px)" }
-                        : { opacity: 0, y: 7, scale: 0.9, filter: "blur(8px)" }
-                    }
-                    animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0, filter: "blur(0px)" }}
-                    transition={{ ...springs.lyricWord, delay: i * (kinetic ? Math.min(0.07, stagger) : stagger) }}
+                    initial={{ opacity: 0, y: 7, scale: 0.9, filter: "blur(8px)" }}
+                    animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+                    transition={{ ...springs.lyricWord, delay: i * stagger }}
                     style={{ transformOrigin: "50% 90%", transformPerspective: 600 }}
                   >
                     {word}
                     {i < words.length - 1 ? "\u00A0" : ""}
                   </motion.span>
                 ))
-              : current}
+              ) : (
+                current
+              )
+            ) : (
+              <LyricEffect animation={animation} text={current} index={index} />
+            )}
           </LyricText>
         </div>
         {!inline && next && (

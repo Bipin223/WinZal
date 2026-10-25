@@ -238,7 +238,7 @@
       <div>Appearance</div><div>Theme, material, glass, corners, accent, island style.</div>
       <div>Display</div><div>Visibility, monitor, position, silent mode, DND, recording dots, <b>Font</b>, presentation mode.</div>
       <div>Performance</div><div>Motion intensity, GPU acceleration, iGPU/dGPU, FPS unlock, <b>Gaming look</b> and <b>Gaming mode</b>.</div>
-      <div>Music</div><div>Music in the pill, lyric layout, size, weight, min width, pill length, auto width, height, offset, visualizer, animation.</div>
+      <div>Music</div><div>Music in the pill, lyric layout, size, weight, min width, pill length, auto width, height, offset, equalizer, glow, animation.</div>
       <div>Tools</div><div>Enable, disable and reorder every tool; vault settings.</div>
       <div>Timer</div><div>Alarm sound, volume and duration.</div>
       <div>AI</div><div>Ask provider, model, API key, custom AI usage endpoint.</div>
@@ -281,15 +281,14 @@
   <section id="gaming">
     <p class="eyebrow">Performance → Gaming look</p>
     <h2>A gaming pill that only shows what you need</h2>
-    <p>The preview above the toggles is the real thing: turn a stat off and the pill shrinks to fit. Choose a style for CPU, GPU and RAM, add an optional divider between the left and right groups, or drop everything except FPS and CPU for a minimal overlay.</p>
+    <p>The preview above the toggles is the real thing: turn a stat off and the pill shrinks to fit. Choose Text or Bars, add an optional divider between the left and right groups, or drop everything except FPS and CPU for a minimal overlay. Bars puts a stacked CPU/GPU/RAM meter in the middle.</p>
     <figure class="figure">
-      <img src="manual/gaming.svg" alt="WinZal gaming overlay in Text, Bars and Graph styles">
-      <figcaption>Text, Bars and Graph. Bars and Graph omit the percentage text; Graph auto-scales its samples into a pulse.</figcaption>
+      <img src="manual/gaming.svg" alt="WinZal gaming overlay in Text and Bars styles">
+      <figcaption>Text and Bars. Bars keeps the values readable at the sides and puts the live meter in the middle.</figcaption>
     </figure>
     <div class="grid g2" style="margin-top:14px">
       <div class="card"><h3>Show</h3><p>FPS, CPU, Temperatures, GPU and RAM. Each toggle updates the preview and the real pill.</p></div>
       <div class="card"><h3>Shrink</h3><p>The pill measures the real row, so removing items or dropping digits shrinks the notch instead of leaving a fixed gap.</p></div>
-      <div class="card"><h3>Graph pulse</h3><p>The Graph style scales to the visible window, so small load swings read as up-and-down movement instead of a flat line.</p></div>
       <div class="card"><h3>Transparent in games</h3><p>Uses the existing <b>Glass 0.62</b> alpha while a game is in front. One transparency source, no duplicate slider.</p></div>
       <div class="card"><h3>Custom power in games</h3><p>Switches Lenovo to Custom when a chosen game starts and restores the previous power mode when it exits. A saved mode also heals after a crash.</p></div>
     </div>
@@ -328,14 +327,14 @@
   <section id="music">
     <p class="eyebrow">Music &amp; lyrics</p>
     <h2>Synced lines without the jitter</h2>
-    <p>Lyrics come from LRCLIB and are cached per track. Four transitions: <b>Apple Music</b>, <b>Word by Word</b>, <b>Kinetic</b> (per-word 3D) and <b>Reveal</b>. Old and new lines never overlap; the old line leaves before the new one enters.</p>
+    <p>Lyrics come from LRCLIB and are cached per track. <b>Word by Word</b> plus ten lab effects: Word fill sweep, Word focus, Glitch scramble, Liquid fill, Iridescent, Magic stripe, Spring cascade, Depth dissolve, Interlude dots and Duet split. Old and new lines never overlap; the old line leaves before the new one enters.</p>
     <div class="grid g2" style="margin-top:14px">
       <div class="card"><h3>Lyric pill</h3><p>Text size 10–15, weight 400–900, min width and pill length 284–640, height 24–44. Auto width is on by default: grow and shrink with the line, never below the minimum or beyond the length.</p></div>
       <div class="card"><h3>Instrumental / Music</h3><p>Instrumental tracks show <b>Instrumental</b>. Tracks with no synced lyrics show <b>Music</b> instead of an empty slot.</p></div>
     </div>
     <div class="grid g2" style="margin-top:14px">
       <div class="card"><h3>Lyrics offset</h3><p>±1 s in 0.1 s steps. Positive values make lines appear later. Fixes early or late LRCLIB timings.</p></div>
-      <div class="card"><h3>Visualizer</h3><p>Wave, Pulse, Dots, Ripple or Aurora behind the lyric, in the Equalization Accent (<b>auto</b> follows the cover). Previews animate only on hover.</p></div>
+      <div class="card"><h3>Equalizer &amp; glow</h3><p>Five equalizers: Bars, Mirror, LED dots, Ticks, Spring capsules. Six behind-glows: Bloom, Aurora, Rings, Spectrum haze, Liquid, Halo. Both follow the Equalization Accent.</p></div>
       <div class="card"><h3>Output device</h3><p>The Now Playing mixer lists Windows playback endpoints. Pick speakers, headphones or Bluetooth and Windows switches its default output immediately.</p></div>
     </div>
   </section>

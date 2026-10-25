@@ -10,18 +10,25 @@ import { system, useSystemShown } from "./store";
 import { LiveEdge } from "../../notch/liveEdges";
 
 /**
- * Gaming overlay. Each stat is optional; Text / Bars / Dots changes how
- * CPU, GPU and RAM are drawn. FPS stays a number.
+ * Gaming overlay. Each stat is optional; Text is inline, Bars adds a central
+ * stacked CPU/GPU/RAM meter. FPS stays a number.
  */
 export function LiveGaming() {
   useFpsPolling();
   const g = settings.use().gaming;
   useSystemShown(gamingFull(g));
   const f = fps.use();
-  const { stats, history } = system.use();
+  const { stats } = system.use();
   const mem = stats ? (stats.memUsed / stats.memTotal) * 100 : null;
   const left = g.showFps || g.showCpu;
   const right = g.showGpu || g.showRam;
+  const textKind = g.style === "bars" ? "text" : g.style;
+  const bars: number[] = [];
+  if (g.style === "bars") {
+    if (g.showCpu) bars.push(stats?.cpu ?? 0);
+    if (g.showGpu) bars.push(stats?.gpu ?? 0);
+    if (g.showRam) bars.push(mem ?? 0);
+  }
   const fit = useRef<HTMLDivElement>(null);
 
   // The shape's width follows the real row, not an estimate. This removes the
@@ -56,13 +63,13 @@ export function LiveGaming() {
                 label="CPU"
                 value={stats?.cpu ?? null}
                 temp={g.showTemps ? (stats?.cpuTemp ?? null) : null}
-                kind={g.style}
-                data={history.cpu}
+                kind={textKind}
               />
             )}
           </LiveEdge>
         )}
         {left && right && g.divider && <span aria-hidden className="h-3 w-px shrink-0 bg-separator" />}
+        {g.style === "bars" && bars.length > 0 && <GamingBars values={bars} />}
         {right && (
           <LiveEdge side="right" className="flex items-center gap-2">
             {g.showGpu && (
@@ -70,12 +77,11 @@ export function LiveGaming() {
                 label="GPU"
                 value={stats?.gpu ?? null}
                 temp={g.showTemps ? (stats?.gpuTemp ?? null) : null}
-                kind={g.style}
-                data={history.gpu}
+                kind={textKind}
               />
             )}
             {g.showGpu && g.showRam && <span aria-hidden className="h-3 w-px shrink-0 self-center bg-separator" />}
-            {g.showRam && <GamingStat label="RAM" value={mem} kind={g.style} data={history.mem} />}
+            {g.showRam && <GamingStat label="RAM" value={mem} kind={textKind} />}
           </LiveEdge>
         )}
         {!left && !right && <span aria-hidden className="size-1 rounded-full bg-label-3" />}
@@ -105,20 +111,37 @@ export function FpsStat({ f, preview = false }: { f: { value: number | null; err
   );
 }
 
+/** The central stacked meter used by Bars: CPU, GPU and RAM rows. */
+export function GamingBars({ values }: { values: number[] }) {
+  return (
+    <span className="flex w-14 shrink-0 flex-col justify-center gap-[3px]" aria-hidden>
+      {values.map((value, i) => {
+        const level = Math.max(0, Math.min(100, value));
+        return (
+          <span key={i} className="relative h-[3px] overflow-hidden rounded-full bg-fill-3">
+            <span
+              className="block h-full rounded-full transition-[width,background-color] duration-500 ease-out"
+              style={{ width: `${level}%`, backgroundColor: levelColor(level) }}
+            />
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 export function GamingStat({
   label,
   value,
   temp = null,
   kind = "text",
   preview = false,
-  data = [],
 }: {
   label: string;
   value: number | null;
   temp?: number | null;
-  kind?: "text" | "bars" | "graph";
+  kind?: "text" | "bars";
   preview?: boolean;
-  data?: number[];
 }) {
   const used = Math.max(0, Math.min(100, value ?? 0));
   const color = levelColor(used);
@@ -136,38 +159,6 @@ export function GamingStat({
         <span className={`relative h-[3px] w-8 overflow-hidden rounded-full ${trackClass}`}>
           <span className="block h-full rounded-full transition-[width,background-color] duration-500 ease-out" style={{ width: `${used}%`, backgroundColor: color }} />
         </span>
-        <Temp temp={temp} preview={preview} />
-      </span>
-    );
-  }
-
-  if (kind === "graph") {
-    const series = data.filter((n) => Number.isFinite(n)).slice(-24);
-    const w = 38;
-    const h = 12;
-    // Scale to the visible window, not 0–100: a 37 % CPU line with ±3 % jitter
-    // should read as a pulse, not a flat ruler.
-    const lo = series.length ? Math.min(...series) : used;
-    const hi = series.length ? Math.max(...series) : used;
-    const pad = Math.max(2, (hi - lo) * 0.18);
-    const min = Math.max(0, lo - pad);
-    const max = Math.min(100, hi + pad);
-    const span = Math.max(1, max - min);
-    const y = (v: number) => h - 1 - ((Math.max(0, Math.min(100, v)) - min) / span) * (h - 2);
-    const points = series.length < 2
-      ? `0,${y(used)} ${w},${y(used)}`
-      : series.map((v, i) => `${(i / (series.length - 1)) * w},${y(v)}`).join(" ");
-    const last = series.at(-1) ?? used;
-    return (
-      <span
-        className="flex shrink-0 items-center gap-1.5 whitespace-nowrap"
-        title={`${label} ${value === null ? "—" : `${Math.round(used)}%`}`}
-      >
-        <span className={`text-caption font-medium ${labelClass}`}>{label}</span>
-        <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="shrink-0 overflow-visible" aria-hidden>
-          <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          <circle cx={w} cy={y(last)} r="1.4" fill={color} />
-        </svg>
         <Temp temp={temp} preview={preview} />
       </span>
     );

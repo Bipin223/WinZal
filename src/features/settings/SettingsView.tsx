@@ -37,7 +37,7 @@ import { SelectedDot } from "../../ui/SelectedDot";
 import { effortLevels, listModels, providerInfo } from "../ask/providers";
 import { discordState, reconnectDiscord } from "../discord/store";
 import { fps } from "../system/gaming";
-import { FpsStat, GamingStat } from "../system/LiveGaming";
+import { FpsStat, GamingBars, GamingStat } from "../system/LiveGaming";
 import { PlaceSearch } from "../weather/WeatherView";
 import { AppearanceView } from "../appearance/AppearanceView";
 import { MusicSettings } from "./MusicSettings";
@@ -697,11 +697,9 @@ function GamingSettings() {
   const setG = (patch: Partial<Settings["gaming"]>) => updateSettings((cur) => ({ gaming: { ...cur.gaming, ...patch } }));
   const left = g.showFps || g.showCpu;
   const right = g.showGpu || g.showRam;
-  const sample = {
-    cpu: [18, 24, 21, 30, 28, 36, 33, 37],
-    gpu: [30, 38, 34, 44, 40, 52, 47, 48],
-    ram: [52, 55, 54, 58, 60, 63, 67, 69],
-  };
+  const previewBars = [g.showCpu ? 37 : null, g.showGpu ? 48 : null, g.showRam ? 69 : null].filter(
+    (value): value is number => value !== null,
+  );
   const flags: { key: "showFps" | "showCpu" | "showTemps" | "showGpu" | "showRam"; label: string }[] = [
     { key: "showFps", label: "FPS" },
     { key: "showCpu", label: "CPU" },
@@ -712,7 +710,6 @@ function GamingSettings() {
   const styles: { value: Settings["gaming"]["style"]; label: string }[] = [
     { value: "text", label: t("Text") },
     { value: "bars", label: t("Bars") },
-    { value: "graph", label: t("Graph") },
   ];
   return (
     <>
@@ -732,18 +729,19 @@ function GamingSettings() {
               <div className="flex shrink-0 items-center gap-2">
                 {g.showFps && <FpsStat f={{ value: 64, error: null }} preview />}
                 {g.showCpu && (
-                  <GamingStat label="CPU" value={37} temp={g.showTemps ? 28 : null} kind={g.style} preview data={sample.cpu} />
+                  <GamingStat label="CPU" value={37} temp={g.showTemps ? 28 : null} kind={g.style === "bars" ? "text" : g.style} preview />
                 )}
               </div>
             )}
             {left && right && g.divider && <span aria-hidden className="h-3 w-px shrink-0 self-center bg-white/15" />}
+            {g.style === "bars" && previewBars.length > 0 && <GamingBars values={previewBars} />}
             {right && (
               <div className="flex shrink-0 items-center gap-2">
                 {g.showGpu && (
-                  <GamingStat label="GPU" value={48} temp={g.showTemps ? 81 : null} kind={g.style} preview data={sample.gpu} />
+                  <GamingStat label="GPU" value={48} temp={g.showTemps ? 81 : null} kind={g.style === "bars" ? "text" : g.style} preview />
                 )}
                 {g.showGpu && g.showRam && <span aria-hidden className="h-3 w-px shrink-0 self-center bg-white/15" />}
-                {g.showRam && <GamingStat label="RAM" value={69} kind={g.style} preview data={sample.ram} />}
+                {g.showRam && <GamingStat label="RAM" value={69} kind={g.style === "bars" ? "text" : g.style} preview />}
               </div>
             )}
             {!left && !right && <span aria-hidden className="size-1 rounded-full bg-white/40" />}
@@ -765,7 +763,7 @@ function GamingSettings() {
       </div>
       <div className="px-3 pb-2">
         <div className="mb-1.5 text-footnote font-medium text-label-2">{t("Stat style")}</div>
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-2 gap-1.5">
           {styles.map((style) => (
             <button
               key={style.value}
@@ -776,7 +774,7 @@ function GamingSettings() {
               }`}
             >
               <div className="flex h-8 items-center justify-center rounded-[7px] bg-black">
-                <GamingStat label="CPU" value={37} kind={style.value} preview data={sample.cpu} />
+                <GamingStat label="CPU" value={37} kind={style.value} preview />
               </div>
               <div className="mt-1 text-center text-[9px] font-medium text-label">{style.label}</div>
               {g.style === style.value && <SelectedDot className="absolute top-1.5 right-1.5" />}

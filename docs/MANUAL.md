@@ -91,7 +91,7 @@ Enable, disable and reorder them in **Settings → Tools**.
 | **Appearance** | Theme, material/glass, corners, accent, island style. |
 | **Display** | Visibility, monitor, position, silent, DND, recording dots, **Font**, presentation. |
 | **Performance** | Motion intensity, GPU acceleration, iGPU/dGPU, FPS unlock, **Gaming look** and **Gaming mode**. |
-| **Music** | Music in the pill, lyrics layout, size, weight, min width, pill length, auto width, height, offset, visualizer, animation. |
+| **Music** | Music in the pill, lyrics layout, size, weight, min width, pill length, auto width, height, offset, equalizer, glow, animation. |
 | **Tools** | Tool order and visibility; vault settings. |
 | **Timer** | Alarm sound, volume, duration. |
 | **AI** | Ask provider/model/key; custom AI Usage endpoint. |
@@ -128,10 +128,9 @@ The preview is the real pill: toggles change it immediately.
 ![Gaming overlay styles](manual/gaming.svg)
 
 - **Show:** FPS, CPU, Temperatures, GPU, RAM.
-- **Stat style:** Text, Bars or Graph. Bars and Graph omit the percentage text, so the pill stays compact.
-- **Graph:** auto-scales the last 24 samples, so load changes read as a pulse instead of a flat ruler.
+- **Stat style:** Text or Bars. Bars adds a central stacked CPU/GPU/RAM meter; the text values stay at the sides.
 - **Divider line:** optional separator between the FPS/CPU group and the GPU/RAM group.
-- **Dynamic width:** the pill follows the real row width; it grows and shrinks with the visible stats instead of reserving a fixed gap.
+- **Dynamic width:** the pill follows the real row width; the central meter and text grow/shrink together so everything stays inside the notch.
 - **Gaming overlay:** on/off; the preview shows **ON/OFF**.
 - **Transparent in games:** reuses the existing **Glass 0.62** alpha while a game is in front.
 - **Custom power in games:** switches Lenovo to Custom when a chosen game starts and restores the previous power mode when it exits (also heals after a crash).
@@ -172,10 +171,9 @@ Idle memory is roughly **10 MB UI + 20 MB helper**, plus WebView2 shared process
 ## Music & lyrics
 
 - Lyrics come from LRCLIB and are cached per track.
-- Transitions: **Apple Music**, **Word by Word**, **Kinetic** (per-word 3D) and **Reveal**.
-- Old and new lines never overlap: the old line leaves before the new one enters.
+- Transitions: **Word by Word** plus ten lab effects: **Word fill sweep, Word focus, Glitch scramble, Liquid fill, Iridescent, Magic stripe, Spring cascade, Depth dissolve, Interlude dots, Duet split**. Old and new lines never overlap.
 - **Lyrics offset:** ±1 s in 0.1 s steps; positive makes lines appear later.
-- **Visualizer:** Wave, Pulse, Dots, Ripple or Aurora in the Equalization Accent (`auto` follows the cover). Settings previews animate only on hover.
+- **Equalizer:** Bars, Mirror, LED dots, Ticks or Spring capsules. **Behind glow:** Bloom, Aurora, Rings, Spectrum haze, Liquid or Halo. Both follow the Equalization Accent.
 - **Output device:** the Now Playing mixer lists Windows playback endpoints. Pick speakers, headphones or Bluetooth and Windows switches its default output immediately.
 
 ---

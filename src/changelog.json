@@ -8,6 +8,10 @@
         "en": "Five visually selectable clock faces in Settings (Stacked, Split, Scatter, Classic, Word); the selected face appears in the expanded Overview and in the closed pill, which sizes itself to the content; Split shows seconds and has an adjustable divider height"
       },
       {
+        "de": "Songtext-Labor: Word by Word plus zehn neue Effekte (Fill, Focus, Glitch, Liquid, Iridescent, Stripe, Cascade, Dissolve, Dots, Duet), sechs Equalizer und sechs Behind-Glows",
+        "en": "Lyric lab: Word by Word plus ten new effects (Fill, Focus, Glitch, Liquid, Iridescent, Stripe, Cascade, Dissolve, Dots, Duet), six equalizers and six behind-glows"
+      },
+      {
         "de": "Hover und Klick-Durchlässigkeit nutzen jetzt die echte WebView-Clientfläche statt des Windows-Skalierungsfaktors. Das behebt das automatische Schließen am rechten Rand und nicht erreichbare Buttons auf Laptops mit anderer Skalierung oder Textgröße (z. B. ASUS TUF F15)",
         "en": "Hover and click-through now map the cursor through the real WebView client area instead of the Windows scale factor. This fixes the right-edge auto-close and unreachable buttons on laptops with different display or text scaling (e.g. ASUS TUF F15)"
       },
@@ -20,8 +24,8 @@
         "en": "Lyric pill: pill length (maximum with auto width, fixed width without it); width changes use a smooth ease-in-out curve instead of a hard snap"
       },
       {
-        "de": "Gaming: eigener Bereich unter Performance mit Gaming-Look und Gaming-Modus; Balken/Graph ohne Prozenttext, Breite folgt der echten Zeile, optionale Trennlinie und ein automatisch skalierender Graph mit sichtbaren Ausschlägen",
-        "en": "Gaming: its own section under Performance with Gaming look and Gaming mode; Bars/Graph omit percentage text, width follows the real row, optional divider and an auto-scaling Graph with visible pulses"
+        "de": "Gaming: eigener Bereich unter Performance mit Gaming-Look und Gaming-Modus; Text/Bars mit zentralem CPU/GPU/RAM-Balken, gemessener Breite und optionaler Trennlinie",
+        "en": "Gaming: its own section under Performance with Gaming look and Gaming mode; Text/Bars with a central CPU/GPU/RAM meter, measured width and an optional divider"
       },
       {
         "de": "Now Playing: Ausgabegerät direkt wechseln (Lautsprecher, Kopfhörer, Bluetooth) über die Windows-Standardausgabe",

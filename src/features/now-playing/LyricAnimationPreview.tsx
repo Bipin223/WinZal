@@ -1,4 +1,5 @@
 import type { Settings } from "../../settings/store";
+import { LyricEffect } from "./LyricEffect";
 
 type Animation = Settings["appearance"]["lyricsAnimation"];
 
@@ -22,8 +23,8 @@ export function LyricAnimationPreview({ animation }: { animation: Animation }) {
     );
   }
   return (
-    <div className="flex h-full items-center justify-center px-1">
-      <span className={`anim-preview anim-${animation} max-w-full truncate text-[9px] font-semibold whitespace-nowrap text-white`}>{sample}</span>
+    <div className="flex h-full items-center justify-center overflow-hidden px-1 text-[9px] font-semibold whitespace-nowrap text-white">
+      <LyricEffect animation={animation} text="light the candle" index={0} preview />
     </div>
   );
 }

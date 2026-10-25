@@ -177,11 +177,12 @@ export function Notch() {
   const lyricTarget = !lyricPill || lyricWidth <= 0
     ? 0
     : appearance.lyricsPillAuto
-      ? Math.max(appearance.lyricsPillMinWidth, Math.min(appearance.lyricsPillLength, lyricWidth + 78))
+      ? Math.max(appearance.lyricsPillMinWidth, Math.min(appearance.lyricsPillLength, lyricWidth + (appearance.lyricsVisualizer ? 108 : 78)))
       : appearance.lyricsPillLength;
   const lyricsExtra = lyricTarget > 0 ? Math.min(360, Math.max(0, lyricTarget - geometry.live.w)) : 0;
 
-  const clockContent = measuredClockWidth > 0 ? measuredClockWidth : 206 + clockExtra;
+  // The row is shrink-0 now, so this is the real width of face + PM + meta.
+  const clockContent = Math.max(measuredClockWidth, 206 + clockExtra);
   const clockShapeWidth =
     Math.min(700, Math.max(120, clockContent + appearance.islandWidth + (status === "peek" ? 16 : 0))) +
     (showRecording ? RECORDING_EXTRA : 0);
