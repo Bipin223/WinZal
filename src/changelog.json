@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.7.6",
+    "date": "2026-10-25",
+    "items": [
+      {
+        "de": "Custom nutzt jetzt Lenovo-Profil 0xFF – den echten Vantage-Custom-Modus (lila) statt Performance + Lüftung; fällt das Modell auf 5 nicht zurück, wird Performance + aktive Kühlung verwendet. Die Auswahl bleibt nach Neustarts erhalten",
+        "en": "Custom now uses Lenovo profile 0xFF – the real Vantage custom mode (purple) instead of performance + cooling; if the model rejects 5 it falls back to performance + active cooling. The selection survives restarts"
+      },
+      {
+        "de": "Notch und Display bleiben getrennte Seiten; die Einstellungen bleiben aufgeräumt",
+        "en": "Notch and Display stay separate pages; Settings stays clean"
+      }
+    ]
+  },
+  {
     "version": "1.7.5",
     "date": "2026-10-25",
     "items": [

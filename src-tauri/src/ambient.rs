@@ -548,13 +548,13 @@ fn energy_status() -> Result<Energy, String> {
     let plugged = ac_connected();
     let mode = crate::fps::lenovo_mode();
     let cooling = crate::fps::lenovo_fan_cooling();
-    let mut scheme = if crate::fps::lenovo_custom_active() || mode == Some(4) || (mode == Some(3) && cooling == Some(1)) {
+    let mut scheme = if crate::fps::lenovo_custom_active() || mode == Some(255) || (mode == Some(3) && cooling == Some(1)) {
         "custom"
     } else {
         match mode {
             Some(1) => "saver",
             Some(2) => "balanced",
-            Some(3) => "max",
+            Some(3) | Some(0xE0) => "max",
             _ => overlay_name(&guid),
         }
     };
@@ -578,7 +578,7 @@ pub fn spawn_energy_watch() {
             battery_reads = battery_reads.saturating_add(1);
             if battery_reads == 2 {
                 let custom = crate::fps::lenovo_custom_active()
-                    || crate::fps::lenovo_mode() == Some(4)
+                    || crate::fps::lenovo_mode() == Some(255)
                     || (crate::fps::lenovo_mode() == Some(3) && crate::fps::lenovo_fan_cooling() == Some(1));
                 if custom {
                     let _ = set_overlay(&BALANCED);
@@ -627,7 +627,7 @@ pub fn restore_power(app: tauri::AppHandle) {
         }
         let _ = activate_plan(&BALANCED_PLAN);
         let _ = set_overlay(&BALANCED);
-        let _ = crate::fps::lenovo_set_mode(4);
+        let _ = crate::fps::lenovo_set_mode(255);
     });
 }
 
@@ -646,7 +646,7 @@ fn apply_energy(mode: &str) -> Result<Energy, String> {
         // Balanced plan; the old custom power plan was reset by Windows.
         activate_plan(&BALANCED_PLAN)?;
         set_overlay(&BALANCED)?;
-        crate::fps::lenovo_set_mode(4).map_err(|_| "lenovo".to_string())?;
+        crate::fps::lenovo_set_mode(255).map_err(|_| "lenovo".to_string())?;
         return energy_status();
     }
 

@@ -296,7 +296,7 @@ pub(crate) fn lenovo_mode() -> Option<u8> {
             return None;
         }
         let mode = (*shared).lenovo_mode.load(Ordering::Relaxed);
-        (1..=4).contains(&mode).then_some(mode as u8)
+        ((1..=3).contains(&mode) || mode == 0xE0 || mode == 0xFF).then_some(mode as u8)
     }
 }
 
@@ -793,10 +793,14 @@ fn temp_loop(shared_addr: usize) {
             let seq = request >> 8;
             let mode = (request & 0xFF) as u8;
             let (attempt, applied_mode, applied_cooling) = match &lenovo {
-                Some(l) if mode == 4 => {
-                    // Lenovo "Custom" = Performance fan curve + active cooling.
-                    let result = l.set_mode(3).and_then(|_| l.set_fan_cooling(true));
-                    (result, 3u32, 1u32)
+                Some(l) if mode == 255 => {
+                    // Lenovo's hardware "custom" profile (Vantage purple mode).
+                    // Setting 4 is max-power/Extreme on many models, not custom.
+                    // If the model rejects 5, fall back to performance + active cooling.
+                    match l.set_mode(255) {
+                        Ok(()) => (Ok(()), 255u32, 0u32),
+                        Err(_) => (l.set_mode(3).and_then(|_| l.set_fan_cooling(true)), 3u32, 1u32),
+                    }
                 }
                 Some(l) if (1..=3).contains(&mode) => {
                     let result = l.set_mode(mode);
@@ -815,7 +819,7 @@ fn temp_loop(shared_addr: usize) {
                     (*shared).lenovo_mode_at.store(GetTickCount64(), Ordering::Relaxed);
                     (*shared).fan_cooling.store(applied_cooling, Ordering::Relaxed);
                     (*shared).fan_cooling_at.store(GetTickCount64(), Ordering::Relaxed);
-                    (*shared).custom_active.store((mode == 4) as u32, Ordering::Relaxed);
+                    (*shared).custom_active.store((mode == 255) as u32, Ordering::Relaxed);
                 }
                 1
             } else {
