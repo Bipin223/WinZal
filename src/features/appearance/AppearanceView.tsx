@@ -34,7 +34,9 @@ const DEFAULTS: Appearance = {
   clockShowDay: true,
   musicInPill: true,
   clockAccent: "#ff453a",
-  clockText: "large",
+  weatherColors: true,
+  clockClosedSize: 15,
+  clockClosedTracking: 0,
   clockClosedWeight: 800,
   clockOpenWeight: 700,
   clockEmphasis: true,
@@ -108,16 +110,38 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
                 </div>
               ) : (
                 <div
-                  className="flex items-center justify-center rounded-full bg-black shadow-[0_6px_18px_rgb(0_0_0/0.35)] transition-[width,height] duration-200"
+                  className="flex items-center justify-center overflow-hidden rounded-full bg-black px-2 shadow-[0_6px_18px_rgb(0_0_0/0.35)] transition-[width,height] duration-200"
                   style={{ width: 206 + a.islandWidth, height: a.islandHeight }}
                 >
                   {a.clockWeather && (
-                    <ClockTime
-                      time={previewTime.time}
-                      className={`tabular text-white ${a.clockText === "large" ? "text-[15px]" : "text-[13px]"}`}
-                      emphasizeHour={a.clockEmphasis}
-                      weight={a.clockClosedWeight}
-                    />
+                    <div
+                      className="flex items-center gap-1 whitespace-nowrap"
+                      style={{ letterSpacing: `${a.clockClosedTracking}px` }}
+                    >
+                      <span style={{ fontSize: `${a.clockClosedSize}px`, color: "#fff" }}>
+                        <ClockTime
+                          time={previewTime.time}
+                          className="tabular"
+                          emphasizeHour={a.clockEmphasis}
+                          weight={a.clockClosedWeight}
+                        />
+                      </span>
+                      {previewTime.period && (
+                        <span className="text-white/55" style={{ fontSize: Math.max(8, Math.round(a.clockClosedSize * 0.66)) }}>
+                          {previewTime.period}
+                        </span>
+                      )}
+                      {(a.clockShowDay || a.clockShowDate) && (
+                        <span className="text-white/55" style={{ fontSize: Math.max(8, Math.round(a.clockClosedSize * 0.66)) }}>
+                          · {[a.clockShowDay ? "Sun" : null, a.clockShowDate ? "25 Oct" : null].filter(Boolean).join(" · ")}
+                        </span>
+                      )}
+                      {a.clockShowWeather && (
+                        <span className="text-white/55" style={{ fontSize: Math.max(8, Math.round(a.clockClosedSize * 0.8)) }}>
+                          · 25°
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
@@ -154,16 +178,39 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
             </div>
             {!line && (
               <>
-                <div className="mt-2">
-                  <Choice
-                    label={t("Clock size")}
-                    value={a.clockText}
-                    options={[
-                      ["compact", t("Compact")],
-                      ["large", t("Large")],
-                    ]}
-                    onChange={(clockText) => set({ clockText: clockText as Appearance["clockText"] })}
-                  />
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="flex items-center justify-between text-caption font-medium text-label-2">
+                      <span>{t("Text size")}</span>
+                      <span className="tabular text-label-3">{a.clockClosedSize.toFixed(1)} px</span>
+                    </div>
+                    <Slider
+                      label={t("Text size")}
+                      value={a.clockClosedSize}
+                      min={10}
+                      max={24}
+                      step={0.5}
+                      onChange={(clockClosedSize) => set({ clockClosedSize })}
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between text-caption font-medium text-label-2">
+                      <span>{t("Text width")}</span>
+                      <span className="tabular text-label-3">
+                        {a.clockClosedTracking === 0
+                          ? t("Default")
+                          : `${a.clockClosedTracking > 0 ? "+" : ""}${a.clockClosedTracking.toFixed(1)} px`}
+                      </span>
+                    </div>
+                    <Slider
+                      label={t("Text width")}
+                      value={a.clockClosedTracking}
+                      min={-2}
+                      max={2}
+                      step={0.1}
+                      onChange={(clockClosedTracking) => set({ clockClosedTracking })}
+                    />
+                  </div>
                 </div>
                 <div className="mt-2">
                   <div className="flex items-center justify-between text-caption font-medium text-label-2">
@@ -257,6 +304,9 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
           <StyleCard active={a.style === "windows"} label={t("Windows Island")} floating onClick={() => set({ style: "windows" })} />
         </div>
       </Section>
+      <Section label={t("Weather")}>
+        <ToggleRow label={t("Weather colors")} checked={a.weatherColors} onChange={(weatherColors) => set({ weatherColors })} />
+      </Section>
       <Section label={t("Equalization Accent")}>
         <Swatches value={a.accent} colors={ACCENTS} onChange={(accent) => set({ accent })} />
       </Section>
@@ -306,7 +356,8 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
               gpuPreference: a.gpuPreference,
               // Clock styling lives on the Notch page; Appearance reset leaves it alone.
               clockAccent: a.clockAccent,
-              clockText: a.clockText,
+              clockClosedSize: a.clockClosedSize,
+              clockClosedTracking: a.clockClosedTracking,
               clockEmphasis: a.clockEmphasis,
               clockClosedWeight: a.clockClosedWeight,
               clockOpenWeight: a.clockOpenWeight,

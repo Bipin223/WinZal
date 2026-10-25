@@ -32,7 +32,7 @@ import { holdOpen, pinned, togglePin, useNotchState, type NotchStatus } from "./
 import { t, locale } from "../i18n";
 import { formatTemp, formatTimeParts } from "../lib/format";
 import { useMinute } from "../lib/useMinute";
-import { describe, useForecast } from "../features/weather/store";
+import { describe, useForecast, weatherTone } from "../features/weather/store";
 import { timer } from "../features/timer/store";
 
 /** `#rrggbb` + alpha → `rgba(...)`; anything else is passed through untouched. */
@@ -164,7 +164,7 @@ export function Notch() {
   const topPad = floating && !tightHit ? 8 : 0;
   const sticky = useStickyHitZone(status, size.h);
   const lyricWidth = lyricsTextWidth.use();
-  const clockExtra = appearance.clockText === "large" && clockPill && !idleLine && status !== "open" ? 10 : 0;
+  const clockExtra = clockPill && !idleLine && status !== "open" ? Math.max(0, (appearance.clockClosedSize - 13) * 5) : 0;
   // Grow or shrink to the line, with three levels of breathing room. `normal`
   // is the text-fit width; compact caps long lines, long adds extra air.
   const lyricPill = appearance.lyricsInPill && pillLive === "media" && !idleLine && status !== "open";
@@ -392,39 +392,41 @@ function ClosedClock() {
   const now = useMinute();
   const forecast = useForecast();
   const appearance = settings.use().appearance;
-  const large = appearance.clockText === "large";
+  const size = appearance.clockClosedSize;
+  const smallSize = Math.max(8, Math.round(size * 0.66));
+  const tempSize = Math.max(8, Math.round(size * 0.8));
   const { time, period } = formatTimeParts(now);
   const weekday = now.toLocaleDateString(locale(), { weekday: "short" });
   const date = now.toLocaleDateString(locale(), { day: "numeric", month: "short" });
   const meta = [appearance.clockShowDay ? weekday : null, appearance.clockShowDate ? date : null].filter(Boolean).join(" · ");
   const wx = appearance.clockShowWeather && forecast && forecast !== "error" ? describe(forecast.current.code, forecast.current.day) : null;
   const temp = appearance.clockShowWeather && forecast && forecast !== "error" ? formatTemp(forecast.current.temp) : null;
-  const timeClass = large ? "text-[15px]" : "text-[13px]";
-  const smallClass = large ? "text-[10px] font-semibold" : "text-[9px] font-medium";
-  const tempClass = large ? "text-[12px] font-bold" : "text-[11px] font-semibold";
-  const iconSize = large ? 14 : 12;
+  const tone = appearance.weatherColors && forecast && forecast !== "error" ? weatherTone(forecast.current.code, forecast.current.day) : undefined;
+  const iconSize = Math.max(12, Math.round(size * 0.95));
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-      <div className="flex items-center gap-1">
-        <ClockTime
-          time={time}
-          className={`tabular ${timeClass} text-label`}
-          emphasizeHour={appearance.clockEmphasis}
-          weight={appearance.clockClosedWeight}
-        />
-        {period && <span className={`${smallClass} text-label-3`}>{period}</span>}
-        {meta && <span className={`${smallClass} text-label-3`}>{period ? `· ${meta}` : meta}</span>}
+      <div className="flex items-center gap-1" style={{ letterSpacing: `${appearance.clockClosedTracking}px` }}>
+        <span style={{ fontSize: `${size}px` }}>
+          <ClockTime
+            time={time}
+            className="tabular text-label"
+            emphasizeHour={appearance.clockEmphasis}
+            weight={appearance.clockClosedWeight}
+          />
+        </span>
+        {period && <span className="text-label-3" style={{ fontSize: `${smallSize}px` }}>{period}</span>}
+        {meta && <span className="text-label-3" style={{ fontSize: `${smallSize}px` }}>{period ? `· ${meta}` : meta}</span>}
       </div>
       {wx && (
         <>
           <span
             aria-hidden
-            className={`mx-3 ${large ? "h-4" : "h-3.5"} w-[2px] shrink-0 rounded-full`}
+            className={`mx-3 ${size >= 15 ? "h-4" : "h-3.5"} w-[2px] shrink-0 rounded-full`}
             style={{ background: "var(--color-label-2)", boxShadow: "0 0 6px var(--color-label-4)" }}
           />
           <div className="flex items-center gap-1.5">
-            <wx.icon size={iconSize} weight="fill" className="text-label-2" />
-            <span className={`tabular ${tempClass} text-label-2`}>{temp}</span>
+            <wx.icon size={iconSize} weight="fill" className="text-label-2" style={tone ? { color: tone } : undefined} />
+            <span className="tabular text-label-2" style={{ fontSize: `${tempSize}px` }}>{temp}</span>
           </div>
         </>
       )}

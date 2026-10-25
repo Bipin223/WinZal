@@ -111,7 +111,12 @@ export interface Settings {
     /** Colour of the first clock digit (OnePlus-style accent); red by default. */
     clockAccent: string;
     /** Closed clock pill: compact or bigger/bolder text (large default). */
-    clockText: "compact" | "large";
+    /** Color weather icons by condition (sun, cloud, rain, snow, storm). */
+    weatherColors: boolean;
+    /** Closed pill clock font size in px. */
+    clockClosedSize: number;
+    /** Closed pill clock tracking in px (visual text width). */
+    clockClosedTracking: number;
     /** Closed pill clock weight (400–900). */
     clockClosedWeight: number;
     /** Open/extended header clock weight (400–900). */
@@ -236,7 +241,9 @@ const defaults: Settings = {
   clockShowDay: true,
     musicInPill: true,
     clockAccent: "#ff453a",
-    clockText: "large",
+    weatherColors: true,
+    clockClosedSize: 15,
+    clockClosedTracking: 0,
     clockClosedWeight: 800,
     clockOpenWeight: 700,
     clockEmphasis: true,
@@ -353,7 +360,16 @@ settings.set((s) => {
       clockClosedWeight: (() => {
         const stored = (s.appearance as { clockClosedWeight?: number } | undefined)?.clockClosedWeight;
         if (typeof stored === "number") return Math.min(900, Math.max(400, stored));
-        return s.appearance?.clockText === "compact" ? 700 : 800;
+        return (s.appearance as { clockText?: string } | undefined)?.clockText === "compact" ? 700 : 800;
+      })(),
+      clockClosedSize: (() => {
+        const legacy = s.appearance as { clockClosedSize?: number; clockText?: string } | undefined;
+        if (typeof legacy?.clockClosedSize === "number") return Math.min(24, Math.max(10, legacy.clockClosedSize));
+        return legacy?.clockText === "compact" ? 13 : 15;
+      })(),
+      clockClosedTracking: (() => {
+        const stored = (s.appearance as { clockClosedTracking?: number } | undefined)?.clockClosedTracking;
+        return typeof stored === "number" ? Math.min(2, Math.max(-2, stored)) : 0;
       })(),
       clockOpenWeight: (() => {
         const legacy = s.appearance as { clockOpenWeight?: number; clockBold?: boolean } | undefined;
@@ -400,17 +416,6 @@ settings.set((s) => {
     ask: migrateAsk(s.ask),
   };
 });
-
-// One-time: the large closed clock is the new default. After this marker the
-// user's own Compact/Large choice sticks across restarts.
-try {
-  if (!localStorage.getItem("notch:clock-text-large")) {
-    settings.set((s) => ({ ...s, appearance: { ...s.appearance, clockText: "large" } }));
-    localStorage.setItem("notch:clock-text-large", "1");
-  }
-} catch {
-  // localStorage unavailable: defaults already use large.
-}
 
 // Give the Discord card its default author name once. A name the user typed
 // themselves is never overwritten; clearing it afterwards also sticks.

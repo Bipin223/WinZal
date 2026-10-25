@@ -20,6 +20,17 @@ The illustrated version is [`manual.html`](manual.html). Open it in a browser fo
 2. **Extended** — header, active tool and the dock.
 3. **Line** — a thin strip with an amber locator dot.
 
+### Closed pill text
+
+**Settings → Notch → Closed pill** has the same structure as the pill itself:
+
+- **Text size** — 10–24 px. The whole clock line scales: time, period, date/day and temperature.
+- **Text width** — a tracking offset, −2.0 → +2.0 px. `0` = default width.
+- **Weight** — the clock weight slider below.
+- The preview above shows the real time, period, date sample and temperature, including the Weather/Date/Day toggles.
+
+The pill widens with larger text; use the **Length** slider if you want more room.
+
 ---
 
 ## Header icons
@@ -63,8 +74,8 @@ Enable, disable and reorder them in **Settings → Tools**.
 | Page | Contains |
 |---|---|
 | **General** | Startup, language, weather location, updates. |
-| **Notch** | Closed pill/line, size, clock size and weight, clock accent, weather/date/day. |
-| **Appearance** | Theme, material/glass, corners, accent, island style. |
+| **Notch** | Closed pill/line, size, **closed text size and width**, clock size and weight, clock accent, weather/date/day. |
+| **Appearance** | Theme, material/glass, corners, accent, **weather colors**, island style. |
 | **Display** | Visibility, monitor, position, silent, DND, recording dots, **Font**, **Gaming**, presentation. |
 | **Performance** | Motion intensity, GPU acceleration, iGPU/dGPU, FPS unlock. |
 | **Music** | Music in the pill, lyrics layout, size, offset, pill width, visualizer, animation. |
@@ -96,6 +107,14 @@ Five roles share one scale. Pick a role, adjust **size** and **weight**, and the
 - **Reset font** sets all five roles back to 0.
 - The selected role is previewed with its live size/weight above the sliders.
 - The original L4 notch uses 11/12/13/15/22; WinZal is intentionally one step larger and slightly bolder.
+
+### Weather colors
+
+**Settings → Appearance → Weather** has one toggle:
+
+- **On:** sun = warm amber, partly cloudy = gold, cloudy = silver, fog = gray, rain = blue, snow = light blue, storm = violet.
+- **Off:** every weather icon returns to the normal label color.
+- Applies to the closed pill, the Overview and the Weather tool.
 
 ---
 

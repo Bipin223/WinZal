@@ -24,7 +24,7 @@ export interface Forecast {
   daily: { date: string; code: number; max: number; min: number; rain: number }[];
 }
 
-/** WMO weather codes → icon + text. */
+/** WMO weather codes -> icon + text. */
 export function describe(code: number, day = true): { icon: Icon; text: string } {
   if (code === 0) return { icon: day ? Sun : Moon, text: t("Klar") };
   if (code <= 2) return { icon: day ? CloudSun : CloudMoon, text: t(code === 1 ? "Überwiegend klar" : "Teils bewölkt") };
@@ -34,6 +34,17 @@ export function describe(code: number, day = true): { icon: Icon; text: string }
   if (code <= 67 || (code >= 80 && code <= 82)) return { icon: CloudRain, text: t("Regen") };
   if (code <= 77 || code === 85 || code === 86) return { icon: CloudSnow, text: t("Schnee") };
   return { icon: CloudLightning, text: t("Gewitter") };
+}
+
+/** Theme-aware icon colour for a WMO code. */
+export function weatherTone(code: number, day = true): string {
+  if (code === 0) return day ? "var(--color-weather-sun)" : "var(--color-weather-moon)";
+  if (code <= 2) return day ? "var(--color-weather-partly)" : "var(--color-weather-moon)";
+  if (code === 3) return "var(--color-weather-cloud)";
+  if (code <= 48) return "var(--color-weather-fog)";
+  if (code <= 67 || (code >= 80 && code <= 82)) return "var(--color-weather-rain)";
+  if (code <= 77 || code === 85 || code === 86) return "var(--color-weather-snow)";
+  return "var(--color-weather-storm)";
 }
 
 const cache = new Map<string, { at: number; data: Forecast }>();

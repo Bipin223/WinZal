@@ -11,7 +11,7 @@ import { useDiscordCall } from "../discord/store";
 import { Equalizer } from "../now-playing/Equalizer";
 import { ARTWORK_LAYOUT_ID } from "../now-playing/NowPlayingView";
 import { formatClock, timer, useRemaining } from "../timer/store";
-import { describe, useForecast } from "../weather/store";
+import { describe, useForecast, weatherTone } from "../weather/store";
 import { settings } from "../../settings/store";
 import { formatTemp, formatTimeParts } from "../../lib/format";
 import { locale, t } from "../../i18n";
@@ -81,7 +81,12 @@ function Header() {
               initial={{ opacity: 0, filter: "blur(4px)" }}
               animate={{ opacity: 1, filter: "blur(0px)", transition: content.enter }}
             >
-              <weather.icon size={22} weight="fill" className="text-label" />
+              <weather.icon
+                size={22}
+                weight="fill"
+                className="text-label"
+                style={appearance.weatherColors ? { color: weatherTone(forecast.current.code, forecast.current.day) } : undefined}
+              />
               <span className="tabular text-[22px] leading-none font-semibold tracking-[-0.02em] text-label">
                 {formatTemp(forecast.current.temp)}
               </span>

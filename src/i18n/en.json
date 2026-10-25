@@ -766,5 +766,8 @@
   "Caption": "Caption",
   "Footnote": "Footnote",
   "Body": "Body",
-  "Title": "Title"
+  "Title": "Title",
+  "Weather colors": "Weather colors",
+  "Text size": "Text size",
+  "Text width": "Text width"
 }
