@@ -15,8 +15,9 @@ import { describe, useForecast } from "../weather/store";
 import { settings } from "../../settings/store";
 import { formatTemp, formatTimeParts } from "../../lib/format";
 import { locale, t } from "../../i18n";
-import { ClockTime } from "../../notch/ClockTime";
+import { CompactClock } from "../../notch/ClockFace";
 import { useMinute } from "../../lib/useMinute";
+import { useSecond } from "../../lib/useSecond";
 import { PowerActions, QuickControls, SystemRow } from "./Controls";
 
 /*
@@ -55,15 +56,26 @@ function Header() {
   const appearance = settings.use().appearance;
   const place = settings.use().weather;
   const weather = forecast && forecast !== "error" ? describe(forecast.current.code, forecast.current.day) : null;
-  const { time, period } = formatTimeParts(now);
+  const { period } = formatTimeParts(now);
   const date = new Intl.DateTimeFormat(locale(), { weekday: "long", day: "numeric", month: "long" }).format(now);
+  const stacked = appearance.clockStyle === "stacked";
+  const withSeconds = appearance.clockStyle === "split" || appearance.clockStyle === "scatter";
+  const liveSeconds = useSecond(withSeconds);
 
   return (
     <div className="relative flex items-end justify-between">
       <div>
-        <div className="tabular text-[34px] leading-none tracking-[-0.03em] text-label">
-          <ClockTime time={time} emphasizeHour={appearance.clockEmphasis} weight={appearance.clockOpenWeight} />
-          {period && <span className="ml-1 text-title tracking-normal text-label-3">{period}</span>}
+        <div className={`flex ${stacked ? "items-center" : "items-baseline"} gap-1 leading-none tracking-[-0.03em] text-label`}>
+          <CompactClock
+            style={appearance.clockStyle}
+            now={now}
+            size={stacked ? 26 : 34}
+            height={stacked ? 58 : 40}
+            weight={appearance.clockOpenWeight}
+            seconds={liveSeconds}
+            showSeconds={withSeconds}
+          />
+          {period && <span className="text-title tracking-normal text-label-3">{period}</span>}
         </div>
         <div className="mt-1 text-footnote text-label-3">{date}</div>
       </div>

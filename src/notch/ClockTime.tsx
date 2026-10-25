@@ -13,13 +13,16 @@ export function ClockTime({
   className,
   emphasizeHour = false,
   weight,
+  tint = true,
 }: {
   time: string;
   className?: string;
   emphasizeHour?: boolean;
   weight?: number;
+  /** Tint the first digit. Off for the minute half of a split clock. */
+  tint?: boolean;
 }) {
-  const accent = settings.use().appearance.clockAccent;
+  const accentColor = settings.use().appearance.clockAccent;
   const colon = time.indexOf(":");
   const hourEnd = colon > 0 ? colon : Math.min(2, time.length);
   const first = time.slice(0, 1);
@@ -44,7 +47,7 @@ export function ClockTime({
             : undefined
         }
       >
-        <span style={{ color: accent }}>{first}</span>
+        <span style={tint ? { color: accentColor } : undefined}>{first}</span>
         {restHour}
       </span>
       {rest}

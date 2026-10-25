@@ -9,13 +9,14 @@ import { FOCUS_CLICKS, focusMode, setFocusMode } from "./focus";
 import { silentMode, setSilentMode } from "./silent";
 import { useGamingLive } from "../features/system/gaming";
 import { useGameAutoPower } from "../features/system/autoPower";
-import { gamingWidth } from "../features/system/gamingOverlay";
+import { gamingMeasured, gamingWidth } from "../features/system/gamingOverlay";
 import { useDragToMove } from "./drag";
 import { LiveSlot, useLiveActivity } from "./live";
 import { GamingSatellite } from "./GamingSatellite";
 import { DOCK_HEIGHT, HEADER_HEIGHT, geometry, openGeometry, type NotchGeometry } from "./geometry";
 import { HeaderButton, headerSlot } from "./header";
-import { ClockTime } from "./ClockTime";
+import { ClockMeta, CompactClock } from "./ClockFace";
+import { clockMeasured } from "./clockMeasure";
 import { LiveRightInset } from "./liveEdges";
 import { RECORDING_EXTRA, RECORDING_INSET, RecordingBadge, useRecording } from "./recording";
 import { sizeOverride } from "./size";
@@ -29,10 +30,9 @@ import { nav, navigate } from "./nav";
 import { update } from "../lib/update";
 import { findTab, settingsTab, tabs, type NotchTab } from "./tabs";
 import { holdOpen, pinned, togglePin, useNotchState, type NotchStatus } from "./useNotchState";
-import { t, locale } from "../i18n";
-import { formatTemp, formatTimeParts } from "../lib/format";
+import { t } from "../i18n";
+import { formatTimeParts } from "../lib/format";
 import { useMinute } from "../lib/useMinute";
-import { describe, useForecast } from "../features/weather/store";
 import { timer } from "../features/timer/store";
 
 /** `#rrggbb` + alpha → `rgba(...)`; anything else is passed through untouched. */
@@ -54,13 +54,15 @@ export function Notch() {
   const focus = focusMode.use();
   const silent = silentMode.use();
   const gamingLive = useGamingLive();
+  const measuredGamingWidth = gamingMeasured.use();
+  const measuredClockWidth = clockMeasured.use();
   useGameAutoPower();
   const { tools: toolSettings, display: displaySettings, appearance, gaming } = settings.use();
   // Silent mode is the only ghost; game transparency reuses the Glass alpha (0.62).
   const ghostOpacity = silent && status !== "open" ? 0.28 : 1;
   const materialAlpha = appearance.material === "glass" ? 0.62 : appearance.material === "dark" ? 0.82 : 1;
   const notchAlpha = gaming.transparent && gamingLive ? 0.62 : materialAlpha;
-  const systemWidth = gamingWidth(gaming);
+  const systemWidth = measuredGamingWidth > 0 ? measuredGamingWidth : gamingWidth(gaming);
   useEffect(() => {
     setSilent(silent && status !== "open");
   }, [silent, status]);
@@ -175,12 +177,17 @@ export function Notch() {
   const lyricTarget = !lyricPill || lyricWidth <= 0
     ? 0
     : appearance.lyricsPillAuto
-      ? Math.max(appearance.lyricsPillMinWidth, lyricWidth + 78)
-      : appearance.lyricsPillMinWidth;
+      ? Math.max(appearance.lyricsPillMinWidth, Math.min(appearance.lyricsPillLength, lyricWidth + 78))
+      : appearance.lyricsPillLength;
   const lyricsExtra = lyricTarget > 0 ? Math.min(360, Math.max(0, lyricTarget - geometry.live.w)) : 0;
+
+  const clockContent = measuredClockWidth > 0 ? measuredClockWidth : 206 + clockExtra;
+  const clockShapeWidth =
+    Math.min(700, Math.max(120, clockContent + appearance.islandWidth + (status === "peek" ? 16 : 0))) +
+    (showRecording ? RECORDING_EXTRA : 0);
   const displayShape = {
     ...finalShape,
-    w: finalShape.w + (showRecording ? RECORDING_EXTRA : 0) + clockExtra + lyricsExtra,
+    w: clockPill && status !== "open" ? clockShapeWidth : finalShape.w + (showRecording ? RECORDING_EXTRA : 0) + lyricsExtra,
   };
   // Gaming stats own the pill; a playing track gets its own little island instead.
   const gamingSatellite =
@@ -389,48 +396,59 @@ export function Notch() {
   );
 }
 
-/** Windows-island style: a clock in the floating closed pill. */
+/** Windows-island style: the selected clock face in the floating closed pill. */
 function ClosedClock() {
   const now = useMinute();
-  const forecast = useForecast();
   const appearance = settings.use().appearance;
   const size = appearance.clockClosedSize;
   const smallSize = Math.max(8, Math.round(size * 0.66));
-  const tempSize = Math.max(8, Math.round(size * 0.8));
-  const { time, period } = formatTimeParts(now);
-  const weekday = now.toLocaleDateString(locale(), { weekday: "short" });
-  const date = now.toLocaleDateString(locale(), { day: "numeric", month: "short" });
-  const meta = [appearance.clockShowDay ? weekday : null, appearance.clockShowDate ? date : null].filter(Boolean).join(" · ");
-  const wx = appearance.clockShowWeather && forecast && forecast !== "error" ? describe(forecast.current.code, forecast.current.day) : null;
-  const temp = appearance.clockShowWeather && forecast && forecast !== "error" ? formatTemp(forecast.current.temp) : null;
-  const iconSize = Math.max(12, Math.round(size * 0.95));
+  const { period } = formatTimeParts(now);
+  const row = useRef<HTMLDivElement>(null);
+
+  // Report the intrinsic row width so the closed notch grows/shrinks with the
+  // selected face instead of using a fixed 206 px base.
+  useLayoutEffect(() => {
+    const el = row.current;
+    if (!el) return;
+    const report = () => clockMeasured.set(Math.ceil(el.scrollWidth + 24));
+    const ro = new ResizeObserver(report);
+    ro.observe(el);
+    report();
+    return () => {
+      ro.disconnect();
+      clockMeasured.set(0);
+    };
+  }, []);
+
+  // One-line faces share the baseline with PM and the weather; the two-line
+  // Stacked face keeps the side text centered against the block.
+  const baseline = appearance.clockStyle !== "stacked";
   return (
-    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-      <div className="flex items-center gap-1" style={{ fontWeight: appearance.clockClosedWeight }}>
-        <span style={{ fontSize: `${size}px` }}>
-          <ClockTime
-            time={time}
-            className="tabular text-label"
-            emphasizeHour={appearance.clockEmphasis}
-            weight={appearance.clockClosedWeight}
-          />
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-1">
+      <div
+        ref={row}
+        className={`flex w-max shrink-0 ${baseline ? "items-baseline" : "items-center"} gap-2 whitespace-nowrap`}
+        style={{ fontWeight: appearance.clockClosedWeight }}
+      >
+        <span className={`flex min-w-0 ${baseline ? "items-baseline" : "items-center"} gap-1`}>
+          <span className="min-w-0 overflow-hidden tabular leading-none text-label" style={{ fontSize: `${size}px` }}>
+            <CompactClock
+              style={appearance.clockStyle}
+              now={now}
+              size={size}
+              height={appearance.islandHeight}
+            />
+          </span>
+          {period && (
+            <span className="shrink-0 text-label-3 leading-none" style={{ fontSize: `${smallSize}px` }}>
+              {period}
+            </span>
+          )}
         </span>
-        {period && <span className="text-label-3" style={{ fontSize: `${smallSize}px` }}>{period}</span>}
-        {meta && <span className="text-label-3" style={{ fontSize: `${smallSize}px` }}>{period ? `· ${meta}` : meta}</span>}
+        <span className="flex shrink-0 items-baseline text-label-3 leading-none" style={{ fontSize: `${smallSize}px` }}>
+          <ClockMeta now={now} compact />
+        </span>
       </div>
-      {wx && (
-        <>
-          <span
-            aria-hidden
-            className={`mx-3 ${size >= 15 ? "h-4" : "h-3.5"} w-[2px] shrink-0 rounded-full`}
-            style={{ background: "var(--color-label-2)", boxShadow: "0 0 6px var(--color-label-4)" }}
-          />
-          <div className="flex items-center gap-1.5">
-            <wx.icon size={iconSize} weight="fill" className="text-label-2"  />
-            <span className="tabular text-label-2" style={{ fontSize: `${tempSize}px` }}>{temp}</span>
-          </div>
-        </>
-      )}
     </div>
   );
 }
@@ -655,10 +673,20 @@ function useNativeBridge(
     // The shape's size is animated by a spring → ResizeObserver fires every frame.
     const report = () => {
       const r = el.getBoundingClientRect();
-      setHitRect({ x: r.x, y: r.y, w: r.width, h: r.height });
+      setHitRect({
+        x: r.x,
+        y: r.y,
+        w: r.width,
+        h: r.height,
+        vw: document.documentElement.clientWidth || window.innerWidth,
+        vh: document.documentElement.clientHeight || window.innerHeight,
+      });
     };
     const ro = new ResizeObserver(report);
     ro.observe(el);
+    // A display/DPI change can alter the CSS viewport without resizing the hit
+    // zone, so report that too.
+    window.addEventListener("resize", report);
     report();
 
     const offHover = onNativeHover((inside) => (inside ? onEnter() : onLeave()));
@@ -675,6 +703,7 @@ function useNativeBridge(
 
     return () => {
       ro.disconnect();
+      window.removeEventListener("resize", report);
       offHover();
       el.removeEventListener("focusin", onFocusIn);
       el.removeEventListener("focusout", onFocusOut);

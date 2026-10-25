@@ -16,32 +16,26 @@
   <text x="670" y="78" fill="#f2f2f4" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="12" font-weight="700">69%</text>
 
   <text x="42" y="156" fill="#5f5f65" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" letter-spacing="1.6">BARS</text>
-  <rect x="130" y="132" width="620" height="40" rx="20" fill="#000" stroke="#242426"/>
+  <rect x="130" y="132" width="530" height="40" rx="20" fill="#000" stroke="#242426"/>
   <text x="160" y="158" fill="#f2f2f4" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="12" font-weight="700">64</text>
   <text x="182" y="157" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">FPS</text>
   <text x="222" y="157" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">CPU</text>
   <rect x="252" y="151" width="46" height="3" rx="1.5" fill="#242426"/><rect x="252" y="151" width="17" height="3" rx="1.5" fill="#30d158"/>
-  <text x="306" y="158" fill="#f2f2f4" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" font-weight="600">37%</text>
-  <text x="470" y="157" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">GPU</text>
-  <rect x="500" y="151" width="46" height="3" rx="1.5" fill="#242426"/><rect x="500" y="151" width="22" height="3" rx="1.5" fill="#ff9f0a"/>
-  <text x="554" y="158" fill="#f2f2f4" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" font-weight="600">48%</text>
-  <text x="640" y="157" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">RAM</text>
-  <rect x="670" y="151" width="46" height="3" rx="1.5" fill="#242426"/><rect x="670" y="151" width="32" height="3" rx="1.5" fill="#f2f2f4"/>
-  <text x="724" y="158" fill="#f2f2f4" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" font-weight="600">69%</text>
+  <text x="390" y="157" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">GPU</text>
+  <rect x="420" y="151" width="46" height="3" rx="1.5" fill="#242426"/><rect x="420" y="151" width="22" height="3" rx="1.5" fill="#ff9f0a"/>
+  <text x="540" y="157" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">RAM</text>
+  <rect x="570" y="151" width="46" height="3" rx="1.5" fill="#242426"/><rect x="570" y="151" width="32" height="3" rx="1.5" fill="#f2f2f4"/>
 
   <text x="42" y="236" fill="#5f5f65" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" letter-spacing="1.6">GRAPH</text>
-  <rect x="130" y="212" width="620" height="40" rx="20" fill="#000" stroke="#242426"/>
+  <rect x="130" y="212" width="530" height="40" rx="20" fill="#000" stroke="#242426"/>
   <text x="160" y="238" fill="#f2f2f4" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="12" font-weight="700">64</text>
   <text x="182" y="237" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">FPS</text>
   <text x="222" y="237" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">CPU</text>
   <polyline points="252,238 258,236 264,237 270,232 276,234 284,229" fill="none" stroke="#30d158" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="296" y="238" fill="#f2f2f4" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" font-weight="600">37%</text>
-  <text x="470" y="237" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">GPU</text>
-  <polyline points="500,238 506,235 512,236 518,231 524,233 532,228" fill="none" stroke="#ff9f0a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="544" y="238" fill="#f2f2f4" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" font-weight="600">48%</text>
-  <text x="640" y="237" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">RAM</text>
-  <polyline points="670,238 676,236 682,237 688,232 694,234 702,229" fill="none" stroke="#f2f2f4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="714" y="238" fill="#f2f2f4" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" font-weight="600">69%</text>
+  <text x="390" y="237" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">GPU</text>
+  <polyline points="420,238 426,235 432,236 438,231 444,233 452,228" fill="none" stroke="#ff9f0a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="540" y="237" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">RAM</text>
+  <polyline points="570,238 576,236 582,237 588,232 594,234 602,229" fill="none" stroke="#f2f2f4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
 
   <text x="450" y="284" text-anchor="middle" fill="#5f5f65" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10">remove stats → the pill shrinks to fit</text>
 </svg>

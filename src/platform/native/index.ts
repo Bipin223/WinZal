@@ -5,8 +5,12 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 /** Is the frontend running in the Tauri app (rather than a regular browser)? */
 export const isNative = "__TAURI_INTERNALS__" in window;
 
-/** Reports the hit zone in CSS px relative to the window to Rust (click-through). */
-export function setHitRect(rect: { x: number; y: number; w: number; h: number }) {
+/**
+ * Reports the hit zone in CSS px relative to the window, plus the CSS viewport
+ * size, to Rust (click-through). Rust uses the viewport to map the cursor into
+ * the same CSS space, so display/text scaling cannot shift the right edge.
+ */
+export function setHitRect(rect: { x: number; y: number; w: number; h: number; vw: number; vh: number }) {
   if (isNative) void invoke("set_hit_rect", { rect });
 }
 

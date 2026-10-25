@@ -54,9 +54,15 @@ export const springs = {
   get lyricWord() {
     return spring(0.52, 0.22);
   },
-  /** Closed notch growing/shrinking for a lyric line. */
-  get lyricWidth() {
-    return spring(0.3, 0);
+  /**
+   * Closed notch growing/shrinking for a lyric line. A tween with an ease-in-out
+   * curve (rather than a spring) starts gently, accelerates through the middle
+   * and settles without a hard stop — the AE-style fade in/out of motion.
+   */
+  get lyricWidth(): Transition {
+    const factor = 0.25 + 0.75 * motionScale;
+    if (reduceMotion || motionScale === 0) return { type: "tween", duration: 0.001, ease: "linear" };
+    return { type: "tween", duration: 0.46 * factor * slow, ease: [0.42, 0, 0.58, 1] };
   },
 };
 

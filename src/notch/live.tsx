@@ -1,5 +1,6 @@
 import { useContext, useRef } from "react";
-import { AnimatePresence, useTransform } from "motion/react";
+import { AnimatePresence, motion, useTransform } from "motion/react";
+import { springs } from "../design/motion";
 import { useNowPlaying } from "../platform/media";
 import { LiveActivity } from "../features/now-playing/LiveActivity";
 import { LiveTimer, useTimerLive } from "../features/timer/LiveTimer";
@@ -50,15 +51,18 @@ export function LiveSlot({ id, recording = false, extra = 0, widthExtra = 0, hei
   const spread = useTransform(useContext(ShapeWidth), (w) =>
     Math.max(0, (w - boxW.current) / 2),
   );
+  // The content follows the same curve as the shape. Without this the live row
+  // snapped to the new width while only the notch outline eased, which made
+  // extension look like a jump. `morph` covers open/close and non-lyric sizes.
+  const widthTransition = last.current === "media" && extra > 0 ? springs.lyricWidth : springs.morph;
   return (
     <LiveSpread.Provider value={spread}>
-      <div
+      <motion.div
         className="absolute top-0 left-1/2"
-        style={{
-          width,
-          height: height ?? box.h,
-          marginLeft: -width / 2,
-        }}
+        initial={false}
+        animate={{ width, marginLeft: -width / 2 }}
+        transition={widthTransition}
+        style={{ height: height ?? box.h }}
       >
         <AnimatePresence initial={false}>
           {id === "system" && <LiveGaming key="system" />}
@@ -68,7 +72,7 @@ export function LiveSlot({ id, recording = false, extra = 0, widthExtra = 0, hei
           )}
           {id === "media" && np && <LiveActivity key="media" np={np} />}
         </AnimatePresence>
-      </div>
+      </motion.div>
     </LiveSpread.Provider>
   );
 }

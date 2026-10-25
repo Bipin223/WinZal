@@ -1,15 +1,30 @@
 import type { Settings } from "../../settings/store";
+import { createStore } from "../../lib/store";
 
-/** Pixel width of the closed gaming pill for the visible items. */
+/**
+ * Measured content width of the live gaming row. 0 = not measured yet, so the
+ * notch falls back to the estimate below.
+ */
+export const gamingMeasured = createStore(0);
+
+/**
+ * Fallback width before the live row has been measured. Bars/Graph show no
+ * percentage text, so they are narrower than the Text style.
+ */
 export function gamingWidth(g: Settings["gaming"]): number {
-  let w = 28;
-  const extra = g.style === "bars" ? 28 : g.style === "graph" ? 48 : 0;
-  if (g.showFps) w += 58;
-  if (g.showCpu) w += (g.showTemps ? 118 : 86) + extra;
-  if (g.showGpu) w += (g.showTemps ? 118 : 86) + extra;
-  if (g.showRam) w += 66 + extra;
+  const text = g.style === "text";
+  const used = g.showTemps
+    ? (text ? 104 : g.style === "bars" ? 98 : 104)
+    : (text ? 74 : g.style === "bars" ? 68 : 74);
+  const ram = text ? 68 : g.style === "bars" ? 72 : 78;
+  let w = 20;
+  if (g.showFps) w += 54;
+  if (g.showCpu) w += used;
+  if (g.showGpu) w += used;
+  if (g.showRam) w += ram;
   if (g.showGpu && g.showRam) w += 12;
-  return Math.round(Math.max(220, Math.min(580, w)));
+  if (g.divider && (g.showFps || g.showCpu) && (g.showGpu || g.showRam)) w += 10;
+  return Math.round(Math.max(180, Math.min(580, w)));
 }
 
 /** GPU counters are only needed for GPU load/temperature. */

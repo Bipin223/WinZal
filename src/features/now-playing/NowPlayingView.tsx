@@ -128,11 +128,11 @@ export function NowPlayingView() {
                     >
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-[11px] leading-[13px] font-semibold text-label">
-                          {session.title || appLabel(session.appId)}
+                          {session.title || session.artist || "—"}
                         </div>
-                        <div className="truncate text-[9px] leading-[11px] text-label-3">
-                          {[session.artist, appLabel(session.appId)].filter(Boolean).join(" · ")}
-                        </div>
+                        {session.title && session.artist && (
+                          <div className="truncate text-[9px] leading-[11px] text-label-3">{session.artist}</div>
+                        )}
                       </div>
                       {np.appId === session.appId && <SelectedDot />}
                     </button>
@@ -359,16 +359,6 @@ function IconButton(props: { label: string; onClick: () => void; children: React
       {props.children}
     </button>
   );
-}
-
-/** Human-ish name from a Windows AUMID (e.g. `SpotifyAB.SpotifyMusic...!Spotify`). */
-function appLabel(appId: string): string {
-  const tail = appId.split("!").pop() || appId;
-  return tail
-    .replace(/\.exe$/i, "")
-    .replace(/[._]+/g, " ")
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .trim();
 }
 
 function Empty() {

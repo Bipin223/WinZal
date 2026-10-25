@@ -5,6 +5,7 @@ import { LyricAnimationPreview } from "../now-playing/LyricAnimationPreview";
 import { LyricVisualizer, type LyricVisualizerStyle } from "../now-playing/LyricVisualizer";
 import { SelectedDot } from "../../ui/SelectedDot";
 import { Group, Row, Segmented, Slider, Switch } from "../../ui/controls";
+import { ACCENTS, Swatches } from "../appearance/AppearanceView";
 
 /**
  * Music-specific settings in one place: what the closed pill shows and how
@@ -120,9 +121,22 @@ export function MusicSettings() {
                   min={284}
                   max={640}
                   step={4}
-                  onChange={(lyricsPillMinWidth) => set({ lyricsPillMinWidth })}
+                  onChange={(lyricsPillMinWidth) => set({ lyricsPillMinWidth, lyricsPillLength: Math.max(a.lyricsPillLength, lyricsPillMinWidth) })}
                 />
                 <span className="tabular w-11 shrink-0 text-right text-caption text-label-3">{a.lyricsPillMinWidth} px</span>
+              </div>
+            </Row>
+            <Row label={t("Pill length")}>
+              <div className="flex w-44 items-center gap-2">
+                <Slider
+                  label={t("Pill length")}
+                  value={a.lyricsPillLength}
+                  min={284}
+                  max={640}
+                  step={4}
+                  onChange={(lyricsPillLength) => set({ lyricsPillLength: Math.max(a.lyricsPillMinWidth, lyricsPillLength) })}
+                />
+                <span className="tabular w-11 shrink-0 text-right text-caption text-label-3">{a.lyricsPillLength} px</span>
               </div>
             </Row>
             <Row label={t("Auto width")}>
@@ -170,6 +184,10 @@ export function MusicSettings() {
                       )}
                     </button>
                   ))}
+                </div>
+                <div className="mt-2">
+                  <div className="mb-1.5 text-footnote font-medium text-label-2">{t("Equalization Accent")}</div>
+                  <Swatches value={a.accent} colors={ACCENTS} onChange={(accent) => set({ accent })} />
                 </div>
               </div>
             )}
@@ -223,7 +241,9 @@ function LyricsPillPreview() {
     ctx.font = `${a.lyricsTextWeight} ${a.lyricsTextSize}px ${getComputedStyle(document.body).fontFamily}`;
     setTextWidth(ctx.measureText("When you light the candle").width);
   }, [a.lyricsTextSize, a.lyricsTextWeight]);
-  const width = a.lyricsPillAuto ? Math.max(a.lyricsPillMinWidth, textWidth + 78) : a.lyricsPillMinWidth;
+  const width = a.lyricsPillAuto
+    ? Math.max(a.lyricsPillMinWidth, Math.min(a.lyricsPillLength, textWidth + 78))
+    : a.lyricsPillLength;
   const scale = Math.min(1, 430 / Math.max(1, width));
   return (
     <div className="flex h-16 items-center justify-center overflow-hidden rounded-[10px] bg-fill-2 px-2">

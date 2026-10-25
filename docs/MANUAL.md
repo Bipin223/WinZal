@@ -1,6 +1,6 @@
 # WinZal — Manual
 
-**Version 1.7.7** · Windows 10 / 11 x64 · by **Bipin Rizal**
+**Version 1.7.8** · Windows 10 / 11 x64 · by **Bipin Rizal**
 
 The illustrated version is [`manual.html`](manual.html). Open it in a browser for the full design, icons and diagrams.
 
@@ -29,6 +29,20 @@ The illustrated version is [`manual.html`](manual.html). Open it in a browser fo
 - The preview above shows the real time, period, date sample and temperature, including the Weather/Date/Day toggles.
 
 The pill widens with larger text; use the **Length** slider if you want more room.
+
+### Clock faces
+
+WinZal ships five faces: **Stacked**, **Split**, **Scatter**, **Classic** and **Word**.
+
+Pick one in **Settings → Notch → Clock faces**. **Classic** is the default and matches the previous clock. The expanded Overview and the closed pill both use the selected face.
+
+- **Stacked** — hours over minutes in a tall two-line block.
+- **Split** - hour and minute separated by a vertical bar, with live seconds and the period at the side. The bar height is adjustable.
+- **Scatter** — hour, minute and second sit apart, tied by a thin diagonal line. The expanded Overview updates the seconds live.
+- **Classic** — centered time with the date and weather underneath.
+- **Word** — the time written out, for example `fourThirtyone`.
+
+All faces follow the clock weight, emphasized hour and first-digit accent. They scale fluidly: the expanded face fills the card, and the closed pill uses a compact version of the same design.
 
 ---
 
@@ -73,11 +87,11 @@ Enable, disable and reorder them in **Settings → Tools**.
 | Page | Contains |
 |---|---|
 | **General** | Startup, language, weather location, updates. |
-| **Notch** | Closed pill/line, size, **closed text size and weight**, clock accent, weather/date/day. |
+| **Notch** | Closed pill/line, size, **closed text size and weight**, **clock face**, clock accent, weather/date/day. |
 | **Appearance** | Theme, material/glass, corners, accent, island style. |
-| **Display** | Visibility, monitor, position, silent, DND, recording dots, **Font**, **Gaming**, presentation. |
-| **Performance** | Motion intensity, GPU acceleration, iGPU/dGPU, FPS unlock. |
-| **Music** | Music in the pill, lyrics layout, size, weight, min width, auto width, height, offset, visualizer, animation. |
+| **Display** | Visibility, monitor, position, silent, DND, recording dots, **Font**, presentation. |
+| **Performance** | Motion intensity, GPU acceleration, iGPU/dGPU, FPS unlock, **Gaming look** and **Gaming mode**. |
+| **Music** | Music in the pill, lyrics layout, size, weight, min width, pill length, auto width, height, offset, visualizer, animation. |
 | **Tools** | Tool order and visibility; vault settings. |
 | **Timer** | Alarm sound, volume, duration. |
 | **AI** | Ask provider/model/key; custom AI Usage endpoint. |
@@ -107,15 +121,17 @@ Five roles share one scale. Pick a role, adjust **size** and **weight**, and the
 - The selected role is previewed with its live size/weight above the sliders.
 - The original L4 notch uses 11/12/13/15/22; WinZal is intentionally one step larger and slightly bolder.
 
-## Gaming — Display → Gaming
+## Gaming — Performance → Gaming look
 
 The preview is the real pill: toggles change it immediately.
 
 ![Gaming overlay styles](manual/gaming.svg)
 
 - **Show:** FPS, CPU, Temperatures, GPU, RAM.
-- **Stat style:** Text, Bars or Graph.
-- **Dynamic width:** the pill shrinks to fit the visible stats (**220–580 px**).
+- **Stat style:** Text, Bars or Graph. Bars and Graph omit the percentage text, so the pill stays compact.
+- **Graph:** auto-scales the last 24 samples, so load changes read as a pulse instead of a flat ruler.
+- **Divider line:** optional separator between the FPS/CPU group and the GPU/RAM group.
+- **Dynamic width:** the pill follows the real row width; it grows and shrinks with the visible stats instead of reserving a fixed gap.
 - **Gaming overlay:** on/off; the preview shows **ON/OFF**.
 - **Transparent in games:** reuses the existing **Glass 0.62** alpha while a game is in front.
 - **Custom power in games:** switches Lenovo to Custom when a chosen game starts and restores the previous power mode when it exits (also heals after a crash).
@@ -159,7 +175,8 @@ Idle memory is roughly **10 MB UI + 20 MB helper**, plus WebView2 shared process
 - Transitions: **Apple Music**, **Word by Word**, **Kinetic** (per-word 3D) and **Reveal**.
 - Old and new lines never overlap: the old line leaves before the new one enters.
 - **Lyrics offset:** ±1 s in 0.1 s steps; positive makes lines appear later.
-- **Visualizer:** Wave, Pulse, Dots, Ripple or Aurora in the cover accent. Settings previews animate only on hover.
+- **Visualizer:** Wave, Pulse, Dots, Ripple or Aurora in the Equalization Accent (`auto` follows the cover). Settings previews animate only on hover.
+- **Output device:** the Now Playing mixer lists Windows playback endpoints. Pick speakers, headphones or Bluetooth and Windows switches its default output immediately.
 
 ---
 
@@ -169,7 +186,9 @@ Settings → Music → Songtext has a live preview and its own pill controls:
 
 - **Text size** 10–15 px, **weight** 400–900.
 - **Min width** 284–640 px. The pill never shrinks below this.
-- **Auto width** is on by default: it grows with the line and shrinks back, but never below the minimum. Turn it off for a fixed width.
+- **Pill length** 284–640 px. With auto width on it is the maximum; with auto width off it is the fixed width.
+- **Auto width** is on by default: it grows with the line and shrinks back, but never below the minimum or beyond the length. Turn it off for a fixed width.
+- **Width motion:** the pill eases in and out when it grows or shrinks, instead of snapping at the edges.
 - **Pill height** 24–44 px.
 - Instrumental tracks show **Instrumental**; tracks without synced lyrics show **Music**.
 - LRCLIB results are matched by title, artist and closest duration, so the right edit of a song wins.
@@ -209,4 +228,4 @@ Tray menu: Open, Settings, Do not disturb, Silent mode, Presentation mode, Start
 - Settings, vault, notes, to-dos and history stay on this PC.
 - Built with Tauri + React + Rust; WebView2 for rendering.
 
-**WinZal 1.7.7** — by **Bipin Rizal**.
+**WinZal 1.7.8** — by **Bipin Rizal**.

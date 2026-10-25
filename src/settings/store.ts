@@ -1,5 +1,6 @@
 ﻿import { createStore } from "../lib/store";
 import type { AlarmDuration, AlarmSound } from "../lib/sound";
+import { isClockStyle, type ClockStyle } from "../notch/clockStyles";
 
 export type AskProvider = "gemini" | "groq" | "custom";
 export type AskEffort = "low" | "medium" | "high" | "xhigh";
@@ -72,6 +73,8 @@ export interface Settings {
     showRam: boolean;
     /** How CPU/GPU/RAM values are drawn. */
     style: "text" | "bars" | "graph";
+    /** Thin separator between the left (FPS/CPU) and right (GPU/RAM) groups. */
+    divider: boolean;
     /** Switch to Lenovo Custom while a game is in front, then restore. */
     autoPower: boolean;
   };
@@ -119,6 +122,10 @@ export interface Settings {
     clockOpenWeight: number;
     /** Larger + 900-weight hour in the clock (OnePlus style). Off = uniform clock. */
     clockEmphasis: boolean;
+    /** Expanded clock face; the closed pill uses a compact version of it. */
+    clockStyle: ClockStyle;
+    /** Split face: divider height as a percentage of the digit height. */
+    clockSplitHeight: number;
     /** Show the current synced lyric line in the closed music pill instead of the title. */
     lyricsInPill: boolean;
     /** One line (inline) or the current + next line. */
@@ -131,6 +138,8 @@ export interface Settings {
     lyricsOffset: number;
     /** Minimum width of the closed lyric pill. */
     lyricsPillMinWidth: number;
+    /** Maximum width when auto width is on; fixed width when it is off. */
+    lyricsPillLength: number;
     /** true: grow/shrink with the text (never below the minimum); false: fixed width. */
     lyricsPillAuto: boolean;
     /** Lyric pill height. */
@@ -221,6 +230,7 @@ const defaults: Settings = {
     showGpu: true,
     showRam: true,
     style: "text",
+    divider: false,
     autoPower: false,
   },
   typography: { ...DEFAULT_TYPOGRAPHY },
@@ -247,12 +257,15 @@ const defaults: Settings = {
     clockClosedWeight: 800,
     clockOpenWeight: 700,
     clockEmphasis: true,
+    clockStyle: "classic",
+    clockSplitHeight: 62,
     lyricsInPill: false,
     lyricsLayout: "inline",
     motion: 100,
     lyricsTextSize: 12,
     lyricsOffset: 0,
     lyricsPillMinWidth: 284,
+    lyricsPillLength: 640,
     lyricsPillAuto: true,
     lyricsPillHeight: 30,
     lyricsTextWeight: 600,
@@ -371,7 +384,27 @@ settings.set((s) => {
         if (typeof legacy?.clockOpenWeight === "number") return Math.min(900, Math.max(400, legacy.clockOpenWeight));
         return legacy?.clockBold === false ? 600 : 700;
       })(),
+      clockStyle: (() => {
+        const stored = (s.appearance as { clockStyle?: string } | undefined)?.clockStyle;
+        // "vertical" was replaced by the Split face before release.
+        if (stored === "vertical") return "split" as const;
+        return isClockStyle(stored) ? stored : defaults.appearance.clockStyle;
+      })(),
+      clockSplitHeight: (() => {
+        const stored = (s.appearance as { clockSplitHeight?: number } | undefined)?.clockSplitHeight;
+        return typeof stored === "number" ? Math.min(100, Math.max(20, Math.round(stored))) : defaults.appearance.clockSplitHeight;
+      })(),
       lyricsVisualizerStyle: s.appearance?.lyricsVisualizerStyle ?? defaults.appearance.lyricsVisualizerStyle,
+      lyricsPillLength: (() => {
+        const a = s.appearance as { lyricsPillLength?: number; lyricsPillMinWidth?: number; lyricsPillAuto?: boolean } | undefined;
+        if (typeof a?.lyricsPillLength === "number") return Math.min(640, Math.max(284, Math.round(a.lyricsPillLength)));
+        const min =
+          typeof a?.lyricsPillMinWidth === "number"
+            ? Math.min(640, Math.max(284, Math.round(a.lyricsPillMinWidth)))
+            : defaults.appearance.lyricsPillMinWidth;
+        // Older fixed-width pills used Min width as their actual length.
+        return a?.lyricsPillAuto === false ? min : defaults.appearance.lyricsPillLength;
+      })(),
       lyricsOffset: (() => {
         const stored = (s.appearance as { lyricsOffset?: number } | undefined)?.lyricsOffset;
         return typeof stored === "number" ? Math.min(2, Math.max(-2, stored)) : 0;
@@ -436,6 +469,7 @@ function migrateGaming(old: unknown): Settings["gaming"] {
     showGpu?: unknown;
     showRam?: unknown;
     style?: unknown;
+    divider?: unknown;
     autoPower?: unknown;
   };
   const mode = legacy.mode === "off" ? "off" : "games";
@@ -464,6 +498,7 @@ function migrateGaming(old: unknown): Settings["gaming"] {
     showGpu: legacy.showGpu !== false && !minimal,
     showRam: legacy.showRam !== false && !minimal,
     style: legacy.style === "bars" ? "bars" : legacy.style === "dots" || legacy.style === "graph" ? "graph" : "text",
+    divider: legacy.divider === true,
     autoPower: legacy.autoPower === true,
   };
 }

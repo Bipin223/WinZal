@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 264" width="1000" height="264" role="img" aria-labelledby="title desc">
+  <title id="title">WinZal clock faces</title>
+  <desc id="desc">Five clock faces: stacked, split, scatter, classic and word.</desc>
+  <defs>
+    <style>
+      .card { fill: #171719; stroke: #2c2c2e; stroke-width: 1; }
+      .label { fill: #8e8e93; font: 600 10px Inter, "Segoe UI", system-ui, sans-serif; letter-spacing: 2.2px; text-anchor: middle; }
+      .time { fill: #f5f5f7; font-family: Inter, "Segoe UI", system-ui, sans-serif; font-weight: 700; letter-spacing: -3px; }
+      .small { fill: #8e8e93; font: 500 10px Inter, "Segoe UI", system-ui, sans-serif; }
+      .accent { fill: #ff453a; }
+    </style>
+  </defs>
+
+  <!-- Stacked -->
+  <rect class="card" x="8" y="8" width="188" height="216" rx="18"/>
+  <text class="time" x="30" y="104" font-size="66"><tspan class="accent">1</tspan>9</text>
+  <text class="time" x="30" y="172" font-size="66">09</text>
+  <text class="small" x="176" y="206" text-anchor="end">Sat · 25 Oct</text>
+  <text class="label" x="102" y="250">STACKED</text>
+
+  <!-- Split -->
+  <rect class="card" x="206" y="8" width="188" height="216" rx="18"/>
+  <text x="222" y="132" fill="#ff453a" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="58" font-weight="750" letter-spacing="-4">6</text>
+  <rect x="276" y="78" width="5" height="62" rx="2.5" fill="#8e8e93" fill-opacity=".7"/>
+  <text x="292" y="132" fill="#f5f5f7" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="58" font-weight="750" letter-spacing="-4">47</text>
+  <text x="378" y="98" fill="#ff453a" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="15" font-weight="800" text-anchor="end">PM</text>
+  <text x="378" y="184" class="small" font-size="13" text-anchor="end">51</text>
+  <text class="label" x="300" y="250">SPLIT</text>
+
+  <!-- Scatter -->
+  <rect class="card" x="404" y="8" width="188" height="216" rx="18"/>
+  <path d="M446 112 L556 164" stroke="#f5f5f7" stroke-opacity=".26" stroke-width="1.5" stroke-linecap="round"/>
+  <circle cx="556" cy="164" r="3" fill="#ff453a"/>
+  <text class="time" x="430" y="106" font-size="38"><tspan class="accent">1</tspan>6</text>
+  <text class="time" x="486" y="156" font-size="34">30</text>
+  <text x="552" y="102" fill="#8e8e93" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="20" font-weight="600">10</text>
+  <text class="label" x="498" y="250">SCATTER</text>
+
+  <!-- Classic -->
+  <rect class="card" x="602" y="8" width="188" height="216" rx="18"/>
+  <text class="time" x="696" y="118" font-size="42" text-anchor="middle"><tspan class="accent">2</tspan>2:18</text>
+  <g transform="translate(662 142)">
+    <path d="M12 14a6 6 0 0 1 6-6 6 6 0 0 1 6 6 5 5 0 0 1-5 5h-1v3h-2v-3h-1a5 5 0 0 1-5-5z" fill="#f5f5f7" opacity=".65"/>
+    <text x="26" y="18" class="small" style="font-size:12px">28°</text>
+  </g>
+  <text class="small" x="696" y="180" text-anchor="middle">Sat, 24 Jun</text>
+  <text class="label" x="696" y="250">CLASSIC</text>
+
+  <!-- Word -->
+  <rect class="card" x="800" y="8" width="188" height="216" rx="18"/>
+  <text x="894" y="124" fill="#f5f5f7" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="22" font-weight="600" letter-spacing="-1" text-anchor="middle"><tspan class="accent">f</tspan>ourThirtyone</text>
+  <text class="label" x="894" y="250">WORD</text>
+</svg>

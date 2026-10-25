@@ -1,5 +1,35 @@
 [
   {
+    "version": "1.7.8",
+    "date": "2026-10-25",
+    "items": [
+      {
+        "de": "Fünf visuell wählbare Zifferblätter in den Einstellungen (Stacked, Split, Scatter, Classic, Word); das gewählte Blatt erscheint in der erweiterten Übersicht und in der geschlossenen Pille, die sich an den Inhalt anpasst; Split zeigt Sekunden und hat eine einstellbare Trennlinien-Höhe",
+        "en": "Five visually selectable clock faces in Settings (Stacked, Split, Scatter, Classic, Word); the selected face appears in the expanded Overview and in the closed pill, which sizes itself to the content; Split shows seconds and has an adjustable divider height"
+      },
+      {
+        "de": "Hover und Klick-Durchlässigkeit nutzen jetzt die echte WebView-Clientfläche statt des Windows-Skalierungsfaktors. Das behebt das automatische Schließen am rechten Rand und nicht erreichbare Buttons auf Laptops mit anderer Skalierung oder Textgröße (z. B. ASUS TUF F15)",
+        "en": "Hover and click-through now map the cursor through the real WebView client area instead of the Windows scale factor. This fixes the right-edge auto-close and unreachable buttons on laptops with different display or text scaling (e.g. ASUS TUF F15)"
+      },
+      {
+        "de": "Geschlossene Pille: Wort- und Split-Text skaliert und richtet sich sauber an PM, Datum und Wetter aus; die Notch-Breite folgt jetzt der gewählten Uhr",
+        "en": "Closed pill: Word and Split text scales and aligns cleanly with PM, date and weather; the notch width now follows the selected clock"
+      },
+      {
+        "de": "Songtext-Pille: Pillenlänge (Maximum bei Auto-Breite, feste Breite ohne Auto) ; Breitenänderungen laufen mit einer weichen Ease-in-out-Kurve statt eines harten Sprungs",
+        "en": "Lyric pill: pill length (maximum with auto width, fixed width without it); width changes use a smooth ease-in-out curve instead of a hard snap"
+      },
+      {
+        "de": "Gaming: eigener Bereich unter Performance mit Gaming-Look und Gaming-Modus; Balken/Graph ohne Prozenttext, Breite folgt der echten Zeile, optionale Trennlinie und ein automatisch skalierender Graph mit sichtbaren Ausschlägen",
+        "en": "Gaming: its own section under Performance with Gaming look and Gaming mode; Bars/Graph omit percentage text, width follows the real row, optional divider and an auto-scaling Graph with visible pulses"
+      },
+      {
+        "de": "Now Playing: Ausgabegerät direkt wechseln (Lautsprecher, Kopfhörer, Bluetooth) über die Windows-Standardausgabe",
+        "en": "Now Playing: switch the output device directly (speakers, headphones, Bluetooth) through the Windows default output"
+      }
+    ]
+  },
+  {
     "version": "1.7.7",
     "date": "2026-10-25",
     "items": [

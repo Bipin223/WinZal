@@ -610,6 +610,18 @@ export const mixer = {
   },
 };
 
+export interface AudioOutput {
+  id: string;
+  name: string;
+  isDefault: boolean;
+}
+
+/** Windows render endpoints and the default-output switch. */
+export const audioOutputs = {
+  list: (): Promise<AudioOutput[]> => (isNative ? invoke<AudioOutput[]>("audio_outputs") : Promise.resolve([])),
+  set: (id: string): Promise<void> => (isNative ? invoke("audio_set_output", { id }) : Promise.resolve()),
+};
+
 export const systemControls = {
   volume: (): Promise<VolumeState> => (isNative ? invoke<VolumeState>("volume_get") : Promise.resolve({ ...mockVolume })),
   setVolume: (patch: { level?: number; muted?: boolean }): Promise<VolumeState> => {

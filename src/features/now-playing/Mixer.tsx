@@ -3,7 +3,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { CaretDown, SpeakerHigh, SpeakerLow, SpeakerNone, SpeakerSimpleSlash } from "@phosphor-icons/react";
 import { content, springs } from "../../design/motion";
 import { holdOpen } from "../../notch/useNotchState";
-import { mixer, systemControls, type AppVolume, type VolumeState } from "../../platform/services";
+import { audioOutputs, mixer, systemControls, type AppVolume, type AudioOutput, type VolumeState } from "../../platform/services";
+import { Select } from "../../ui/controls";
 import { t } from "../../i18n";
 
 /*
@@ -211,6 +212,33 @@ type Item = { key: string; name: string; icon: string | null; playing: boolean; 
  */
 export function MixerList({ data }: { data: MixerData }) {
   const sys = data.system;
+  const [outputs, setOutputs] = useState<AudioOutput[]>([]);
+  const [currentOutput, setCurrentOutput] = useState("");
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      void audioOutputs
+        .list()
+        .then((list) => {
+          if (!alive) return;
+          setOutputs(list);
+          setCurrentOutput((current) => current || list.find((d) => d.isDefault)?.id || list[0]?.id || "");
+        })
+        .catch(() => {});
+    load();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const chooseOutput = (id: string) => {
+    setCurrentOutput(id);
+    void audioOutputs.set(id).then(() => {
+      void audioOutputs.list().then((list) => {
+        setOutputs(list);
+        setCurrentOutput(list.find((d) => d.isDefault)?.id ?? id);
+      });
+    }).catch(() => {});
+  };
   const items: Item[] = data.apps.map((a) => ({
     key: a.id,
     name: a.name,
@@ -234,6 +262,20 @@ export function MixerList({ data }: { data: MixerData }) {
     >
       <div className="mx-0.5 mt-2 mb-1.5 h-px shrink-0 bg-separator" />
       <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 [scrollbar-width:none]">
+        {outputs.length > 0 && (
+          <div className="mb-1 flex items-center gap-2 rounded-[8px] px-2 py-1">
+            <SpeakerHigh size={14} weight="fill" className="shrink-0 text-label-2" />
+            <span className="shrink-0 text-caption font-medium text-label-2">{t("Output")}</span>
+            <div className="ml-auto min-w-0">
+              <Select
+                value={currentOutput}
+                options={outputs.map((output) => ({ value: output.id, label: output.name }))}
+                onChange={chooseOutput}
+                width="w-44"
+              />
+            </div>
+          </div>
+        )}
         <AnimatePresence initial={false} mode="popLayout">
           {items.map((item, i) => (
             <motion.div key={item.key} layout="position" transition={springs.morph} exit={{ opacity: 0, transition: content.exit }}>

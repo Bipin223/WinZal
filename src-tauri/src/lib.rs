@@ -2,6 +2,7 @@ pub mod ai;
 mod ambient;
 mod ask_history;
 mod audio;
+mod audio_out;
 mod clipboard;
 mod controls;
 mod files;
@@ -213,6 +214,8 @@ pub fn run() {
             mixer::mixer_list,
             mixer::mixer_set,
             mixer::media_open_source,
+            audio_out::audio_outputs,
+            audio_out::audio_set_output,
             tray_focus,
             tray_silent,
             tray_presentation,

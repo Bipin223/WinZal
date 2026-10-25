@@ -15,13 +15,22 @@ use serde::Deserialize;
 use tauri::{AppHandle, Emitter, Manager, State, WebviewWindow};
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON};
 
-/// Hit zone in CSS px, relative to the window's top-left corner.
+/// Hit zone in CSS px, relative to the WebView client area's top-left corner.
+///
+/// `vw`/`vh` are the WebView viewport in the same CSS px. They let the poll
+/// convert the cursor through the real client size instead of trusting the
+/// display scale factor, which can differ from the WebView's CSS mapping on
+/// high-DPI or text-scaled laptops.
 #[derive(Clone, Copy, Default, Deserialize)]
 pub struct HitRect {
     x: f64,
     y: f64,
     w: f64,
     h: f64,
+    #[serde(default)]
+    vw: f64,
+    #[serde(default)]
+    vh: f64,
 }
 
 impl HitRect {
@@ -32,7 +41,23 @@ impl HitRect {
     /// Larger zone while something is dragged towards the notch, so files are easier
     /// to drop onto the small closed notch (quick drop).
     fn grown(&self) -> HitRect {
-        HitRect { x: self.x - DROP_MARGIN, y: self.y, w: self.w + DROP_MARGIN * 2.0, h: self.h + DROP_MARGIN }
+        HitRect {
+            x: self.x - DROP_MARGIN,
+            y: self.y,
+            w: self.w + DROP_MARGIN * 2.0,
+            h: self.h + DROP_MARGIN,
+            ..*self
+        }
+    }
+}
+
+/// Physical px per CSS px along one axis. Falls back to the window scale when
+/// the frontend has not reported its viewport yet.
+fn axis_scale(css: f64, physical: u32, fallback: f64) -> f64 {
+    if css > 1.0 && physical > 0 {
+        physical as f64 / css
+    } else {
+        fallback.max(0.1)
     }
 }
 
@@ -105,15 +130,25 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
             if state.refresh.swap(false, Ordering::Relaxed) {
                 last_ignore = None;
             }
-            let (Ok(cursor), Ok(origin), Ok(scale)) =
-                (window.cursor_position(), window.outer_position(), window.scale_factor())
-            else {
+            let (Ok(cursor), Ok(origin), Ok(inner)) = (
+                window.cursor_position(),
+                window.inner_position(),
+                window.inner_size(),
+            ) else {
                 continue;
             };
 
-            let x = (cursor.x - origin.x as f64) / scale;
-            let y = (cursor.y - origin.y as f64) / scale;
+            // Map the cursor into the WebView's own CSS space. Deriving the
+            // ratio from the actual client size (not scale_factor) keeps the
+            // hit zone aligned on displays with fractional scaling or text
+            // scaling, where the two can disagree by many pixels at the right
+            // and bottom edges.
             let rect = *state.rect.lock().unwrap();
+            let fallback = window.scale_factor().unwrap_or(1.0);
+            let sx = axis_scale(rect.vw, inner.width, fallback);
+            let sy = axis_scale(rect.vh, inner.height, fallback);
+            let x = (cursor.x - origin.x as f64) / sx;
+            let y = (cursor.y - origin.y as f64) / sy;
             let dragging = unsafe { GetAsyncKeyState(VK_LBUTTON.0 as i32) } as u16 & 0x8000 != 0;
             let pressed = dragging && !was_down;
             // Edge distance to the hit zone; a held button keeps the fast poll (drags).

@@ -7,14 +7,16 @@ import { Slider, Switch } from "../../ui/controls";
 import { SelectedDot } from "../../ui/SelectedDot";
 import { ColorPickerPanel } from "../../ui/ColorPicker";
 import { t } from "../../i18n";
-import { ClockTime } from "../../notch/ClockTime";
+import { ClockFace, CompactClock } from "../../notch/ClockFace";
+import { ClockStylePicker } from "../../notch/ClockStylePicker";
 import { formatTimeParts } from "../../lib/format";
 import { useMinute } from "../../lib/useMinute";
+import { useSecond } from "../../lib/useSecond";
 import { DARK_SURFACE, LIGHT_SURFACE, useThemeLight } from "./theme";
 
 type Appearance = Settings["appearance"];
 
-const ACCENTS = ["auto", "#0a84ff", "#30d158", "#ffd60a", "#ff9f0a", "#ff453a", "#bf5af2", "#ffffff"];
+export const ACCENTS = ["auto", "#0a84ff", "#30d158", "#ffd60a", "#ff9f0a", "#ff453a", "#bf5af2", "#ffffff"];
 const CLOCK_ACCENTS = ["#ff453a", "#ff9f0a", "#ffd60a", "#30d158", "#0a84ff", "#bf5af2", "#ffffff"];
 const DEFAULTS: Appearance = {
   accent: "auto",
@@ -38,12 +40,15 @@ const DEFAULTS: Appearance = {
   clockClosedWeight: 800,
   clockOpenWeight: 700,
   clockEmphasis: true,
+  clockStyle: "classic",
+  clockSplitHeight: 62,
   lyricsInPill: false,
   lyricsLayout: "inline",
   motion: 100,
   lyricsTextSize: 12,
   lyricsOffset: 0,
   lyricsPillMinWidth: 284,
+  lyricsPillLength: 640,
   lyricsPillAuto: true,
   lyricsPillHeight: 30,
   lyricsTextWeight: 600,
@@ -67,6 +72,7 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
   const display = settings.use().display;
   const line = display.idleStyle === "line";
   const now = useMinute();
+  const previewSeconds = useSecond(a.clockStyle === "split" || a.clockStyle === "scatter");
   const previewTime = formatTimeParts(now);
   const themeLight = useThemeLight();
   const set = (patch: Partial<Appearance>) => updateSettings({ appearance: { ...a, ...patch } });
@@ -116,32 +122,36 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
                 >
                   {a.clockWeather && (
                     <div
-                      className="flex items-center gap-1 whitespace-nowrap"
+                      className="flex min-w-0 max-w-full items-center gap-1 whitespace-nowrap"
                       style={{ fontWeight: a.clockClosedWeight }}
                     >
-                      <span style={{ fontSize: `${a.clockClosedSize}px`, color: "#fff" }}>
-                        <ClockTime
-                          time={previewTime.time}
-                          className="tabular"
-                          emphasizeHour={a.clockEmphasis}
-                          weight={a.clockClosedWeight}
-                        />
+                      <span className={`flex min-w-0 ${a.clockStyle === "word" || a.clockStyle === "classic" ? "items-baseline" : "items-center"} gap-1`}>
+                        <span className="min-w-0 overflow-hidden tabular leading-none" style={{ fontSize: `${a.clockClosedSize}px`, color: "#fff" }}>
+                          <CompactClock
+                            style={a.clockStyle}
+                            now={now}
+                            size={a.clockClosedSize}
+                            height={a.islandHeight}
+                          />
+                        </span>
+                        {previewTime.period && (
+                          <span className="shrink-0 text-white/55 leading-none" style={{ fontSize: Math.max(8, Math.round(a.clockClosedSize * 0.66)) }}>
+                            {previewTime.period}
+                          </span>
+                        )}
                       </span>
-                      {previewTime.period && (
-                        <span className="text-white/55" style={{ fontSize: Math.max(8, Math.round(a.clockClosedSize * 0.66)) }}>
-                          {previewTime.period}
-                        </span>
-                      )}
-                      {(a.clockShowDay || a.clockShowDate) && (
-                        <span className="text-white/55" style={{ fontSize: Math.max(8, Math.round(a.clockClosedSize * 0.66)) }}>
-                          · {[a.clockShowDay ? "Sun" : null, a.clockShowDate ? "25 Oct" : null].filter(Boolean).join(" · ")}
-                        </span>
-                      )}
-                      {a.clockShowWeather && (
-                        <span className="text-white/55" style={{ fontSize: Math.max(8, Math.round(a.clockClosedSize * 0.8)) }}>
-                          · 25°
-                        </span>
-                      )}
+                      <span className="flex min-w-0 items-center gap-1 overflow-hidden text-white/55 leading-none">
+                        {(a.clockShowDay || a.clockShowDate) && (
+                          <span style={{ fontSize: Math.max(8, Math.round(a.clockClosedSize * 0.66)) }}>
+                            · {[a.clockShowDay ? "Sun" : null, a.clockShowDate ? "25 Oct" : null].filter(Boolean).join(" · ")}
+                          </span>
+                        )}
+                        {a.clockShowWeather && (
+                          <span style={{ fontSize: Math.max(8, Math.round(a.clockClosedSize * 0.8)) }}>
+                            · 25°
+                          </span>
+                        )}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -225,18 +235,32 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
             )}
           </Section>
 
-          <Section label={t("Extended pill")}>
-            <div className="mb-2 flex h-[72px] items-center justify-center rounded-[10px] bg-fill-2">
-              <div className="flex items-center rounded-[14px] bg-black px-5 py-3">
-                <ClockTime
-                  time={previewTime.time}
-                  className="tabular text-[34px] text-white"
-                  emphasizeHour={a.clockEmphasis}
-                  weight={a.clockOpenWeight}
-                />
-                {previewTime.period && <span className="ml-1 text-[11px] font-semibold text-white/55">{previewTime.period}</span>}
+          <Section label={t("Clock faces")}>
+            <div className="mb-2 flex h-20 items-center justify-center rounded-[10px] bg-fill-2 px-2">
+              <div className="h-20 w-72 overflow-hidden rounded-[14px] bg-black">
+                <ClockFace style={a.clockStyle} now={now} seconds={previewSeconds} scale={0.43} />
               </div>
             </div>
+            <div className="mb-2">
+              <div className="mb-1 text-caption font-medium text-label-2">{t("Clock style")}</div>
+              <ClockStylePicker value={a.clockStyle} onChange={(clockStyle) => set({ clockStyle })} />
+            </div>
+            {a.clockStyle === "split" && (
+              <div className="mb-2">
+                <div className="flex items-center justify-between text-caption font-medium text-label-2">
+                  <span>{t("Splitter height")}</span>
+                  <span className="tabular text-label-3">{a.clockSplitHeight}%</span>
+                </div>
+                <Slider
+                  label={t("Splitter height")}
+                  value={a.clockSplitHeight}
+                  min={20}
+                  max={100}
+                  step={1}
+                  onChange={(clockSplitHeight) => set({ clockSplitHeight })}
+                />
+              </div>
+            )}
             <div className="flex items-center justify-between text-caption font-medium text-label-2">
               <span>{t("Weight")}</span>
               <span className="tabular text-label-3">{a.clockOpenWeight}</span>
@@ -464,7 +488,7 @@ function ToggleRow({
   );
 }
 
-function Swatches({ value, colors, onChange }: { value: string; colors: string[]; onChange: (v: string) => void }) {  const custom = !colors.includes(value) && /^#?[0-9a-f]{6}$/i.test(value);
+export function Swatches({ value, colors, onChange }: { value: string; colors: string[]; onChange: (v: string) => void }) {  const custom = !colors.includes(value) && /^#?[0-9a-f]{6}$/i.test(value);
   return (
     <div className="flex items-center gap-1.5">
       {colors.map((color) => {

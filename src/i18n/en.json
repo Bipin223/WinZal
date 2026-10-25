@@ -550,5 +550,22 @@
   "Min width": "Min width",
   "Auto width": "Auto width",
   "Instrumental": "Instrumental",
-  "Music": "Music"
+  "Music": "Music",
+  "Uhr": "Clock",
+  "Clock": "Clock",
+  "Clock style": "Clock style",
+  "Stacked": "Stacked",
+  "Scatter": "Scatter",
+  "Classic": "Classic",
+  "Word": "Word",
+  "Split": "Split",
+  "Splitter height": "Splitter height",
+  "Divider line": "Divider line",
+  "Pill length": "Pill length",
+  "Gaming look": "Gaming look",
+  "Gaming mode": "Gaming mode",
+  "Show": "Show",
+  "Games": "Games",
+  "Clock faces": "Clock faces",
+  "Output": "Output"
 }

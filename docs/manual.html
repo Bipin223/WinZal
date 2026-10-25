@@ -108,7 +108,8 @@
   <symbol id="i-pin" viewBox="0 0 24 24"><path d="m9 3 6 6-2 2 3.5 3.5-1.5 1.5L11.5 12.5 9.5 14.5 3 8l6-5Z"/><path d="m9.5 14.5-6 6"/></symbol>
   <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2.1 2.1M16.9 16.9 19 19M19 5l-2.1 2.1M7.1 16.9 5 19"/></symbol>
   <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l10-2v13"/><circle cx="6.2" cy="18" r="2.8"/><circle cx="16.2" cy="16" r="2.8"/></symbol>
-  <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4.5l3 1.8M9 2h6"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/><path d="M9 2h6"/></symbol>
+<symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4.5l3 1.8M9 2h6"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></symbol>
   <symbol id="i-note" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
   <symbol id="i-clip" viewBox="0 0 24 24"><rect x="5" y="4.5" width="14" height="16.5" rx="2.5"/><path d="M9 4.5V2.5h6v2M9 10h6M9 14h6"/></symbol>
@@ -130,7 +131,7 @@
     <div class="notchmark"></div>
     <h1>WinZal</h1>
     <p class="tagline">The Windows dynamic island. Media, lyrics, tools and privacy that stay out of the way.</p>
-    <div class="version"><span class="pill">v1.7.7</span> Bipin Rizal · Windows 10 / 11 x64</div>
+    <div class="version"><span class="pill">v1.7.8</span> Bipin Rizal · Windows 10 / 11 x64</div>
   </header>
 
   <nav class="toc" aria-label="Contents">
@@ -140,6 +141,7 @@
     <a href="#tools">Tools</a>
     <a href="#settings">Settings</a>
     <a href="#font">Font</a>
+    <a href="#clocks">Clock</a>
     <a href="#gaming">Gaming</a>
     <a href="#privacy">Privacy</a>
     <a href="#performance">Performance</a>
@@ -186,7 +188,7 @@
     </div>
     <div class="grid g2" style="margin-top:14px">
       <div class="card"><h3>Closed text size &amp; weight</h3><p>Settings → Notch → Closed pill. <b>Text size</b> is 10–24 px and the weight slider sits below it. Both preview live with time, period, date and temperature.</p></div>
-      <div class="card"><h3>Lyric pill</h3><p>Settings → Music → Songtext. Separate preview, text size/weight, <b>min width</b>, <b>auto width on by default</b> and height. Instrumental tracks say <b>Instrumental</b>; no lyrics say <b>Music</b>.</p></div>
+      <div class="card"><h3>Lyric pill</h3><p>Settings → Music → Songtext. Separate preview, text size/weight, <b>min width</b>, <b>pill length</b>, <b>auto width on by default</b> and height. The pill eases in and out when it grows or shrinks. Instrumental tracks say <b>Instrumental</b>; no lyrics say <b>Music</b>.</p></div>
     </div>
   </section>
 
@@ -232,11 +234,11 @@
     <h2>Where everything lives</h2>
     <div class="kv">
       <div>General</div><div>Startup, language, weather location, updates.</div>
-      <div>Notch</div><div>Closed pill, line, size, <b>closed text size and weight</b>, clock size and weight, clock accent, weather/date/day.</div>
+      <div>Notch</div><div>Closed pill, line, size, <b>closed text size and weight</b>, <b>clock face</b>, clock size and weight, clock accent, weather/date/day.</div>
       <div>Appearance</div><div>Theme, material, glass, corners, accent, island style.</div>
-      <div>Display</div><div>Visibility, monitor, position, silent mode, DND, recording dots, <b>Font</b>, <b>Gaming</b>, presentation mode.</div>
-      <div>Performance</div><div>Motion intensity, GPU acceleration, iGPU/dGPU, FPS unlock.</div>
-      <div>Music</div><div>Music in the pill, lyric layout, size, weight, min width, auto width, height, offset, visualizer, animation.</div>
+      <div>Display</div><div>Visibility, monitor, position, silent mode, DND, recording dots, <b>Font</b>, presentation mode.</div>
+      <div>Performance</div><div>Motion intensity, GPU acceleration, iGPU/dGPU, FPS unlock, <b>Gaming look</b> and <b>Gaming mode</b>.</div>
+      <div>Music</div><div>Music in the pill, lyric layout, size, weight, min width, pill length, auto width, height, offset, visualizer, animation.</div>
       <div>Tools</div><div>Enable, disable and reorder every tool; vault settings.</div>
       <div>Timer</div><div>Alarm sound, volume and duration.</div>
       <div>AI</div><div>Ask provider, model, API key, custom AI usage endpoint.</div>
@@ -261,17 +263,33 @@
     <p><b>Preview:</b> the selected role is shown above the sliders with its current pixel size and weight. The five role cards use the real text-role classes, so they update live too.</p>
   </section>
 
+  <section id="clocks">
+    <p class="eyebrow">Settings → Notch → Clock faces</p>
+    <h2>Five faces, one clock</h2>
+    <p>Five faces live in <b>Settings → Notch → Clock faces</b>. <b>Classic</b> is the default and matches the previous clock. The expanded Overview and the closed pill both use the selected face. <b>Split</b> also shows live seconds and reveals a <b>Splitter height</b> slider under the picker.</p>
+    <figure class="figure">
+      <img src="manual/clocks.svg" alt="Five WinZal clock faces: stacked, split, scatter, classic and word">
+      <figcaption>Stacked · Split · Scatter · Classic · Word</figcaption>
+    </figure>
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card"><h3>Stacked / Split</h3><p>Two-line hour-and-minute block, or a large hour and minute separated by an adjustable vertical bar, with live seconds and the period at the side.</p></div>
+      <div class="card"><h3>Scatter / Word</h3><p>Scatter spreads hour, minute and second around a thin diagonal line; Word writes the time out, like <b>fourThirtyone</b>.</p></div>
+    </div>
+    <div class="callout"><svg class="icon"><use href="#i-clock"/></svg><div><b>They follow the notch.</b> The expanded Overview and the closed pill use the selected face, with a compact version in the closed pill. Weight, emphasized hour and the first-digit accent apply to every face.</div></div>
+  </section>
+
   <section id="gaming">
-    <p class="eyebrow">Display → Gaming</p>
+    <p class="eyebrow">Performance → Gaming look</p>
     <h2>A gaming pill that only shows what you need</h2>
-    <p>The preview above the toggles is the real thing: turn a stat off and the pill shrinks to fit. Choose a style for CPU, GPU and RAM, or drop everything except FPS and CPU for a minimal overlay.</p>
+    <p>The preview above the toggles is the real thing: turn a stat off and the pill shrinks to fit. Choose a style for CPU, GPU and RAM, add an optional divider between the left and right groups, or drop everything except FPS and CPU for a minimal overlay.</p>
     <figure class="figure">
       <img src="manual/gaming.svg" alt="WinZal gaming overlay in Text, Bars and Graph styles">
-      <figcaption>Text, Bars and Graph. FPS stays a number; the other stats change style.</figcaption>
+      <figcaption>Text, Bars and Graph. Bars and Graph omit the percentage text; Graph auto-scales its samples into a pulse.</figcaption>
     </figure>
     <div class="grid g2" style="margin-top:14px">
       <div class="card"><h3>Show</h3><p>FPS, CPU, Temperatures, GPU and RAM. Each toggle updates the preview and the real pill.</p></div>
-      <div class="card"><h3>Shrink</h3><p>Width is computed from the visible stats: <b>220–580 px</b>. Removing items shrinks the notch instead of leaving empty space.</p></div>
+      <div class="card"><h3>Shrink</h3><p>The pill measures the real row, so removing items or dropping digits shrinks the notch instead of leaving a fixed gap.</p></div>
+      <div class="card"><h3>Graph pulse</h3><p>The Graph style scales to the visible window, so small load swings read as up-and-down movement instead of a flat line.</p></div>
       <div class="card"><h3>Transparent in games</h3><p>Uses the existing <b>Glass 0.62</b> alpha while a game is in front. One transparency source, no duplicate slider.</p></div>
       <div class="card"><h3>Custom power in games</h3><p>Switches Lenovo to Custom when a chosen game starts and restores the previous power mode when it exits. A saved mode also heals after a crash.</p></div>
     </div>
@@ -312,12 +330,13 @@
     <h2>Synced lines without the jitter</h2>
     <p>Lyrics come from LRCLIB and are cached per track. Four transitions: <b>Apple Music</b>, <b>Word by Word</b>, <b>Kinetic</b> (per-word 3D) and <b>Reveal</b>. Old and new lines never overlap; the old line leaves before the new one enters.</p>
     <div class="grid g2" style="margin-top:14px">
-      <div class="card"><h3>Lyric pill</h3><p>Text size 10–15, weight 400–900, min width 284–640 and height 24–44. Auto width is on by default: grow and shrink with the line, never below the minimum.</p></div>
+      <div class="card"><h3>Lyric pill</h3><p>Text size 10–15, weight 400–900, min width and pill length 284–640, height 24–44. Auto width is on by default: grow and shrink with the line, never below the minimum or beyond the length.</p></div>
       <div class="card"><h3>Instrumental / Music</h3><p>Instrumental tracks show <b>Instrumental</b>. Tracks with no synced lyrics show <b>Music</b> instead of an empty slot.</p></div>
     </div>
     <div class="grid g2" style="margin-top:14px">
       <div class="card"><h3>Lyrics offset</h3><p>±1 s in 0.1 s steps. Positive values make lines appear later. Fixes early or late LRCLIB timings.</p></div>
-      <div class="card"><h3>Visualizer</h3><p>Wave, Pulse, Dots, Ripple or Aurora behind the lyric, in the cover accent. Previews animate only on hover.</p></div>
+      <div class="card"><h3>Visualizer</h3><p>Wave, Pulse, Dots, Ripple or Aurora behind the lyric, in the Equalization Accent (<b>auto</b> follows the cover). Previews animate only on hover.</p></div>
+      <div class="card"><h3>Output device</h3><p>The Now Playing mixer lists Windows playback endpoints. Pick speakers, headphones or Bluetooth and Windows switches its default output immediately.</p></div>
     </div>
   </section>
 
@@ -351,7 +370,7 @@
   </section>
 
   <footer>
-    <div>WinZal v1.7.7 · local manual · no telemetry</div>
+    <div>WinZal v1.7.8 · local manual · no telemetry</div>
     <div>Built by <b>Bipin Rizal</b> · Windows-only · Tauri + React + Rust</div>
   </footer>
 </div>

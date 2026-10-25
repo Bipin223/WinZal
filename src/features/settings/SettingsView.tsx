@@ -38,7 +38,6 @@ import { effortLevels, listModels, providerInfo } from "../ask/providers";
 import { discordState, reconnectDiscord } from "../discord/store";
 import { fps } from "../system/gaming";
 import { FpsStat, GamingStat } from "../system/LiveGaming";
-import { gamingWidth } from "../system/gamingOverlay";
 import { PlaceSearch } from "../weather/WeatherView";
 import { AppearanceView } from "../appearance/AppearanceView";
 import { MusicSettings } from "./MusicSettings";
@@ -182,11 +181,15 @@ export function SettingsView() {
               <>
                 <Display />
                 <Typography />
-                <GamingSettings />
                 <Presentation />
               </>
             )}
-            {page === "performance" && <Performance />}
+            {page === "performance" && (
+              <>
+                <Performance />
+                <GamingSettings />
+              </>
+            )}
             {page === "music" && <MusicSettings />}
             {page === "tools" && (
               <>
@@ -692,10 +695,8 @@ function Typography() {
 function GamingSettings() {
   const g = settings.use().gaming;
   const setG = (patch: Partial<Settings["gaming"]>) => updateSettings((cur) => ({ gaming: { ...cur.gaming, ...patch } }));
-  const width = gamingWidth(g);
   const left = g.showFps || g.showCpu;
   const right = g.showGpu || g.showRam;
-  const scale = width > 430 ? 430 / width : 1;
   const sample = {
     cpu: [18, 24, 21, 30, 28, 36, 33, 37],
     gpu: [30, 38, 34, 44, 40, 52, 47, 48],
@@ -714,17 +715,18 @@ function GamingSettings() {
     { value: "graph", label: t("Graph") },
   ];
   return (
-    <Group title={t("Gaming")} id="settings-gaming">
+    <>
+    <Group title={t("Gaming look")} id="settings-gaming">
       <div className="px-3 pt-3 pb-2">
         <div className="relative flex h-16 items-center justify-center overflow-hidden rounded-[10px] bg-fill-2 px-2">
           <span className="absolute top-1.5 right-2 z-10 text-[9px] font-semibold tracking-wide text-label-4 uppercase">
             {g.mode === "games" ? t("On") : t("Off")}
           </span>
           <div
-            className={`flex origin-center items-center gap-2 rounded-full bg-black px-3 text-white ${
-              left && right ? "justify-between" : "justify-center"
-            } ${g.mode === "games" ? "" : "opacity-50"}`}
-            style={{ width, height: 30, transform: `scale(${scale})` }}
+            className={`flex w-fit max-w-full items-center justify-center gap-1.5 rounded-full bg-black px-[10px] text-white ${
+              g.mode === "games" ? "" : "opacity-50"
+            }`}
+            style={{ height: 30 }}
           >
             {left && (
               <div className="flex shrink-0 items-center gap-2">
@@ -734,6 +736,7 @@ function GamingSettings() {
                 )}
               </div>
             )}
+            {left && right && g.divider && <span aria-hidden className="h-3 w-px shrink-0 self-center bg-white/15" />}
             {right && (
               <div className="flex shrink-0 items-center gap-2">
                 {g.showGpu && (
@@ -747,6 +750,7 @@ function GamingSettings() {
           </div>
         </div>
       </div>
+      <div className="px-3 pt-1 pb-1 text-footnote font-medium text-label-2">{t("Show")}</div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-1 px-3 pb-2">
         {flags.map((flag) => (
           <div key={flag.key} className="flex min-h-6 items-center justify-between gap-2">
@@ -780,6 +784,14 @@ function GamingSettings() {
           ))}
         </div>
       </div>
+      <Row label={t("Divider line")}>
+        <Switch label={t("Divider line")} checked={g.divider} onChange={(divider) => setG({ divider })} />
+      </Row>
+      <Row label={t("Transparent in games")}>
+        <Switch label={t("Transparent in games")} checked={g.transparent} onChange={(transparent) => setG({ transparent })} />
+      </Row>
+    </Group>
+    <Group title={t("Gaming mode")} id="settings-gaming-mode">
       <Row label={t("Gaming overlay")}>
         <Switch
           label={t("Gaming overlay")}
@@ -787,14 +799,12 @@ function GamingSettings() {
           onChange={(on) => setG({ mode: on ? "games" : "off" })}
         />
       </Row>
-      <Row label={t("Transparent in games")}>
-        <Switch label={t("Transparent in games")} checked={g.transparent} onChange={(transparent) => setG({ transparent })} />
-      </Row>
       <Row label={t("Custom power in games")}>
         <Switch label={t("Custom power in games")} checked={g.autoPower} onChange={(autoPower) => setG({ autoPower })} />
       </Row>
-      {g.mode === "games" && <GamingApps />}
     </Group>
+    {g.mode === "games" && <GamingApps />}
+    </>
   );
 }
 
@@ -916,7 +926,7 @@ function GamingApps() {
   const remove = (id: string) => updateSettings((cur) => ({ gaming: { ...cur.gaming, apps: cur.gaming.apps.filter((item) => item !== id) } }));
 
   return (
-    <Group title={t("FPS-Spiel")} id="settings-gaming-apps">
+    <Group title={t("Games")} id="settings-gaming-apps">
       <Row label="Genshin Impact">
         <SelectedDot />
       </Row>
