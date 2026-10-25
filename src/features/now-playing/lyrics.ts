@@ -16,10 +16,13 @@ export interface LyricsDisplay {
   start: number;
   /** Start time of the next line, or the end of the track. */
   end: number;
+  /** loading (title shown) | lyrics | instrumental | music (no lyrics). */
+  status: "loading" | "lyrics" | "instrumental" | "music";
 }
 
 /** Parse once per track, even when the pill closes and reopens. */
 const parsed = new Map<string, Line[]>();
+const meta = new Map<string, { instrumental: boolean; hasLyrics: boolean }>();
 const PARSED_MAX = 30;
 
 /**
@@ -30,6 +33,7 @@ const PARSED_MAX = 30;
 export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDisplay {
   const [lines, setLines] = useState<Line[]>([]);
   const [index, setIndex] = useState(-1);
+  const [status, setStatus] = useState<LyricsDisplay["status"]>("loading");
   const offset = settings.use().appearance.lyricsOffset;
   const npRef = useRef(np);
   npRef.current = np;
@@ -42,29 +46,41 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
       // with lyrics off does not cause an extra render.
       setLines((prev) => (prev.length ? [] : prev));
       setIndex((prev) => (prev === -1 ? prev : -1));
+      setStatus("loading");
       return;
     }
     const cached = parsed.get(track);
     if (cached) {
       setLines(cached);
       setIndex(-1);
+      const info = meta.get(track);
+      setStatus(cached.length ? "lyrics" : info?.instrumental ? "instrumental" : info ? "music" : "loading");
       return;
     }
     let alive = true;
     setLines([]);
     setIndex(-1);
+    setStatus("loading");
     // Small grace period: skipping tracks quickly does not fire a request per track.
     const id = window.setTimeout(() => {
       void fetchLyrics(np.title, np.artist, np.duration)
         .then((lyrics) => {
           if (!alive) return;
           const next = parseLrc(lyrics.synced);
-          if (parsed.size >= PARSED_MAX) parsed.clear();
+          if (parsed.size >= PARSED_MAX) {
+            parsed.clear();
+            meta.clear();
+          }
           parsed.set(track, next);
+          meta.set(track, { instrumental: !!lyrics.instrumental, hasLyrics: next.length > 0 });
           setLines(next);
+          setStatus(next.length ? "lyrics" : lyrics.instrumental ? "instrumental" : "music");
         })
         .catch(() => {
-          if (alive) setLines([]);
+          if (alive) {
+            setLines([]);
+            setStatus("music");
+          }
         });
     }, 300);
     return () => {
@@ -97,7 +113,7 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
     setIndex((prev) => (prev === next ? prev : next));
   }, [enabled, playing, lines, np?.position, offset]);
 
-  if (index < 0 || !lines[index]) return { current: null, next: null, index: -1, start: 0, end: 0 };
+  if (index < 0 || !lines[index]) return { current: null, next: null, index: -1, start: 0, end: 0, status };
   const start = lines[index].at;
   const end = lines[index + 1]?.at ?? (np && np.duration > start ? np.duration : start + 4);
   return {
@@ -106,6 +122,7 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
     index,
     start,
     end,
+    status,
   };
 }
 

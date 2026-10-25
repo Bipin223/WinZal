@@ -67,7 +67,9 @@ function poll() {
 
 function wanted(): boolean {
   const s = settings.get();
-  return s.tools.some((x) => x.id === "system" && x.enabled) || s.gaming.mode !== "off";
+  // Background history only while the Hardware tool is enabled; a live gaming
+  // overlay starts polling through useSystemShown and stops when it closes.
+  return s.tools.some((x) => x.id === "system" && x.enabled) || shown.get() > 0;
 }
 
 function apply() {

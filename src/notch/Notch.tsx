@@ -149,7 +149,7 @@ export function Notch() {
   const sizedShape = customIsland
     ? {
         ...shape,
-        w: Math.max(80, shape.w + (lyricsPill ? appearance.lyricsPillExtraWidth : appearance.islandWidth)),
+        w: Math.max(80, shape.w + (lyricsPill ? 0 : appearance.islandWidth)),
         h: lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight,
       }
     : shape;
@@ -172,8 +172,12 @@ export function Notch() {
   // Grow or shrink to the line, with three levels of breathing room. `normal`
   // is the text-fit width; compact caps long lines, long adds extra air.
   const lyricPill = appearance.lyricsInPill && pillLive === "media" && !idleLine && status !== "open";
-  const lyricTarget = !lyricPill || lyricWidth <= 0 ? 0 : lyricWidth + 78;
-  const lyricsExtra = lyricTarget > 0 ? Math.min(360, lyricTarget - geometry.live.w) : 0;
+  const lyricTarget = !lyricPill || lyricWidth <= 0
+    ? 0
+    : appearance.lyricsPillAuto
+      ? Math.max(appearance.lyricsPillMinWidth, lyricWidth + 78)
+      : appearance.lyricsPillMinWidth;
+  const lyricsExtra = lyricTarget > 0 ? Math.min(360, Math.max(0, lyricTarget - geometry.live.w)) : 0;
   const displayShape = {
     ...finalShape,
     w: finalShape.w + (showRecording ? RECORDING_EXTRA : 0) + clockExtra + lyricsExtra,
@@ -314,7 +318,7 @@ export function Notch() {
           floating={floating}
         >
           <LiveRightInset.Provider value={rightInset}>
-            <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} widthExtra={lyricsPill ? appearance.lyricsPillExtraWidth : appearance.islandWidth} height={lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight} systemWidth={systemWidth} />
+            <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} widthExtra={lyricsPill ? 0 : appearance.islandWidth} height={lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight} systemWidth={systemWidth} />
           </LiveRightInset.Provider>
           {clockWeather && !idleLine && status !== "open" && !pillLive && <ClosedClock />}
           {!idleLine && <PrivacyDots hideScreen={showRecording} />}

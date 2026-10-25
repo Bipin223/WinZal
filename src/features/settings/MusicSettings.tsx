@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { settings, updateSettings, type Settings } from "../../settings/store";
 import { t } from "../../i18n";
 import { LyricAnimationPreview } from "../now-playing/LyricAnimationPreview";
@@ -112,20 +112,21 @@ export function MusicSettings() {
                 <span className="tabular w-11 shrink-0 text-right text-caption text-label-3">{a.lyricsTextWeight}</span>
               </div>
             </Row>
-            <Row label={t("Pill width")}>
+            <Row label={t("Min width")}>
               <div className="flex w-44 items-center gap-2">
                 <Slider
-                  label={t("Pill width")}
-                  value={a.lyricsPillExtraWidth}
-                  min={0}
-                  max={100}
-                  step={2}
-                  onChange={(lyricsPillExtraWidth) => set({ lyricsPillExtraWidth })}
+                  label={t("Min width")}
+                  value={a.lyricsPillMinWidth}
+                  min={284}
+                  max={640}
+                  step={4}
+                  onChange={(lyricsPillMinWidth) => set({ lyricsPillMinWidth })}
                 />
-                <span className="tabular w-11 shrink-0 text-right text-caption text-label-3">
-                  {a.lyricsPillExtraWidth === 0 ? t("Default") : `+${a.lyricsPillExtraWidth} px`}
-                </span>
+                <span className="tabular w-11 shrink-0 text-right text-caption text-label-3">{a.lyricsPillMinWidth} px</span>
               </div>
+            </Row>
+            <Row label={t("Auto width")}>
+              <Switch label={t("Auto width")} checked={a.lyricsPillAuto} onChange={(lyricsPillAuto) => set({ lyricsPillAuto })} />
             </Row>
             <Row label={t("Pill height")}>
               <div className="flex w-44 items-center gap-2">
@@ -215,15 +216,20 @@ export function MusicSettings() {
 /** Live preview of the closed lyric pill. */
 function LyricsPillPreview() {
   const a = settings.use().appearance;
+  const [textWidth, setTextWidth] = useState(0);
+  useLayoutEffect(() => {
+    const ctx = document.createElement("canvas").getContext("2d");
+    if (!ctx) return;
+    ctx.font = `${a.lyricsTextWeight} ${a.lyricsTextSize}px ${getComputedStyle(document.body).fontFamily}`;
+    setTextWidth(ctx.measureText("When you light the candle").width);
+  }, [a.lyricsTextSize, a.lyricsTextWeight]);
+  const width = a.lyricsPillAuto ? Math.max(a.lyricsPillMinWidth, textWidth + 78) : a.lyricsPillMinWidth;
+  const scale = Math.min(1, 430 / Math.max(1, width));
   return (
-    <div className="flex h-16 items-center justify-center rounded-[10px] bg-fill-2 px-2">
+    <div className="flex h-16 items-center justify-center overflow-hidden rounded-[10px] bg-fill-2 px-2">
       <div
-        className="flex max-w-full items-center gap-2 overflow-hidden rounded-full bg-black px-3"
-        style={{
-          height: a.lyricsPillHeight,
-          paddingLeft: 10 + a.lyricsPillExtraWidth / 2,
-          paddingRight: 10 + a.lyricsPillExtraWidth / 2,
-        }}
+        className="flex origin-center items-center justify-between gap-2 overflow-hidden rounded-full bg-black px-3"
+        style={{ width, height: a.lyricsPillHeight, transform: `scale(${scale})` }}
       >
         <span className="size-5 shrink-0 rounded-[5px] bg-white/15" />
         <span

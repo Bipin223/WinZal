@@ -130,7 +130,7 @@
     <div class="notchmark"></div>
     <h1>WinZal</h1>
     <p class="tagline">The Windows dynamic island. Media, lyrics, tools and privacy that stay out of the way.</p>
-    <div class="version"><span class="pill">v1.7.6</span> Bipin Rizal · Windows 10 / 11 x64</div>
+    <div class="version"><span class="pill">v1.7.7</span> Bipin Rizal · Windows 10 / 11 x64</div>
   </header>
 
   <nav class="toc" aria-label="Contents">
@@ -185,19 +185,8 @@
       <div class="card"><h3>Line</h3><p>A minimal strip for a clean desktop. The amber dot marks the notch position.</p></div>
     </div>
     <div class="grid g2" style="margin-top:14px">
-      <div class="card"><h3>Closed text size &amp; width</h3><p>Settings → Notch → Closed pill. <b>Text size</b> is 10–24 px; <b>Text width</b> is a −2…+2 px tracking offset. Both preview live with time, period, date and temperature.</p></div>
-      <div class="card">
-        <h3>Weather colors</h3>
-        <p><b>Settings → Appearance → Weather.</b> One toggle for the closed pill, Overview and Weather tool.</p>
-        <p style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap">
-          <span style="color:#ffb020">● Sun</span>
-          <span style="color:#ffc14d">● Partly</span>
-          <span style="color:#a7b0bd">● Cloud</span>
-          <span style="color:#5aa7ff">● Rain</span>
-          <span style="color:#9fd4ff">● Snow</span>
-          <span style="color:#c08bff">● Storm</span>
-        </p>
-      </div>
+      <div class="card"><h3>Closed text size &amp; weight</h3><p>Settings → Notch → Closed pill. <b>Text size</b> is 10–24 px and the weight slider sits below it. Both preview live with time, period, date and temperature.</p></div>
+      <div class="card"><h3>Lyric pill</h3><p>Settings → Music → Songtext. Separate preview, text size/weight, <b>min width</b>, <b>auto width on by default</b> and height. Instrumental tracks say <b>Instrumental</b>; no lyrics say <b>Music</b>.</p></div>
     </div>
   </section>
 
@@ -243,11 +232,11 @@
     <h2>Where everything lives</h2>
     <div class="kv">
       <div>General</div><div>Startup, language, weather location, updates.</div>
-      <div>Notch</div><div>Closed pill, line, size, <b>closed text size and width</b>, clock size and weight, clock accent, weather/date/day.</div>
-      <div>Appearance</div><div>Theme, material, glass, corners, accent, <b>weather colors</b>, island style.</div>
+      <div>Notch</div><div>Closed pill, line, size, <b>closed text size and weight</b>, clock size and weight, clock accent, weather/date/day.</div>
+      <div>Appearance</div><div>Theme, material, glass, corners, accent, island style.</div>
       <div>Display</div><div>Visibility, monitor, position, silent mode, DND, recording dots, <b>Font</b>, <b>Gaming</b>, presentation mode.</div>
       <div>Performance</div><div>Motion intensity, GPU acceleration, iGPU/dGPU, FPS unlock.</div>
-      <div>Music</div><div>Music in the pill, lyric layout, size, offset, pill width, visualizer, animation.</div>
+      <div>Music</div><div>Music in the pill, lyric layout, size, weight, min width, auto width, height, offset, visualizer, animation.</div>
       <div>Tools</div><div>Enable, disable and reorder every tool; vault settings.</div>
       <div>Timer</div><div>Alarm sound, volume and duration.</div>
       <div>AI</div><div>Ask provider, model, API key, custom AI usage endpoint.</div>
@@ -277,12 +266,12 @@
     <h2>A gaming pill that only shows what you need</h2>
     <p>The preview above the toggles is the real thing: turn a stat off and the pill shrinks to fit. Choose a style for CPU, GPU and RAM, or drop everything except FPS and CPU for a minimal overlay.</p>
     <figure class="figure">
-      <img src="manual/gaming.svg" alt="WinZal gaming overlay in Text, Bars and Dots styles">
-      <figcaption>Text, Bars and Dots. FPS stays a number; the other stats change style.</figcaption>
+      <img src="manual/gaming.svg" alt="WinZal gaming overlay in Text, Bars and Graph styles">
+      <figcaption>Text, Bars and Graph. FPS stays a number; the other stats change style.</figcaption>
     </figure>
     <div class="grid g2" style="margin-top:14px">
       <div class="card"><h3>Show</h3><p>FPS, CPU, Temperatures, GPU and RAM. Each toggle updates the preview and the real pill.</p></div>
-      <div class="card"><h3>Shrink</h3><p>Width is computed from the visible stats: <b>180–460 px</b>. Removing items shrinks the notch instead of leaving empty space.</p></div>
+      <div class="card"><h3>Shrink</h3><p>Width is computed from the visible stats: <b>220–580 px</b>. Removing items shrinks the notch instead of leaving empty space.</p></div>
       <div class="card"><h3>Transparent in games</h3><p>Uses the existing <b>Glass 0.62</b> alpha while a game is in front. One transparency source, no duplicate slider.</p></div>
       <div class="card"><h3>Custom power in games</h3><p>Switches Lenovo to Custom when a chosen game starts and restores the previous power mode when it exits. A saved mode also heals after a crash.</p></div>
     </div>
@@ -323,6 +312,10 @@
     <h2>Synced lines without the jitter</h2>
     <p>Lyrics come from LRCLIB and are cached per track. Four transitions: <b>Apple Music</b>, <b>Word by Word</b>, <b>Kinetic</b> (per-word 3D) and <b>Reveal</b>. Old and new lines never overlap; the old line leaves before the new one enters.</p>
     <div class="grid g2" style="margin-top:14px">
+      <div class="card"><h3>Lyric pill</h3><p>Text size 10–15, weight 400–900, min width 284–640 and height 24–44. Auto width is on by default: grow and shrink with the line, never below the minimum.</p></div>
+      <div class="card"><h3>Instrumental / Music</h3><p>Instrumental tracks show <b>Instrumental</b>. Tracks with no synced lyrics show <b>Music</b> instead of an empty slot.</p></div>
+    </div>
+    <div class="grid g2" style="margin-top:14px">
       <div class="card"><h3>Lyrics offset</h3><p>±1 s in 0.1 s steps. Positive values make lines appear later. Fixes early or late LRCLIB timings.</p></div>
       <div class="card"><h3>Visualizer</h3><p>Wave, Pulse, Dots, Ripple or Aurora behind the lyric, in the cover accent. Previews animate only on hover.</p></div>
     </div>
@@ -358,7 +351,7 @@
   </section>
 
   <footer>
-    <div>WinZal v1.7.6 · local manual · no telemetry</div>
+    <div>WinZal v1.7.7 · local manual · no telemetry</div>
     <div>Built by <b>Bipin Rizal</b> · Windows-only · Tauri + React + Rust</div>
   </footer>
 </div>

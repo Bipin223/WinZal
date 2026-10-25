@@ -18,7 +18,7 @@ import { t } from "../../i18n";
  */
 export function LiveActivity({ np }: { np: NowPlaying }) {
   const appearance = settings.use().appearance;
-  const { current, next, index, start, end } = useLyrics(np, appearance.lyricsInPill);
+  const { current, next, index, start, end, status } = useLyrics(np, appearance.lyricsInPill);
 
   // Measure the line at its real font size. The notch uses this to expand only
   // as far as the lyric needs, so readable text is not hidden behind the fade.
@@ -83,7 +83,7 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
         ) : (
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.div
-              key={np.title}
+              key={appearance.lyricsInPill && status === "instrumental" ? "instrumental" : appearance.lyricsInPill && status === "music" ? "music" : np.title}
               data-fade-text
               className="max-w-full overflow-hidden whitespace-nowrap text-[11px] leading-none font-semibold text-label"
               initial={{ opacity: 0, transform: "translateY(3px)", filter: "blur(3px)" }}
@@ -91,7 +91,7 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
               exit={{ opacity: 0, transform: "translateY(-3px)", filter: "blur(3px)", transition: content.exit }}
               title={np.title}
             >
-              {np.title}
+              {appearance.lyricsInPill && status === "instrumental" ? t("Instrumental") : appearance.lyricsInPill && status === "music" ? t("Music") : np.title}
             </motion.div>
           </AnimatePresence>
         )}
@@ -205,7 +205,7 @@ function LyricLine({
     },
   }[animation];
   const { enter, active, leave } = motions;
-  const transition = animation === "apple" ? springs.lyrics : content.enter;
+  const transition = animation === "apple" ? { ...springs.lyrics, delay: 0.06 } : { ...content.enter, delay: 0.08 };
   const words = current.split(/\s+/).filter(Boolean);
   const stagger = words.length > 1 ? Math.min(0.36, Math.max(0.04, ((end - start) * 0.75) / (words.length - 1))) : 0;
   const nextSize = Math.max(8, size - 3);

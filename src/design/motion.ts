@@ -56,7 +56,7 @@ export const springs = {
   },
   /** Closed notch growing/shrinking for a lyric line. */
   get lyricWidth() {
-    return spring(0.42, 0);
+    return spring(0.3, 0);
   },
 };
 

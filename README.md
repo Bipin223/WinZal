@@ -5,6 +5,12 @@
 <h1 align="center">WinZal</h1>
 
 <p align="center">
+  <a href="docs/MANUAL.md"><b>Manual</b></a>
+  &nbsp;·&nbsp;
+  <a href="docs/manual.html"><b>Illustrated manual</b></a>
+</p>
+
+<p align="center">
   <b>A Dynamic Island for Windows.</b><br />
   Music, synced lyrics, gaming stats, Discord and power controls in one tiny notch at the top of your screen.
 </p>
@@ -40,7 +46,7 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 - **Large clock by default**, with a separately selectable **Compact** clock. The first digit uses a red accent by default.
 - The expanded clock is **bold by default** and can be switched to Regular in **Settings → Appearance**.
 - **Live music**: cover, title and a real audio-driven equalizer in the closed pill. The first app that starts playing keeps the pill; if it pauses or stops, the next playing app takes over automatically.
-- **Synced lyrics** from LRCLIB, optional. One line or current + next line, **Apple Music (default) / Word by word / Reveal** animations, and a continuous **10–15 px text-size slider** plus **Compact / Normal / Long** pill width. The pill grows to the measured line (up to 360 px) instead of fading readable text; extremely long lines scroll slowly. Choose **Wave**, **Pulse**, **Dots**, **Ripple** or **Aurora** as a visualizer, each with a live preview in Settings → Music; Wave is the default and every style follows the cover accent.
+- **Synced lyrics** from LRCLIB, optional. One line or current + next line, **Apple Music (default) / Word by word / Reveal** animations, and a continuous **10–15 px text-size slider**, weight, minimum width and **auto width** (on by default). The pill grows with the line and shrinks back, never below the minimum; instrumental tracks say **Instrumental**, tracks without synced lyrics say **Music**. Choose **Wave**, **Pulse**, **Dots**, **Ripple** or **Aurora** as a visualizer, each with a live preview in Settings → Music; Wave is the default and every style follows the cover accent.
 - **Appearance**: **Dark**, **Light**, **System** or **Custom** theme. Custom has a full in-app HSV color picker with HEX/RGB fields; text, menus and icons switch between dark and light automatically. Island style, material, corners, clock weight and any color for the equalization or clock accent.
 - **Notch size**: live **Length** and **Width** sliders for the closed island, including music and live activities, with a black-pill preview that updates while you drag.
 - **Privacy dots** for microphone and camera (green) and screen recording (red), plus a recording badge.
@@ -114,7 +120,7 @@ It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Ele
 
 ## Install
 
-1. Download **WinZal_1.7.6_x64-setup.exe** from the [latest release](https://github.com/Bipin223/WinZal/releases/latest).
+1. Download **WinZal_1.7.7_x64-setup.exe** from the [latest release](https://github.com/Bipin223/WinZal/releases/latest).
 2. Run it. It installs for your user only; Node, Rust or administrator rights are not needed.
 3. WinZal starts with Windows. The notch appears at the top of the screen and the tray icon keeps it reachable.
 
@@ -126,7 +132,7 @@ The installer is not code-signed, so Windows SmartScreen may warn on first launc
 
 WinZal **1.6.2 and newer** check a signed `latest.json` from GitHub shortly after startup and once a day. By default they also **install a found update automatically** after a short pause and restart. Turn either behavior off under **Settings → Updates**; a manual check always lets you read the changelog and click **Install** yourself.
 
-If you are on **1.6.1 or older**, install **1.7.6 manually once**; after that, future signed updates can install themselves. Settings and local data are preserved because the app ID stays the same.
+If you are on **1.6.1 or older**, install **1.7.7 manually once**; after that, future signed updates can install themselves. Settings and local data are preserved because the app ID stays the same.
 
 Updates are in-place upgrades: only the app files are replaced. Settings, vault, notes, to-dos and saved Ask chats live in the Windows app-data folder, outside the installation directory, and are never removed by an update.
 
@@ -144,7 +150,7 @@ Saved Ask conversations live in the app data folder as one small JSON file per c
 | Do not disturb | Triple-click the notch, or use the moon button, Settings or the tray menu |
 | Add files | Drag files onto the notch, or paste with **Ctrl + V** |
 | Power mode | Click the battery tile in Overview, or right-click it for Windows settings |
-| Lyrics | **Settings → Music** for layout, the 10-15 px text-size slider, **Compact / Normal / Long** pill width, one of three previewed animations (Apple Music default, Word by word, Reveal) and one of five previewed visualizer styles |
+| Lyrics | **Settings → Music** for layout, the 10-15 px text-size slider, **auto width** (default on) and pill height, one of three previewed animations (Apple Music default, Word by word, Reveal) and one of five previewed visualizer styles |
 
 ## Settings and integrations
 

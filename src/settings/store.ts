@@ -129,8 +129,10 @@ export interface Settings {
     lyricsTextSize: number;
     /** Seconds added to lyric timestamps (+ = lines appear later). */
     lyricsOffset: number;
-    /** Extra width added to the lyric pill (independent of the clock pill). */
-    lyricsPillExtraWidth: number;
+    /** Minimum width of the closed lyric pill. */
+    lyricsPillMinWidth: number;
+    /** true: grow/shrink with the text (never below the minimum); false: fixed width. */
+    lyricsPillAuto: boolean;
     /** Lyric pill height. */
     lyricsPillHeight: number;
     /** Lyric text weight. */
@@ -250,7 +252,8 @@ const defaults: Settings = {
     motion: 100,
     lyricsTextSize: 12,
     lyricsOffset: 0,
-    lyricsPillExtraWidth: 0,
+    lyricsPillMinWidth: 284,
+    lyricsPillAuto: true,
     lyricsPillHeight: 30,
     lyricsTextWeight: 600,
     lyricsVisualizer: true,

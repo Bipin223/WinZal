@@ -331,12 +331,13 @@ export const display = {
 export interface Lyrics {
   synced: string | null;
   plain: string | null;
+  instrumental?: boolean;
 }
 
 /** LRCLIB lookup through Rust (no CORS, in-memory cache). */
 export function fetchLyrics(title: string, artist: string, duration: number): Promise<Lyrics> {
-  if (isNative) return invoke<Lyrics>("lyrics_get", { title, artist, duration }).catch(() => ({ synced: null, plain: null }));
-  return Promise.resolve({ synced: null, plain: null });
+  if (isNative) return invoke<Lyrics>("lyrics_get", { title, artist, duration }).catch(() => ({ synced: null, plain: null, instrumental: false }));
+  return Promise.resolve({ synced: null, plain: null, instrumental: false });
 }
 
 // ---------- Gaming mode ----------

@@ -1,6 +1,6 @@
 # WinZal — Manual
 
-**Version 1.7.6** · Windows 10 / 11 x64 · by **Bipin Rizal**
+**Version 1.7.7** · Windows 10 / 11 x64 · by **Bipin Rizal**
 
 The illustrated version is [`manual.html`](manual.html). Open it in a browser for the full design, icons and diagrams.
 
@@ -25,7 +25,6 @@ The illustrated version is [`manual.html`](manual.html). Open it in a browser fo
 **Settings → Notch → Closed pill** has the same structure as the pill itself:
 
 - **Text size** — 10–24 px. The whole clock line scales: time, period, date/day and temperature.
-- **Text width** — a tracking offset, −2.0 → +2.0 px. `0` = default width.
 - **Weight** — the clock weight slider below.
 - The preview above shows the real time, period, date sample and temperature, including the Weather/Date/Day toggles.
 
@@ -74,11 +73,11 @@ Enable, disable and reorder them in **Settings → Tools**.
 | Page | Contains |
 |---|---|
 | **General** | Startup, language, weather location, updates. |
-| **Notch** | Closed pill/line, size, **closed text size and width**, clock size and weight, clock accent, weather/date/day. |
-| **Appearance** | Theme, material/glass, corners, accent, **weather colors**, island style. |
+| **Notch** | Closed pill/line, size, **closed text size and weight**, clock accent, weather/date/day. |
+| **Appearance** | Theme, material/glass, corners, accent, island style. |
 | **Display** | Visibility, monitor, position, silent, DND, recording dots, **Font**, **Gaming**, presentation. |
 | **Performance** | Motion intensity, GPU acceleration, iGPU/dGPU, FPS unlock. |
-| **Music** | Music in the pill, lyrics layout, size, offset, pill width, visualizer, animation. |
+| **Music** | Music in the pill, lyrics layout, size, weight, min width, auto width, height, offset, visualizer, animation. |
 | **Tools** | Tool order and visibility; vault settings. |
 | **Timer** | Alarm sound, volume, duration. |
 | **AI** | Ask provider/model/key; custom AI Usage endpoint. |
@@ -108,16 +107,6 @@ Five roles share one scale. Pick a role, adjust **size** and **weight**, and the
 - The selected role is previewed with its live size/weight above the sliders.
 - The original L4 notch uses 11/12/13/15/22; WinZal is intentionally one step larger and slightly bolder.
 
-### Weather colors
-
-**Settings → Appearance → Weather** has one toggle:
-
-- **On:** sun = warm amber, partly cloudy = gold, cloudy = silver, fog = gray, rain = blue, snow = light blue, storm = violet.
-- **Off:** every weather icon returns to the normal label color.
-- Applies to the closed pill, the Overview and the Weather tool.
-
----
-
 ## Gaming — Display → Gaming
 
 The preview is the real pill: toggles change it immediately.
@@ -125,8 +114,8 @@ The preview is the real pill: toggles change it immediately.
 ![Gaming overlay styles](manual/gaming.svg)
 
 - **Show:** FPS, CPU, Temperatures, GPU, RAM.
-- **Stat style:** Text, Bars or Dots.
-- **Dynamic width:** the pill shrinks to fit the visible stats (**180–460 px**).
+- **Stat style:** Text, Bars or Graph.
+- **Dynamic width:** the pill shrinks to fit the visible stats (**220–580 px**).
 - **Gaming overlay:** on/off; the preview shows **ON/OFF**.
 - **Transparent in games:** reuses the existing **Glass 0.62** alpha while a game is in front.
 - **Custom power in games:** switches Lenovo to Custom when a chosen game starts and restores the previous power mode when it exits (also heals after a crash).
@@ -174,6 +163,17 @@ Idle memory is roughly **10 MB UI + 20 MB helper**, plus WebView2 shared process
 
 ---
 
+### Lyric pill
+
+Settings → Music → Songtext has a live preview and its own pill controls:
+
+- **Text size** 10–15 px, **weight** 400–900.
+- **Min width** 284–640 px. The pill never shrinks below this.
+- **Auto width** is on by default: it grows with the line and shrinks back, but never below the minimum. Turn it off for a fixed width.
+- **Pill height** 24–44 px.
+- Instrumental tracks show **Instrumental**; tracks without synced lyrics show **Music**.
+- LRCLIB results are matched by title, artist and closest duration, so the right edit of a song wins.
+
 ## Shortcuts
 
 | Keys | Action |
@@ -209,4 +209,4 @@ Tray menu: Open, Settings, Do not disturb, Silent mode, Presentation mode, Start
 - Settings, vault, notes, to-dos and history stay on this PC.
 - Built with Tauri + React + Rust; WebView2 for rendering.
 
-**WinZal 1.7.6** — by **Bipin Rizal**.
+**WinZal 1.7.7** — by **Bipin Rizal**.

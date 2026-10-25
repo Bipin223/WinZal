@@ -17,6 +17,8 @@ use tauri::State;
 pub struct Lyrics {
     synced: Option<String>,
     plain: Option<String>,
+    #[serde(default)]
+    instrumental: bool,
 }
 
 #[derive(Default)]
@@ -30,18 +32,72 @@ struct Track {
     plain: Option<String>,
     #[serde(default)]
     instrumental: bool,
+    #[serde(default)]
+    duration: f64,
+    #[serde(rename = "trackName", default)]
+    track_name: Option<String>,
+    #[serde(rename = "artistName", default)]
+    artist_name: Option<String>,
 }
 
 impl Track {
+    fn playable(&self) -> bool {
+        !self.instrumental && self.synced.as_ref().is_some_and(|s| !s.trim().is_empty())
+    }
+
     fn into_lyrics(self) -> Lyrics {
         if self.instrumental {
-            return Lyrics::default();
+            return Lyrics { instrumental: true, ..Default::default() };
         }
         Lyrics {
             synced: self.synced.filter(|text| !text.trim().is_empty()),
             plain: self.plain.filter(|text| !text.trim().is_empty()),
+            instrumental: false,
         }
     }
+}
+
+fn norm(s: &str) -> String {
+    s.to_lowercase()
+        .chars()
+        .map(|c| if c.is_alphanumeric() { c } else { ' ' })
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Closest duration wins; exact title/artist gets a bonus. Wrong edits of the
+/// same song are the usual reason lyrics run ahead or behind.
+fn score(track: &Track, title: &str, artist: &str, actual: f64) -> f64 {
+    if !track.playable() {
+        return f64::NEG_INFINITY;
+    }
+    let mut score = 0.0;
+    if actual > 1.0 && track.duration > 1.0 {
+        let delta = (track.duration - actual).abs();
+        score -= delta * 20.0;
+        if delta <= 3.0 {
+            score += 400.0;
+        }
+    }
+    let t = norm(title);
+    let a = norm(artist);
+    if let Some(name) = &track.track_name {
+        let n = norm(name);
+        if n == t {
+            score += 300.0;
+        } else if n.contains(&t) || t.contains(&n) {
+            score += 120.0;
+        }
+    }
+    if let Some(name) = &track.artist_name {
+        let n = norm(name);
+        if !a.is_empty() && n == a {
+            score += 150.0;
+        }
+    }
+    score
 }
 
 fn client() -> Result<reqwest::Client, String> {
@@ -99,7 +155,10 @@ pub async fn lyrics_get(title: String, artist: String, duration: f64, state: Sta
             if let Ok(response) = http.get(url).send().await {
                 if response.status().is_success() {
                     if let Ok(tracks) = response.json::<Vec<Track>>().await {
-                        if let Some(track) = tracks.into_iter().find(|t| !t.instrumental && t.synced.as_ref().is_some_and(|s| !s.trim().is_empty())) {
+                        if let Some(track) = tracks
+                            .into_iter()
+                            .max_by(|a, b| score(a, &title, &artist, duration).total_cmp(&score(b, &title, &artist, duration)))
+                        {
                             lyrics = track.into_lyrics();
                         }
                     }

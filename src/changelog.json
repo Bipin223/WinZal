@@ -1,5 +1,31 @@
 [
   {
+    "version": "1.7.7",
+    "date": "2026-10-25",
+    "items": [
+      {
+        "de": "Schrift-Einstellungen: Caption, Footnote, Body, Title und Display mit eigenen Größen- und Gewichts-Reglern, Live-Vorschau und Reset; 0 bedeutet Standard",
+        "en": "Font settings: Caption, Footnote, Body, Title and Display each with size/weight sliders, live preview and reset; 0 means default"
+      },
+      {
+        "de": "Lyrics-Pille separat: Vorschau, Mindestbreite, Auto-Breite (standardmäßig an), Höhe und Gewicht; bessere LRCLIB-Treffer nach Dauer und „Instrumental“/„Music“-Status",
+        "en": "Separate lyric pill: preview, minimum width, auto width (on by default), height and weight; better LRCLIB matching by duration plus Instrumental/Music states"
+      },
+      {
+        "de": "Gaming-Overlay: Live-Vorschau, FPS/CPU/Temperatur/GPU/RAM einzeln schaltbar, Text/Balken/Graph-Stil, dynamische Breite, Transparenz und Custom-Power im Spiel",
+        "en": "Gaming overlay: live preview, FPS/CPU/temperature/GPU/RAM toggles, Text/Bars/Graph styles, dynamic width, transparency and custom power while gaming"
+      },
+      {
+        "de": "Silent Mode als Geist (klick-durchlässig, Triple-Klick weckt), Präsentations-Shortcut und Tray-Einträge, Motion-Intensität, FPS-Unlock und Performance-Seite",
+        "en": "Silent mode as a ghost (click-through, triple-click wakes), presentation shortcut and tray items, motion intensity, FPS unlock and Performance page"
+      },
+      {
+        "de": "Feinere Kürzungen: keine Wetter-Einfärbung mehr, einheitliches Gewicht der geschlossenen Pille, überlappungsfreie Lyrik-Animationen, echter Discord-Icon und Vault-Hello-Fix",
+        "en": "Polish: no weather tint, uniform closed-pill weight, overlap-free lyric animations, real Discord icon and vault Hello fix"
+      }
+    ]
+  },
+  {
     "version": "1.7.6",
     "date": "2026-10-25",
     "items": [
