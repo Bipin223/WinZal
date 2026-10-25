@@ -36,17 +36,6 @@ export function describe(code: number, day = true): { icon: Icon; text: string }
   return { icon: CloudLightning, text: t("Gewitter") };
 }
 
-/** Theme-aware icon colour for a WMO code. */
-export function weatherTone(code: number, day = true): string {
-  if (code === 0) return day ? "var(--color-weather-sun)" : "var(--color-weather-moon)";
-  if (code <= 2) return day ? "var(--color-weather-partly)" : "var(--color-weather-moon)";
-  if (code === 3) return "var(--color-weather-cloud)";
-  if (code <= 48) return "var(--color-weather-fog)";
-  if (code <= 67 || (code >= 80 && code <= 82)) return "var(--color-weather-rain)";
-  if (code <= 77 || code === 85 || code === 86) return "var(--color-weather-snow)";
-  return "var(--color-weather-storm)";
-}
-
 const cache = new Map<string, { at: number; data: Forecast }>();
 
 export async function loadForecast(lat: number, lon: number): Promise<Forecast> {

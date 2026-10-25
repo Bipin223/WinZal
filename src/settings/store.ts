@@ -111,8 +111,6 @@ export interface Settings {
     /** Colour of the first clock digit (OnePlus-style accent); red by default. */
     clockAccent: string;
     /** Closed clock pill: compact or bigger/bolder text (large default). */
-    /** Color weather icons by condition (sun, cloud, rain, snow, storm). */
-    weatherColors: boolean;
     /** Closed pill clock font size in px. */
     clockClosedSize: number;
     /** Closed pill clock tracking in px (visual text width). */
@@ -241,7 +239,6 @@ const defaults: Settings = {
   clockShowDay: true,
     musicInPill: true,
     clockAccent: "#ff453a",
-    weatherColors: true,
     clockClosedSize: 15,
     clockClosedTracking: 0,
     clockClosedWeight: 800,

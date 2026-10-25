@@ -32,7 +32,7 @@ import { holdOpen, pinned, togglePin, useNotchState, type NotchStatus } from "./
 import { t, locale } from "../i18n";
 import { formatTemp, formatTimeParts } from "../lib/format";
 import { useMinute } from "../lib/useMinute";
-import { describe, useForecast, weatherTone } from "../features/weather/store";
+import { describe, useForecast } from "../features/weather/store";
 import { timer } from "../features/timer/store";
 
 /** `#rrggbb` + alpha → `rgba(...)`; anything else is passed through untouched. */
@@ -401,11 +401,10 @@ function ClosedClock() {
   const meta = [appearance.clockShowDay ? weekday : null, appearance.clockShowDate ? date : null].filter(Boolean).join(" · ");
   const wx = appearance.clockShowWeather && forecast && forecast !== "error" ? describe(forecast.current.code, forecast.current.day) : null;
   const temp = appearance.clockShowWeather && forecast && forecast !== "error" ? formatTemp(forecast.current.temp) : null;
-  const tone = appearance.weatherColors && forecast && forecast !== "error" ? weatherTone(forecast.current.code, forecast.current.day) : undefined;
   const iconSize = Math.max(12, Math.round(size * 0.95));
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-      <div className="flex items-center gap-1" style={{ letterSpacing: `${appearance.clockClosedTracking}px` }}>
+      <div className="flex items-center gap-1" style={{ letterSpacing: `${appearance.clockClosedTracking}px`, fontWeight: appearance.clockClosedWeight }}>
         <span style={{ fontSize: `${size}px` }}>
           <ClockTime
             time={time}
@@ -425,7 +424,7 @@ function ClosedClock() {
             style={{ background: "var(--color-label-2)", boxShadow: "0 0 6px var(--color-label-4)" }}
           />
           <div className="flex items-center gap-1.5">
-            <wx.icon size={iconSize} weight="fill" className="text-label-2" style={tone ? { color: tone } : undefined} />
+            <wx.icon size={iconSize} weight="fill" className="text-label-2"  />
             <span className="tabular text-label-2" style={{ fontSize: `${tempSize}px` }}>{temp}</span>
           </div>
         </>

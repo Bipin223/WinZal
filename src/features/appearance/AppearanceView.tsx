@@ -34,7 +34,6 @@ const DEFAULTS: Appearance = {
   clockShowDay: true,
   musicInPill: true,
   clockAccent: "#ff453a",
-  weatherColors: true,
   clockClosedSize: 15,
   clockClosedTracking: 0,
   clockClosedWeight: 800,
@@ -116,7 +115,7 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
                   {a.clockWeather && (
                     <div
                       className="flex items-center gap-1 whitespace-nowrap"
-                      style={{ letterSpacing: `${a.clockClosedTracking}px` }}
+                      style={{ letterSpacing: `${a.clockClosedTracking}px`, fontWeight: a.clockClosedWeight }}
                     >
                       <span style={{ fontSize: `${a.clockClosedSize}px`, color: "#fff" }}>
                         <ClockTime
@@ -303,9 +302,6 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
           <StyleCard active={a.style === "dynamic"} label={t("Dynamic Island")} onClick={() => set({ style: "dynamic" })} />
           <StyleCard active={a.style === "windows"} label={t("Windows Island")} floating onClick={() => set({ style: "windows" })} />
         </div>
-      </Section>
-      <Section label={t("Weather")}>
-        <ToggleRow label={t("Weather colors")} checked={a.weatherColors} onChange={(weatherColors) => set({ weatherColors })} />
       </Section>
       <Section label={t("Equalization Accent")}>
         <Swatches value={a.accent} colors={ACCENTS} onChange={(accent) => set({ accent })} />

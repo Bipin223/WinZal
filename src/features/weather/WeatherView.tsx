@@ -6,7 +6,7 @@ import { settings } from "../../settings/store";
 import { Skeleton } from "../../ui/controls";
 import { formatTemp, formatWind } from "../../lib/format";
 import { locale, t } from "../../i18n";
-import { choosePlace, describe, detectPlace, loadForecast, searchPlaces, weatherTone, type Forecast, type Place } from "./store";
+import { choosePlace, describe, detectPlace, loadForecast, searchPlaces, type Forecast, type Place } from "./store";
 
 /*
  * Weather via Open-Meteo (data and location detection: ./store.ts).
@@ -20,7 +20,6 @@ const weekday = () => new Intl.DateTimeFormat(locale(), { weekday: "short" });
 
 export function WeatherView() {
   const place = settings.use().weather;
-  const weatherColors = settings.use().appearance.weatherColors;
   const [data, setData] = useState<Forecast | null>(null);
   const [error, setError] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -68,7 +67,7 @@ export function WeatherView() {
                 return (
                   <div key={d.date} className={`flex flex-col items-center gap-1 rounded-[10px] py-1.5 ${i === 0 ? "bg-fill-1" : ""}`} title={text}>
                     <span className="text-caption text-label-3">{i === 0 ? t("Heute") : weekday().format(new Date(`${d.date}T12:00:00`)).replace(".", "")}</span>
-                    <I size={18} weight="fill" className="text-label-2" style={weatherColors ? { color: weatherTone(d.code) } : undefined} />
+                    <I size={18} weight="fill" className="text-label-2" />
                     <span className="tabular text-caption font-semibold text-label">{formatTemp(d.max)}</span>
                     <span className="tabular -mt-1 text-caption text-label-3">{formatTemp(d.min)}</span>
                   </div>
@@ -84,11 +83,10 @@ export function WeatherView() {
 
 function Current({ data, name, auto, onChangePlace }: { data: Forecast; name: string; auto: boolean; onChangePlace: () => void }) {
   const { icon: I, text } = describe(data.current.code, data.current.day);
-  const weatherColors = settings.use().appearance.weatherColors;
   const today = data.daily[0];
   return (
     <div className="flex items-center gap-3">
-      <I size={38} weight="fill" className="text-label" style={weatherColors ? { color: weatherTone(data.current.code, data.current.day) } : undefined} />
+      <I size={38} weight="fill" className="text-label" />
       <span className="tabular text-[34px] leading-none font-semibold tracking-[-0.03em]">{formatTemp(data.current.temp)}</span>
       <div className="min-w-0">
         <button onClick={onChangePlace} className="flex items-center gap-1 text-footnote font-medium text-label hover:text-label-2" title={t("Ort ändern")}>

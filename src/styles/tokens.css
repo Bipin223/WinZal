@@ -28,15 +28,6 @@
   --color-red: #ff453a;
   --color-orange: #ff9f0a;
   --color-yellow: #ffd60a;
-  /* Weather icon colours (sunny, cloudy, rain, snow, storm). */
-  --color-weather-sun: #ffb020;
-  --color-weather-moon: #9fa6ff;
-  --color-weather-partly: #ffc14d;
-  --color-weather-cloud: #a7b0bd;
-  --color-weather-fog: #9aa0a8;
-  --color-weather-rain: #5aa7ff;
-  --color-weather-snow: #9fd4ff;
-  --color-weather-storm: #c08bff;
   /* Links (Apple's dark mode link color). */
   --color-link: #419cff;
 
@@ -102,14 +93,6 @@
   --color-red: #ff3b30;
   --color-orange: #ff9500;
   --color-yellow: #e5a800;
-  --color-weather-sun: #e08600;
-  --color-weather-moon: #6f6fd6;
-  --color-weather-partly: #d98a00;
-  --color-weather-cloud: #6b7480;
-  --color-weather-fog: #7a828c;
-  --color-weather-rain: #2f7fd1;
-  --color-weather-snow: #3f9bd8;
-  --color-weather-storm: #8e4fd1;
   --color-link: #007aff;
 }
 
