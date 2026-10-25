@@ -49,13 +49,34 @@ fn render_mode_path() -> Option<std::path::PathBuf> {
     Some(std::path::PathBuf::from(local).join("app.winzal").join("render-mode"))
 }
 
-/// CPU (software) is the default. GPU is opt-in through Appearance.
+fn gpu_preference_path() -> Option<std::path::PathBuf> {
+    let local = std::env::var_os("LOCALAPPDATA")?;
+    Some(std::path::PathBuf::from(local).join("app.winzal").join("gpu-preference"))
+}
+
+/// auto | igpu | dgpu (default auto = Windows decides, the iGPU on hybrids).
+fn gpu_preference() -> String {
+    gpu_preference_path()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .map(|s| s.trim().to_string())
+        .unwrap_or_else(|| "auto".into())
+}
+
+/// CPU (software) is the default. GPU is opt-in through Performance; it uses
+/// the integrated GPU unless the user picks the discrete one.
 fn webview_args() -> String {
     let gpu = render_mode_path()
         .and_then(|p| std::fs::read_to_string(p).ok())
         .is_some_and(|s| s.trim() == "gpu");
     if gpu {
-        WEBVIEW_BASE_ARGS.to_string()
+        let mut args = WEBVIEW_BASE_ARGS.to_string();
+        // Chromium 145+ honors these on Windows (WebView2 155 here).
+        match gpu_preference().as_str() {
+            "igpu" => args.push_str(" --force_low_power_gpu"),
+            "dgpu" => args.push_str(" --force_high_performance_gpu"),
+            _ => {}
+        }
+        args
     } else {
         format!("{WEBVIEW_BASE_ARGS} --disable-gpu")
     }
@@ -76,8 +97,27 @@ fn set_webview_render_mode(mode: String) -> Result<(), String> {
     std::fs::write(path, value).map_err(|e| e.to_string())
 }
 
+/// Persist which GPU the WebView should prefer; applies after a restart.
+#[tauri::command]
+fn set_gpu_preference(mode: String) -> Result<(), String> {
+    let value = match mode.as_str() {
+        "auto" => "auto",
+        "igpu" => "igpu",
+        "dgpu" => "dgpu",
+        other => return Err(format!("Unknown GPU preference: {other}")),
+    };
+    let path = gpu_preference_path().ok_or("LOCALAPPDATA is not available")?;
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    }
+    std::fs::write(path, value).map_err(|e| e.to_string())
+}
+
 pub fn run() {
     let shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::Space);
+    let presentation = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyP);
+    let silent = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyS);
+    let (h_shortcut, h_presentation, h_silent) = (shortcut.clone(), presentation.clone(), silent.clone());
 
     tauri::Builder::default()
         // A second launch doesn't open a second notch.
@@ -89,8 +129,15 @@ pub fn run() {
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(move |app, pressed, event| {
-                    if pressed == &shortcut && event.state() == ShortcutState::Pressed {
+                    if event.state() != ShortcutState::Pressed {
+                        return;
+                    }
+                    if pressed == &h_shortcut {
                         let _ = app.emit("notch://shortcut", ());
+                    } else if pressed == &h_presentation {
+                        let _ = app.emit("notch://presentation-toggle", ());
+                    } else if pressed == &h_silent {
+                        let _ = app.emit("notch://silent-toggle", ());
                     }
                 })
                 .build(),
@@ -112,6 +159,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             hit_test::set_hit_rect,
             hit_test::set_pinned,
+            hit_test::set_silent,
             media::media_get,
             lyrics::lyrics_get,
             media::media_control,
@@ -132,6 +180,7 @@ pub fn run() {
             keyboard_focus,
             notch_prompt_mode,
             set_webview_render_mode,
+    set_gpu_preference,
             audio::audio_levels,
             ai::ai_chat,
             ai::ai_cancel,
@@ -165,6 +214,8 @@ pub fn run() {
             mixer::mixer_set,
             mixer::media_open_source,
             tray_focus,
+            tray_silent,
+            tray_presentation,
             controls::focus_get,
             controls::focus_set,
             controls::brightness_get,
@@ -248,6 +299,8 @@ pub fn run() {
 
             // If another app owns the shortcut, the notch still runs, just without it.
             let _ = app.global_shortcut().register(shortcut);
+            let _ = app.global_shortcut().register(presentation);
+            let _ = app.global_shortcut().register(silent);
             enable_autostart_once(app.handle());
             build_tray(app)?;
             Ok(())
@@ -316,6 +369,8 @@ struct Tray {
     open: MenuItem<tauri::Wry>,
     settings: MenuItem<tauri::Wry>,
     focus: CheckMenuItem<tauri::Wry>,
+    silent: CheckMenuItem<tauri::Wry>,
+    presentation: CheckMenuItem<tauri::Wry>,
     autostart: CheckMenuItem<tauri::Wry>,
     quit: MenuItem<tauri::Wry>,
 }
@@ -323,25 +378,43 @@ struct Tray {
 #[derive(Default)]
 struct TrayItems(Mutex<Option<Tray>>);
 
-/// Open (shortcut right-aligned via tab, like Windows menus), settings, focus mode, autostart, quit.
-fn tray_texts(lang: &str) -> [String; 5] {
+/// Open (shortcut right-aligned via tab, like Windows menus), settings, focus mode, silent, presentation, autostart, quit.
+fn tray_texts(lang: &str) -> [String; 7] {
     if lang == "en" {
         let keys = SHORTCUT_LABEL.replace("Strg", "Ctrl").replace("Leertaste", "Space");
-        [format!("Open WinZal\t{keys}"), "Settings …".into(), "Do not disturb".into(), "Start with Windows".into(), "Quit WinZal".into()]
+        [
+            format!("Open WinZal\t{keys}"),
+            "Settings…".into(),
+            "Do not disturb".into(),
+            "Silent mode".into(),
+            "Presentation mode".into(),
+            "Start with Windows".into(),
+            "Quit WinZal".into(),
+        ]
     } else {
-        [format!("WinZal öffnen\t{SHORTCUT_LABEL}"), "Einstellungen …".into(), "Nicht stören".into(), "Mit Windows starten".into(), "WinZal beenden".into()]
+        [
+            format!("WinZal öffnen\t{SHORTCUT_LABEL}"),
+            "Einstellungen…".into(),
+            "Nicht stören".into(),
+            "Stille".into(),
+            "Präsentationsmodus".into(),
+            "Mit Windows starten".into(),
+            "WinZal beenden".into(),
+        ]
     }
 }
 
 #[tauri::command]
 fn set_language(lang: String, state: State<'_, TrayItems>) {
     if let Some(tray) = state.0.lock().unwrap().as_ref() {
-        let [a, b, c, d, e] = tray_texts(&lang);
+        let [a, b, c, d, e, f, g] = tray_texts(&lang);
         let _ = tray.open.set_text(a);
         let _ = tray.settings.set_text(b);
         let _ = tray.focus.set_text(c);
-        let _ = tray.autostart.set_text(d);
-        let _ = tray.quit.set_text(e);
+        let _ = tray.silent.set_text(d);
+        let _ = tray.presentation.set_text(e);
+        let _ = tray.autostart.set_text(f);
+        let _ = tray.quit.set_text(g);
     }
 }
 
@@ -350,6 +423,20 @@ fn set_language(lang: String, state: State<'_, TrayItems>) {
 fn tray_focus(on: bool, state: State<'_, TrayItems>) {
     if let Some(tray) = state.0.lock().unwrap().as_ref() {
         let _ = tray.focus.set_checked(on);
+    }
+}
+
+#[tauri::command]
+fn tray_silent(on: bool, state: State<'_, TrayItems>) {
+    if let Some(tray) = state.0.lock().unwrap().as_ref() {
+        let _ = tray.silent.set_checked(on);
+    }
+}
+
+#[tauri::command]
+fn tray_presentation(on: bool, state: State<'_, TrayItems>) {
+    if let Some(tray) = state.0.lock().unwrap().as_ref() {
+        let _ = tray.presentation.set_checked(on);
     }
 }
 
@@ -378,27 +465,43 @@ fn dark_menus() {
 fn build_tray(app: &App) -> tauri::Result<()> {
     dark_menus();
     let enabled = app.autolaunch().is_enabled().unwrap_or(false);
-    let [open_text, settings_text, focus_text, autostart_text, quit_text] = tray_texts("en");
+    let [open_text, settings_text, focus_text, silent_text, presentation_text, autostart_text, quit_text] = tray_texts("en");
     let open = MenuItem::with_id(app, "open", open_text, true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", settings_text, true, None::<&str>)?;
     // The real state follows right after start (the frontend calls tray_focus).
     let focus = CheckMenuItem::with_id(app, "focus", focus_text, true, false, None::<&str>)?;
+    let silent = CheckMenuItem::with_id(app, "silent", silent_text, true, false, None::<&str>)?;
+    let presentation = CheckMenuItem::with_id(app, "presentation", presentation_text, true, false, None::<&str>)?;
     let autostart = CheckMenuItem::with_id(app, "autostart", autostart_text, true, enabled, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", quit_text, true, None::<&str>)?;
     *app.state::<TrayItems>().0.lock().unwrap() = Some(Tray {
         open: open.clone(),
         settings: settings.clone(),
         focus: focus.clone(),
+        silent: silent.clone(),
+        presentation: presentation.clone(),
         autostart: autostart.clone(),
         quit: quit.clone(),
     });
     let menu = Menu::with_items(
         app,
-        &[&open, &settings, &PredefinedMenuItem::separator(app)?, &focus, &autostart, &PredefinedMenuItem::separator(app)?, &quit],
+        &[
+            &open,
+            &settings,
+            &PredefinedMenuItem::separator(app)?,
+            &focus,
+            &silent,
+            &presentation,
+            &autostart,
+            &PredefinedMenuItem::separator(app)?,
+            &quit,
+        ],
     )?;
 
     let autostart_item = autostart.clone();
     let focus_item = focus.clone();
+    let silent_item = silent.clone();
+    let presentation_item = presentation.clone();
     TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
         .tooltip("WinZal")
@@ -421,6 +524,14 @@ fn build_tray(app: &App) -> tauri::Result<()> {
                 // The click already toggled the check; the frontend applies it and mirrors it back.
                 let on = focus_item.is_checked().unwrap_or(false);
                 let _ = app.emit("notch://focus-set", on);
+            }
+            "silent" => {
+                let on = silent_item.is_checked().unwrap_or(false);
+                let _ = app.emit("notch://silent-set", on);
+            }
+            "presentation" => {
+                let on = presentation_item.is_checked().unwrap_or(false);
+                let _ = app.emit("notch://presentation-set", on);
             }
             "autostart" => {
                 // The check item toggles itself on click; read the new state.

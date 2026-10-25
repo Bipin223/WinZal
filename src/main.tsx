@@ -1,4 +1,4 @@
-import { StrictMode } from "react";
+import { StrictMode, useEffect, useLayoutEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { createRoot } from "react-dom/client";
 import { MotionConfig } from "motion/react";
@@ -9,8 +9,12 @@ import { isNative } from "./platform/native";
 import { startDropListener } from "./platform/drop";
 import { clipboard } from "./platform/clipboard";
 import { settings } from "./settings/store";
+import { setMotionScale } from "./design/motion";
+import { applyTypography } from "./features/appearance/typography";
 import { applyDisplay } from "./notch/drag";
 import { startFocusMode } from "./notch/focus";
+import { startSilentMode } from "./notch/silent";
+import { startPresentationMode } from "./features/privacy/store";
 import { startSystemPolling } from "./features/system/store";
 import { startGamingWatch } from "./features/system/gaming";
 import { startDiscord } from "./features/discord/store";
@@ -25,6 +29,8 @@ if (showcase) startShowcase();
 startTheme();
 startDropListener();
 startFocusMode();
+startSilentMode();
+startPresentationMode();
 startSystemPolling();
 startGamingWatch();
 startDiscord();
@@ -92,10 +98,23 @@ new MutationObserver(stripTitles).observe(document.documentElement, {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    {/* reducedMotion="user": Motion respects the Windows "Animation effects" setting. */}
-    <MotionConfig reducedMotion="user">
+    <Root />
+  </StrictMode>,
+);
+
+/** Applies the global motion intensity to Motion and the CSS layer. */
+function Root() {
+  const s = settings.use();
+  const motion = s.appearance.motion;
+  setMotionScale(motion / 100);
+  useLayoutEffect(() => applyTypography(s.typography), [s.typography]);
+  useEffect(() => {
+    document.documentElement.dataset.motion = motion === 0 ? "off" : motion < 50 ? "reduced" : "full";
+  }, [motion]);
+  return (
+    <MotionConfig reducedMotion={motion === 0 ? "always" : "user"}>
       {!isNative && <DesktopMock />}
       <Notch />
     </MotionConfig>
-  </StrictMode>,
-);
+  );
+}

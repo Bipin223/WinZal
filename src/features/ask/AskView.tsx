@@ -506,7 +506,7 @@ export function AskView() {
         {historyOpen && (
           <div className="absolute right-0 bottom-full z-40 mb-1 w-[280px] overflow-hidden rounded-[12px] bg-elevated p-1.5 shadow-2xl ring-1 ring-separator">
             <div className="flex items-center justify-between px-2 py-1">
-              <div className="text-[10px] font-semibold tracking-wide text-label-2 uppercase">{t("Gespeicherte Chats")}</div>
+              <div className="text-[10px] font-medium tracking-wide text-label-2 uppercase">{t("Gespeicherte Chats")}</div>
               {saved.length > 0 && (
                 <button
                   type="button"
@@ -569,7 +569,7 @@ export function AskView() {
             )}
             <div className="mt-1 flex items-center justify-between gap-2 border-t border-separator px-2 pt-2 pb-1">
               <div className="min-w-0">
-                <div className="text-[11px] font-semibold text-label">{t("Chats speichern")}</div>
+                <div className="text-[11px] font-medium text-label">{t("Chats speichern")}</div>
                 <div className="mt-0.5 text-[9px] leading-[11px] text-label-3">
                   {saveHistory ? t("Bis zu 3 Chats lokal auf diesem PC") : t("Aus - dieser Chat bleibt nur im Speicher")}
                 </div>

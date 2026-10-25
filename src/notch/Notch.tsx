@@ -1,11 +1,15 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { AnimatePresence, animate, motion, useMotionValue, type Transition } from "motion/react";
-import { GearSix, MoonStars, PushPin } from "@phosphor-icons/react";
+import { GearSix, Ghost, MoonStars, PushPin } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
 import { useNowPlaying } from "../platform/media";
-import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onTrayOpen, setHitRect, setMemoryLow, trimMemory } from "../platform/native";
+import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onSilentExit, onTrayOpen, setHitRect, setMemoryLow, setSilent, trimMemory } from "../platform/native";
 import { PrivacyDots } from "../features/privacy/PrivacyDots";
 import { FOCUS_CLICKS, focusMode, setFocusMode } from "./focus";
+import { silentMode, setSilentMode } from "./silent";
+import { useGamingLive } from "../features/system/gaming";
+import { useGameAutoPower } from "../features/system/autoPower";
+import { gamingWidth } from "../features/system/gamingOverlay";
 import { useDragToMove } from "./drag";
 import { LiveSlot, useLiveActivity } from "./live";
 import { GamingSatellite } from "./GamingSatellite";
@@ -48,7 +52,27 @@ const MEMORY_LOW_AFTER_MS = 20_000;
 export function Notch() {
   const { status, open, dismiss, toggle, onPointerEnter, onPointerLeave } = useNotchState();
   const focus = focusMode.use();
-  const { tools: toolSettings, display: displaySettings, appearance } = settings.use();
+  const silent = silentMode.use();
+  const gamingLive = useGamingLive();
+  useGameAutoPower();
+  const { tools: toolSettings, display: displaySettings, appearance, gaming } = settings.use();
+  // Silent mode is the only ghost; game transparency reuses the Glass alpha (0.62).
+  const ghostOpacity = silent && status !== "open" ? 0.28 : 1;
+  const materialAlpha = appearance.material === "glass" ? 0.62 : appearance.material === "dark" ? 0.82 : 1;
+  const notchAlpha = gaming.transparent && gamingLive ? 0.62 : materialAlpha;
+  const systemWidth = gamingWidth(gaming);
+  useEffect(() => {
+    setSilent(silent && status !== "open");
+  }, [silent, status]);
+  useEffect(
+    () =>
+      onSilentExit(() => {
+        setSilentMode(false);
+        open();
+        keyboardFocus(true);
+      }),
+    [open],
+  );
   const light = useThemeLight();
   const floating = appearance.style === "windows";
   // Line as the normal closed look: hover and click work as usual, but nothing shows
@@ -116,7 +140,7 @@ export function Notch() {
         h: lineHeight,
         r: lineHeight / 2,
       }
-    : shapeFor(status, pillLive, size);
+    : shapeFor(status, pillLive, size, systemWidth);
   const shape =
     !lineView && appearance.corners === "squared" && baseShape.r > 5
       ? { ...baseShape, r: Math.min(baseShape.r, 8), ear: Math.min(baseShape.ear, 3) }
@@ -252,11 +276,7 @@ export function Notch() {
       // In the browser the notch moves inside the window; natively the whole window moves (display.rs).
       style={{
         ["--accent" as string]: appearance.accent === "auto" ? np?.accent : appearance.accent,
-        ["--color-notch" as string]:
-          fillWithAlpha(
-            surface,
-            appearance.material === "glass" ? 0.62 : appearance.material === "dark" ? 0.82 : 1,
-          ),
+        ["--color-notch" as string]: fillWithAlpha(surface, notchAlpha),
         transform: isNative ? undefined : `translateX(${drag.offset}px)`,
       }}
     >
@@ -283,7 +303,11 @@ export function Notch() {
             scaleY: appearance.dragAnimation ? 1 - Math.abs(drag.lag) / 1600 : 1,
           }}
           transition={springs.peek}
-          style={{ transformOrigin: "50% 0%" }}
+          style={{
+            transformOrigin: "50% 0%",
+            opacity: ghostOpacity,
+            transition: "opacity 220ms ease",
+          }}
         >
         <NotchShape
           geometry={displayShape}
@@ -292,7 +316,7 @@ export function Notch() {
           floating={floating}
         >
           <LiveRightInset.Provider value={rightInset}>
-            <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} widthExtra={appearance.islandWidth} height={appearance.islandHeight} />
+            <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} widthExtra={appearance.islandWidth} height={appearance.islandHeight} systemWidth={systemWidth} />
           </LiveRightInset.Provider>
           {clockWeather && !idleLine && status !== "open" && !pillLive && <ClosedClock />}
           {!idleLine && <PrivacyDots hideScreen={showRecording} />}
@@ -313,7 +337,15 @@ export function Notch() {
                 animate={{ opacity: 1, transform: "translateY(0px)", transition: content.enter }}
                 exit={{ opacity: 0, transform: "translateY(-4px)", transition: content.exit }}
               >
-                <Header title={t(tab.label)} onDragStart={drag.onPointerDown} />
+                <Header
+                  title={t(tab.label)}
+                  onDragStart={drag.onPointerDown}
+                  onSilent={() => {
+                    const next = !silentMode.get();
+                    setSilentMode(next);
+                    if (next) dismiss();
+                  }}
+                />
                 <div className="relative min-h-0 flex-1 overflow-clip">
                   <AnimatePresence mode="popLayout" initial={false}>
                     <motion.div
@@ -332,6 +364,22 @@ export function Notch() {
             )}
           </AnimatePresence>
         </NotchShape>
+        {lineView && (
+          <span aria-hidden className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+            <motion.span
+              className="block rounded-full"
+              style={{
+                width: 8,
+                height: Math.max(2, lineHeight),
+                background: "#ffd60a",
+                boxShadow: "0 0 12px 2px rgb(255 214 10 / 0.55)",
+              }}
+              initial={false}
+              animate={{ opacity: linePeek ? 1 : 0.55, scaleX: linePeek ? 1.8 : 1 }}
+              transition={springs.snappy}
+            />
+          </span>
+        )}
         <GamingSatellite show={gamingSatellite} playing={!!np?.isPlaying} floating={floating} />
         </motion.div>
       </div>
@@ -343,21 +391,29 @@ export function Notch() {
 function ClosedClock() {
   const now = useMinute();
   const forecast = useForecast();
-  const large = settings.use().appearance.clockText === "large";
+  const appearance = settings.use().appearance;
+  const large = appearance.clockText === "large";
   const { time, period } = formatTimeParts(now);
-  const date = now.toLocaleDateString(locale(), { weekday: "short", day: "numeric", month: "short" });
-  const wx = forecast && forecast !== "error" ? describe(forecast.current.code, forecast.current.day) : null;
-  const temp = forecast && forecast !== "error" ? formatTemp(forecast.current.temp) : null;
-  const timeClass = large ? "text-[15px] font-extrabold" : "text-[13px] font-bold";
+  const weekday = now.toLocaleDateString(locale(), { weekday: "short" });
+  const date = now.toLocaleDateString(locale(), { day: "numeric", month: "short" });
+  const meta = [appearance.clockShowDay ? weekday : null, appearance.clockShowDate ? date : null].filter(Boolean).join(" · ");
+  const wx = appearance.clockShowWeather && forecast && forecast !== "error" ? describe(forecast.current.code, forecast.current.day) : null;
+  const temp = appearance.clockShowWeather && forecast && forecast !== "error" ? formatTemp(forecast.current.temp) : null;
+  const timeClass = large ? "text-[15px]" : "text-[13px]";
   const smallClass = large ? "text-[10px] font-semibold" : "text-[9px] font-medium";
   const tempClass = large ? "text-[12px] font-bold" : "text-[11px] font-semibold";
   const iconSize = large ? 14 : 12;
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
       <div className="flex items-center gap-1">
-        <ClockTime time={time} className={`tabular ${timeClass} text-label`} emphasizeHour />
+        <ClockTime
+          time={time}
+          className={`tabular ${timeClass} text-label`}
+          emphasizeHour={appearance.clockEmphasis}
+          weight={appearance.clockClosedWeight}
+        />
         {period && <span className={`${smallClass} text-label-3`}>{period}</span>}
-        <span className={`${smallClass} text-label-3`}>• {date}</span>
+        {meta && <span className={`${smallClass} text-label-3`}>{period ? `· ${meta}` : meta}</span>}
       </div>
       {wx && (
         <>
@@ -377,9 +433,10 @@ function ClosedClock() {
 }
 
 /** Header: tool title on the left, actions + pin on the right. The middle (camera) stays free. */
-function Header({ title, onDragStart }: { title: string; onDragStart: (e: React.PointerEvent) => void }) {
+function Header({ title, onDragStart, onSilent }: { title: string; onDragStart: (e: React.PointerEvent) => void; onSilent: () => void }) {
   const isPinned = pinned.use();
   const focus = focusMode.use();
+  const silent = silentMode.use();
   return (
     // Empty header space = drag handle.
     <div data-drag-handle onPointerDown={onDragStart} className="flex shrink-0 items-center justify-between gap-3 pr-3 pl-5" style={{ height: HEADER_HEIGHT + 4 }}>
@@ -387,7 +444,7 @@ function Header({ title, onDragStart }: { title: string; onDragStart: (e: React.
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.h2
             key={title}
-            className="truncate text-title font-semibold"
+            className="truncate text-title"
             initial={{ opacity: 0, filter: "blur(4px)" }}
             animate={{ opacity: 1, filter: "blur(0px)", transition: content.enter }}
             exit={{ opacity: 0, filter: "blur(4px)", transition: content.exit }}
@@ -399,6 +456,13 @@ function Header({ title, onDragStart }: { title: string; onDragStart: (e: React.
       <div className="flex items-center gap-1">
         {/* Tools render here via <HeaderActions> (src/notch/header.tsx). The grid stacks old and new during a switch. */}
         <div ref={(el) => headerSlot.set(el)} className="grid" />
+        <HeaderButton
+          label={silent ? t("Silent mode off") : t("Silent mode")}
+          active={silent}
+          onClick={onSilent}
+        >
+          <Ghost size={14} weight={silent ? "fill" : "bold"} />
+        </HeaderButton>
         <HeaderButton
           label={focus ? t("Nicht stören ausschalten") : t("Nicht stören")}
           active={focus}
@@ -503,9 +567,9 @@ function useStickyHitZone(status: NotchStatus, height: number) {
 /** pb-3 of the hit zone. */
 const HIT_PAD_BOTTOM = 12;
 
-function shapeFor(status: NotchStatus, live: string | null, size: { w: number; h: number }): NotchGeometry {
+function shapeFor(status: NotchStatus, live: string | null, size: { w: number; h: number }, systemWidth = geometry.gaming.w): NotchGeometry {
   if (status === "open") return openGeometry(size.w, size.h);
-  const base = live === "system" ? geometry.gaming : live ? geometry.live : geometry.closed;
+  const base = live === "system" ? { ...geometry.gaming, w: systemWidth } : live ? geometry.live : geometry.closed;
   if (status === "peek") {
     // Hover nudge relative to the current width so it also fits the live state.
     const bump = geometry.peek.w - geometry.closed.w;

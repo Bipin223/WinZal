@@ -592,6 +592,22 @@ pub async fn vault_hello_supported() -> bool {
     tauri::async_runtime::spawn_blocking(hello::supported).await.unwrap_or(false)
 }
 
+/// Windows Hello opens its own secure window. Hide the always-on-top notch
+/// while it is open, otherwise the notch covers the prompt and swallows the
+/// PIN keystrokes.
+fn hide_for_hello(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("notch") {
+        let _ = window.hide();
+    }
+}
+
+fn restore_after_hello(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("notch") {
+        let _ = window.show();
+        let _ = window.set_always_on_top(true);
+    }
+}
+
 /// Shows the Windows Hello prompt; on success the vault is unlocked with the key.
 /// Errors: "hello-cancel", "hello-missing" (credential gone), "hello-failed".
 #[tauri::command]
@@ -601,9 +617,10 @@ pub async fn vault_hello_unlock(app: AppHandle, state: State<'_, VaultState>) ->
         let hello = load(&app)?.hello.ok_or("no-hello")?;
         b64(&hello.challenge)?
     };
-    let key = tauri::async_runtime::spawn_blocking(move || hello::derive_key(false, &challenge))
-        .await
-        .map_err(|e| e.to_string())??;
+    hide_for_hello(&app);
+    let result = tauri::async_runtime::spawn_blocking(move || hello::derive_key(false, &challenge)).await;
+    restore_after_hello(&app);
+    let key = result.map_err(|e| e.to_string())??;
     let _guard = state.lock.lock().unwrap();
     let hello = load(&app)?.hello.ok_or("no-hello")?;
     // GCM authenticates: a wrong key can't open the seal.
@@ -633,9 +650,10 @@ pub async fn vault_hello_enable(app: AppHandle, state: State<'_, VaultState>) ->
     }
     let challenge = Aes256Gcm::generate_key(&mut OsRng).to_vec();
     let sign = challenge.clone();
-    let key = tauri::async_runtime::spawn_blocking(move || hello::derive_key(true, &sign))
-        .await
-        .map_err(|e| e.to_string())??;
+    hide_for_hello(&app);
+    let result = tauri::async_runtime::spawn_blocking(move || hello::derive_key(true, &sign)).await;
+    restore_after_hello(&app);
+    let key = result.map_err(|e| e.to_string())??;
     let _guard = state.lock.lock().unwrap();
     let mut data = load(&app)?;
     data.hello = Some(Hello { challenge: base64::engine::general_purpose::STANDARD.encode(&challenge), sealed: String::new() });

@@ -91,7 +91,7 @@ export function NowPlayingView() {
                   animate={{ opacity: 1, filter: "blur(0px)", transition: content.enter }}
                   exit={{ opacity: 0, filter: "blur(4px)", transition: content.exit }}
                 >
-                  <div className="truncate text-title font-semibold">{np.title}</div>
+                  <div className="truncate text-title">{np.title}</div>
                   <div className="truncate text-body text-label-2">{np.artist}</div>
                 </motion.div>
               </AnimatePresence>

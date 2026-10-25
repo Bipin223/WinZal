@@ -11,14 +11,37 @@ export interface AskProviderConfig {
   baseUrl: string;
 }
 
+export type TypeRole = "caption" | "footnote" | "body" | "title" | "display";
+export type TypeAxis = { size: number; weight: number };
+
+export const DEFAULT_TYPOGRAPHY: Record<TypeRole, TypeAxis> = {
+  caption: { size: 0, weight: 0 },
+  footnote: { size: 0, weight: 0 },
+  body: { size: 0, weight: 0 },
+  title: { size: 0, weight: 0 },
+  display: { size: 0, weight: 0 },
+};
+
 export interface Settings {
   /** Open on hover or only on click. */
   openMode: "hover" | "click";
   hoverDelay: "fast" | "normal" | "patient";
   /** Order = order in the tool bar. */
   tools: { id: string; enabled: boolean }[];
-  /** AI usage: which providers are shown (order = display order). */
-  usage: { claude: boolean; codex: boolean; gemini: boolean; cursor: boolean };
+  /** AI usage: one user-defined endpoint. */
+  usage: {
+    custom: boolean;
+    config: {
+      name: string;
+      url: string;
+      header: string;
+      valuePath: string;
+      limitPath: string;
+      resetPath: string;
+      window: "session" | "daily" | "weekly" | "monthly";
+      plan: string;
+    };
+  };
   /** `saveHistory` off keeps chats in memory only; existing files are never deleted by the switch. */
   ask: { provider: AskProvider; configs: Record<AskProvider, AskProviderConfig>; saveHistory: boolean };
   /** `auto` = detected via IP (again on every start); a picked location stays. */
@@ -38,9 +61,24 @@ export interface Settings {
     idleStyle: "notch" | "line";
   };
   /** Gaming mode: FPS + load in the closed notch: off, for chosen games/apps, or always. */
-  gaming: { mode: "off" | "games"; apps: string[] };
+  gaming: {
+    mode: "off" | "games";
+    apps: string[];
+    transparent: boolean;
+    showFps: boolean;
+    showCpu: boolean;
+    showTemps: boolean;
+    showGpu: boolean;
+    showRam: boolean;
+    /** How CPU/GPU/RAM values are drawn. */
+    style: "text" | "bars" | "dots";
+    /** Switch to Lenovo Custom while a game is in front, then restore. */
+    autoPower: boolean;
+  };
   /** Dots like on iPhone: mic/camera (green) or screen recording (red) in use. */
   privacyDots: boolean;
+  /** Per-role size/weight offsets; 0 = the built-in default. */
+  typography: Record<TypeRole, TypeAxis>;
   /** Notch colours and shape. `accent: "auto"` follows the album art. */
   appearance: {
     accent: string;
@@ -64,20 +102,32 @@ export interface Settings {
     dragAnimation: boolean;
     /** Show time + weather in the closed island. */
     clockWeather: boolean;
+    /** Closed clock extras; the time itself is always shown when the clock is on. */
+    clockShowWeather: boolean;
+    clockShowDate: boolean;
+    clockShowDay: boolean;
     /** Show the playing track in the closed pill at all (music only in the Now Playing tab when off). */
     musicInPill: boolean;
     /** Colour of the first clock digit (OnePlus-style accent); red by default. */
     clockAccent: string;
     /** Closed clock pill: compact or bigger/bolder text (large default). */
     clockText: "compact" | "large";
-    /** Expanded overview clock: bold instead of semibold. */
-    clockBold: boolean;
+    /** Closed pill clock weight (400–900). */
+    clockClosedWeight: number;
+    /** Open/extended header clock weight (400–900). */
+    clockOpenWeight: number;
+    /** Larger + 900-weight hour in the clock (OnePlus style). Off = uniform clock. */
+    clockEmphasis: boolean;
     /** Show the current synced lyric line in the closed music pill instead of the title. */
     lyricsInPill: boolean;
     /** One line (inline) or the current + next line. */
     lyricsLayout: "inline" | "lines";
+    /** Global motion intensity, 0 = off, 100 = full. */
+    motion: number;
     /** Continuous lyric font size in px; the pill and visualizer grow with it. */
     lyricsTextSize: number;
+    /** Seconds added to lyric timestamps (+ = lines appear later). */
+    lyricsOffset: number;
     /** How much room the closed lyric pill uses: compact, exact fit, or long. */
     lyricsPillWidth: "compact" | "normal" | "long";
     /** Subtle waveform behind the lyric, in the cover's accent color. */
@@ -85,9 +135,11 @@ export interface Settings {
     /** Visualizer style inside the lyrics pill. */
     lyricsVisualizerStyle: "wave" | "pulse" | "dots" | "ripple" | "aurora";
     /** Line change animation: Apple Music-style scale/slide, word reveal, or line reveal. */
-    lyricsAnimation: "apple" | "word" | "reveal";
+    lyricsAnimation: "apple" | "word" | "reveal" | "kinetic";
     /** true = hardware acceleration (smoother, more RAM); false = software/CPU (less RAM, more CPU). */
     gpuAcceleration: boolean;
+    /** GPU mode when acceleration is on: auto, integrated, or discrete. */
+    gpuPreference: "auto" | "igpu" | "dgpu";
   };
   /** Discord call in the notch (local RPC, on = Discord tool enabled). The client secret is stored with the secrets. */
   discord: { clientId: string; presence: boolean; appName: string; statusLine: "title" | "artist" | "app" };
@@ -128,7 +180,19 @@ const defaults: Settings = {
   openMode: "hover",
   hoverDelay: "normal",
   tools: TOOL_IDS.map((id) => ({ id, enabled: !DEFAULT_OFF.has(id) })),
-  usage: { claude: true, codex: true, gemini: true, cursor: false },
+  usage: {
+    custom: false,
+    config: {
+      name: "Custom",
+      url: "",
+      header: "Authorization",
+      valuePath: "",
+      limitPath: "",
+      resetPath: "",
+      window: "session",
+      plan: "",
+    },
+  },
   ask: {
     provider: "gemini",
     configs: {
@@ -140,7 +204,19 @@ const defaults: Settings = {
   },
   weather: null,
   display: { visibility: "always", monitor: null, offset: 0, idleStyle: "notch" },
-  gaming: { mode: "off", apps: ["GenshinImpact.exe", "YuanShen.exe"] },
+  gaming: {
+    mode: "off",
+    apps: ["GenshinImpact.exe", "YuanShen.exe"],
+    transparent: false,
+    showFps: true,
+    showCpu: true,
+    showTemps: true,
+    showGpu: true,
+    showRam: true,
+    style: "text",
+    autoPower: false,
+  },
+  typography: { ...DEFAULT_TYPOGRAPHY },
   privacyDots: true,
   appearance: {
     accent: "auto",
@@ -155,18 +231,26 @@ const defaults: Settings = {
     lineThickness: 5,
     dragAnimation: true,
     clockWeather: true,
+  clockShowWeather: true,
+  clockShowDate: true,
+  clockShowDay: true,
     musicInPill: true,
     clockAccent: "#ff453a",
     clockText: "large",
-    clockBold: true,
+    clockClosedWeight: 800,
+    clockOpenWeight: 700,
+    clockEmphasis: true,
     lyricsInPill: false,
     lyricsLayout: "inline",
+    motion: 100,
     lyricsTextSize: 12,
+    lyricsOffset: 0,
     lyricsPillWidth: "normal",
     lyricsVisualizer: true,
     lyricsVisualizerStyle: "wave",
     lyricsAnimation: "apple",
     gpuAcceleration: false,
+    gpuPreference: "auto",
   },
   discord: { clientId: "", presence: true, appName: "Bipin Rizal’s WinZal app", statusLine: "title" },
   alarm: { sound: "chime", volume: 0.7, duration: 5 },
@@ -218,7 +302,18 @@ settings.set((s) => {
     ...defaults,
     ...s,
     tools,
-    usage: { ...defaults.usage, ...s.usage },
+    usage: {
+      ...defaults.usage,
+      ...s.usage,
+      config: { ...defaults.usage.config, ...(s.usage as { config?: Partial<Settings["usage"]["config"]> } | undefined)?.config },
+    },
+    typography: {
+      caption: { ...defaults.typography.caption, ...s.typography?.caption },
+      footnote: { ...defaults.typography.footnote, ...s.typography?.footnote },
+      body: { ...defaults.typography.body, ...s.typography?.body },
+      title: { ...defaults.typography.title, ...s.typography?.title },
+      display: { ...defaults.typography.display, ...s.typography?.display },
+    },
     display: { ...defaults.display, ...s.display },
     gaming: migrateGaming(s.gaming),
     appearance: {
@@ -238,6 +333,8 @@ settings.set((s) => {
         const stored = (s.appearance as { lyricsAnimation?: string } | undefined)?.lyricsAnimation;
         if (stored === "word" || stored === "blur") return "word" as const;
         if (stored === "reveal") return "reveal" as const;
+        if (stored === "kinetic") return "kinetic" as const;
+        if (stored === "roll") return "kinetic" as const;
         return "apple" as const;
       })(),
       // Old Default / Large / Small / Big / Biggest become one continuous size.
@@ -252,7 +349,26 @@ settings.set((s) => {
         const stored = (s.appearance as { lyricsPillWidth?: string } | undefined)?.lyricsPillWidth;
         return stored === "compact" || stored === "long" ? stored : "normal";
       })(),
+      // Old bold/regular choice became two continuous weight sliders.
+      clockClosedWeight: (() => {
+        const stored = (s.appearance as { clockClosedWeight?: number } | undefined)?.clockClosedWeight;
+        if (typeof stored === "number") return Math.min(900, Math.max(400, stored));
+        return s.appearance?.clockText === "compact" ? 700 : 800;
+      })(),
+      clockOpenWeight: (() => {
+        const legacy = s.appearance as { clockOpenWeight?: number; clockBold?: boolean } | undefined;
+        if (typeof legacy?.clockOpenWeight === "number") return Math.min(900, Math.max(400, legacy.clockOpenWeight));
+        return legacy?.clockBold === false ? 600 : 700;
+      })(),
       lyricsVisualizerStyle: s.appearance?.lyricsVisualizerStyle ?? defaults.appearance.lyricsVisualizerStyle,
+      lyricsOffset: (() => {
+        const stored = (s.appearance as { lyricsOffset?: number } | undefined)?.lyricsOffset;
+        return typeof stored === "number" ? Math.min(2, Math.max(-2, stored)) : 0;
+      })(),
+      motion: (() => {
+        const stored = (s.appearance as { motion?: number } | undefined)?.motion;
+        return typeof stored === "number" ? Math.min(100, Math.max(0, stored)) : 100;
+      })(),
       // The experimental RGB accent was removed; fall back to auto.
       accent: s.appearance?.accent === "rgb" ? defaults.appearance.accent : s.appearance?.accent ?? defaults.appearance.accent,
       // The island width/height sliders are additive; clamp values from older/corrupt files.
@@ -296,16 +412,6 @@ try {
   // localStorage unavailable: defaults already use large.
 }
 
-// The expanded clock starts bold now; Regular stays one tap away in Appearance.
-try {
-  if (!localStorage.getItem("notch:clock-bold")) {
-    settings.set((s) => ({ ...s, appearance: { ...s.appearance, clockBold: true } }));
-    localStorage.setItem("notch:clock-bold", "1");
-  }
-} catch {
-  // localStorage unavailable: defaults already use bold.
-}
-
 // Give the Discord card its default author name once. A name the user typed
 // themselves is never overwritten; clearing it afterwards also sticks.
 try {
@@ -319,7 +425,19 @@ try {
 
 /** Old gaming modes were off / fullscreen / always; now off / games / always. */
 function migrateGaming(old: unknown): Settings["gaming"] {
-  const legacy = (old ?? {}) as { mode?: string; apps?: unknown };
+  const legacy = (old ?? {}) as {
+    mode?: string;
+    apps?: unknown;
+    minimal?: unknown;
+    transparent?: unknown;
+    showFps?: unknown;
+    showCpu?: unknown;
+    showTemps?: unknown;
+    showGpu?: unknown;
+    showRam?: unknown;
+    style?: unknown;
+    autoPower?: unknown;
+  };
   const mode = legacy.mode === "off" ? "off" : "games";
   let apps = Array.isArray(legacy.apps) ? legacy.apps.filter((id): id is string => typeof id === "string" && id.length > 0) : [];
   // One-time cleanup for the old "pick any running app" list: keep Genshin and
@@ -335,7 +453,19 @@ function migrateGaming(old: unknown): Settings["gaming"] {
   const genshin = ["genshinimpact.exe", "yuanshen.exe"];
   const normalized = [...new Set(apps.map((id) => id.trim().replace(/^.*[\\/]/, "").toLowerCase()).filter((id) => id.endsWith(".exe")))];
   for (const id of genshin) if (!normalized.includes(id)) normalized.push(id);
-  return { mode, apps: normalized };
+  const minimal = legacy.minimal === true;
+  return {
+    mode,
+    apps: normalized,
+    transparent: legacy.transparent === true,
+    showFps: legacy.showFps !== false,
+    showCpu: legacy.showCpu !== false,
+    showTemps: legacy.showTemps !== false && !minimal,
+    showGpu: legacy.showGpu !== false && !minimal,
+    showRam: legacy.showRam !== false && !minimal,
+    style: legacy.style === "bars" || legacy.style === "dots" ? legacy.style : "text",
+    autoPower: legacy.autoPower === true,
+  };
 }
 
 /** Migrates the old shape ({ provider: "demo", model }) and adds missing providers. */

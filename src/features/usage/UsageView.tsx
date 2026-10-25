@@ -5,57 +5,54 @@ import { content, spin, springs } from "../../design/motion";
 import { formatAgo, formatIn } from "../../lib/format";
 import { HeaderActions, HeaderButton } from "../../notch/header";
 import { navigate } from "../../notch/nav";
-import { fetchUsage, type UsageId, type UsageProvider, type UsageWindow } from "../../platform/services";
+import { fetchUsage, type UsageProvider, type UsageWindow } from "../../platform/services";
 import { settings } from "../../settings/store";
-import { BrandLogo, brandName } from "../../ui/brands";
 import { Button, Empty, Skeleton } from "../../ui/controls";
 import { t } from "../../i18n";
 
-/** Rust caches per provider (Claude 5 min), so polling more often costs nothing. */
+/** Rust caches for 2 minutes, so polling more often costs nothing. */
 const POLL_MS = 60_000;
 
 const windowLabel: Record<string, string> = {
   session: "Session",
   weekly: "Woche",
-  "weekly-opus": "Woche · Opus",
-  "weekly-sonnet": "Woche · Sonnet",
   daily: "Heute",
   monthly: "Monat",
 };
 
 export const usageError: Record<string, string> = {
-  "not-found": "Nicht auf diesem PC gefunden",
-  "not-signed-in": "Nicht angemeldet",
-  expired: "Anmeldung abgelaufen – App kurz öffnen",
-  "rate-limited": "Gerade gedrosselt – nächster Versuch in ein paar Minuten",
-  offline: "Keine Verbindung",
-  failed: "Abruf fehlgeschlagen",
+  "not-configured": "Endpoint or value path missing",
+  "invalid-url": "Use an https URL (or localhost)",
+  "no-key": "Header value is missing",
+  "invalid-path": "The JSON path did not return a number",
+  "rate-limited": "Rate limited – try again in a few minutes",
+  offline: "No connection",
+  failed: "Request failed",
 };
 
 /*
- *   ┌ ✳ Claude  Max ───────┐ ┌ ⌘ ChatGPT  Plus ─────┐
- *   │ Session      44 %    │ │ Session      71 %    │
- *   │ ━━━━━━━━━──────────── │ │ ━━━━━━━━━━━━━━━───── │
- *   │ in 2 h     56 % left │ │ in 48 min  29 % left │
- *   └──────────────────────┘ └──────────────────────┘
- * Like OmniNotch: one card per provider, one bar per limit window.
+ * One card for the custom endpoint: name, plan, one limit bar.
  */
 export function UsageView() {
-  const enabled = settings.use().usage;
-  const ids = (Object.keys(enabled) as UsageId[]).filter((id) => enabled[id]);
-  const key = ids.join(",");
+  const usage = settings.use().usage;
+  const cfg = usage.config;
+  const ready = usage.custom && cfg.url.trim().length > 0 && cfg.valuePath.trim().length > 0;
   const [providers, setProviders] = useState<UsageProvider[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [now, setNow] = useState(Date.now);
 
   const load = useCallback(() => {
+    if (!ready) {
+      setProviders([]);
+      return;
+    }
     setLoading(true);
-    void fetchUsage(key ? key.split(",") : []).then((p) => {
+    void fetchUsage(["custom"], cfg).then((p) => {
       setProviders(p);
       setNow(Date.now());
       setLoading(false);
     });
-  }, [key]);
+  }, [ready, cfg]);
 
   useEffect(() => {
     load();
@@ -80,18 +77,18 @@ export function UsageView() {
     </HeaderActions>
   );
 
-  if (ids.length === 0) {
+  if (!ready) {
     return (
       <Empty
         icon={Gauge}
-        title={t("Keine Anbieter aktiv")}
-        text={t("Wähle in den Einstellungen, welche AI-Abos angezeigt werden.")}
+        title={t("Kein Anbieter aktiv")}
+        text={t("Trage in den Einstellungen deinen eigenen Usage-Endpunkt ein.")}
         action={<Button onClick={() => navigate("settings", "usage")}>{t("Anbieter wählen")}</Button>}
       />
     );
   }
 
-  const list: (Partial<UsageProvider> & { id: UsageId })[] = providers ?? ids.map((id) => ({ id }));
+  const list: (Partial<UsageProvider> & { id: "custom" })[] = providers ?? [{ id: "custom" }];
   return (
     <div className="flex h-full gap-2 overflow-x-auto px-4 pt-1 pb-2 [scrollbar-width:none]">
       {actions}
@@ -104,8 +101,8 @@ export function UsageView() {
           transition={{ ...content.enter, delay: 0.05 * i }}
         >
           <div className="mb-2 flex items-center gap-1.5">
-            <BrandLogo id={p.id} size={14} className="shrink-0 text-label" />
-            <span className="text-footnote font-semibold text-label">{brandName[p.id]}</span>
+            <Gauge size={14} weight="bold" className="shrink-0 text-label" />
+            <span className="truncate text-footnote font-semibold text-label">{p.name ?? cfg.name ?? "Custom"}</span>
             {p.plan && <span className="truncate rounded-full bg-fill-2 px-1.5 text-caption text-label-2">{p.plan}</span>}
           </div>
           {!p.windows ? (

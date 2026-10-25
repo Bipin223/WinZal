@@ -39,6 +39,10 @@
   },
   "bundle": {
     "active": true,
+    "publisher": "Bipin Rizal",
+    "copyright": "Copyright (c) 2026 Bipin Rizal",
+    "shortDescription": "A Windows dynamic island.",
+    "longDescription": "WinZal is a native Windows dynamic island with media, lyrics, system stats, clipboard, timer, vault and more.",
     "targets": [
       "nsis"
     ],

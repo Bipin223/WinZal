@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="360" viewBox="0 0 900 360">
+  <rect width="900" height="360" fill="#0b0b0c"/>
+  <text x="450" y="28" text-anchor="middle" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" letter-spacing="2.4">FONT ROLES · SIZE + WEIGHT</text>
+
+  <g font-family="Inter, Segoe UI, system-ui, sans-serif">
+    <line x1="42" y1="58" x2="858" y2="58" stroke="#1c1c1e"/>
+    <text x="42" y="86" fill="#7c7c82" font-size="10" letter-spacing="1.4">CAPTION</text>
+    <text x="170" y="88" fill="#f2f2f4" font-size="12" font-weight="500">Caption · small labels and metadata</text>
+    <text x="858" y="86" text-anchor="end" fill="#5f5f65" font-size="10">12 px · 500</text>
+
+    <line x1="42" y1="112" x2="858" y2="112" stroke="#1c1c1e"/>
+    <text x="42" y="140" fill="#7c7c82" font-size="10" letter-spacing="1.4">FOOTNOTE</text>
+    <text x="170" y="142" fill="#f2f2f4" font-size="13" font-weight="450">Footnote · timestamps and secondary text</text>
+    <text x="858" y="140" text-anchor="end" fill="#5f5f65" font-size="10">13 px · 450</text>
+
+    <line x1="42" y1="166" x2="858" y2="166" stroke="#1c1c1e"/>
+    <text x="42" y="196" fill="#7c7c82" font-size="10" letter-spacing="1.4">BODY</text>
+    <text x="170" y="198" fill="#f2f2f4" font-size="14" font-weight="450">Body · normal text used across the notch.</text>
+    <text x="858" y="196" text-anchor="end" fill="#5f5f65" font-size="10">14 px · 450</text>
+
+    <line x1="42" y1="222" x2="858" y2="222" stroke="#1c1c1e"/>
+    <text x="42" y="254" fill="#7c7c82" font-size="10" letter-spacing="1.4">TITLE</text>
+    <text x="170" y="256" fill="#f2f2f4" font-size="16" font-weight="650">Title · headings and card names</text>
+    <text x="858" y="254" text-anchor="end" fill="#5f5f65" font-size="10">16 px · 650</text>
+
+    <line x1="42" y1="282" x2="858" y2="282" stroke="#1c1c1e"/>
+    <text x="42" y="322" fill="#7c7c82" font-size="10" letter-spacing="1.4">DISPLAY</text>
+    <text x="170" y="324" fill="#f2f2f4" font-size="24" font-weight="700">Display · the biggest headline</text>
+    <text x="858" y="322" text-anchor="end" fill="#5f5f65" font-size="10">24 px · 700</text>
+  </g>
+  <text x="450" y="352" text-anchor="middle" fill="#5f5f65" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10">Settings → Display → Font · 0 = default</text>
+</svg>

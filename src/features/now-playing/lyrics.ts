@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { livePosition, type NowPlaying } from "../../platform/media";
 import { fetchLyrics } from "../../platform/services";
+import { settings } from "../../settings/store";
 
 interface Line {
   at: number;
@@ -29,6 +30,7 @@ const PARSED_MAX = 30;
 export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDisplay {
   const [lines, setLines] = useState<Line[]>([]);
   const [index, setIndex] = useState(-1);
+  const offset = settings.use().appearance.lyricsOffset;
   const npRef = useRef(np);
   npRef.current = np;
   const track = np ? `${np.title}\u0001${np.artist}\u0001${Math.round(np.duration)}` : "";
@@ -79,21 +81,21 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
     const update = () => {
       const now = npRef.current;
       if (!now) return;
-      const next = indexAt(lines, livePosition(now));
+      const next = indexAt(lines, livePosition(now) - offset);
       setIndex((prev) => (prev === next ? prev : next));
     };
     update();
     if (!playing) return;
     const id = window.setInterval(update, 250);
     return () => window.clearInterval(id);
-  }, [enabled, lines, playing]);
+  }, [enabled, lines, playing, offset]);
 
   // Paused: still follow a seek once, but do not keep a 250 ms timer alive.
   useEffect(() => {
     if (!enabled || playing || !np || lines.length === 0) return;
-    const next = indexAt(lines, livePosition(np));
+    const next = indexAt(lines, livePosition(np) - offset);
     setIndex((prev) => (prev === next ? prev : next));
-  }, [enabled, playing, lines, np?.position]);
+  }, [enabled, playing, lines, np?.position, offset]);
 
   if (index < 0 || !lines[index]) return { current: null, next: null, index: -1, start: 0, end: 0 };
   const start = lines[index].at;

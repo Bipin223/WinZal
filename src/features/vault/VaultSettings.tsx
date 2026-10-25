@@ -49,7 +49,7 @@ export function VaultSettings() {
   if (!status.hasPin) {
     return (
       <Group title={t("Tresor")} id="settings-vault">
-        <Row label={t("Passwörter & 2FA")} hint={t("Noch nicht eingerichtet")}>
+        <Row label={t("Passwörter & 2FA")}>
           <Button
             onClick={() => {
               updateSettings((s) => ({ tools: s.tools.map((x) => (x.id === "vault" ? { ...x, enabled: true } : x)) }));
@@ -119,21 +119,16 @@ export function VaultSettings() {
       {helloSupported && (
         <Row
           label={t("Windows Hello")}
-          hint={
-            status.hello
-              ? t("Ersetzt den PIN. Wird Windows Hello zurückgesetzt, sind die Einträge verloren.")
-              : t("Gesicht, Finger oder Windows-PIN statt des eigenen PINs")
-          }
         >
           <Switch label={t("Windows Hello")} checked={status.hello} onChange={(on) => void run(() => (on ? vault.helloEnable() : vault.helloDisable()))} />
         </Row>
       )}
       {!status.hello && (
         <>
-          <Row label={t("PIN für Passwörter")} hint={t("Vor Anzeigen und Kopieren")}>
+          <Row label={t("PIN für Passwörter")}>
             <Switch label={t("PIN für Passwörter")} checked={status.pinPasswords} onChange={(on) => void run(() => vault.options(on, status.pinTotp))} />
           </Row>
-          <Row label={t("PIN für 2FA-Codes")} hint={t("Vor Anzeigen und Kopieren")}>
+          <Row label={t("PIN für 2FA-Codes")}>
             <Switch label={t("PIN für 2FA-Codes")} checked={status.pinTotp} onChange={(on) => void run(() => vault.options(status.pinPasswords, on))} />
           </Row>
           <Row label={t("PIN ändern")} hint={notice ?? undefined}>
@@ -141,7 +136,7 @@ export function VaultSettings() {
           </Row>
         </>
       )}
-      <Row label={t("Tresor zurücksetzen")} hint={status.hello ? t("Löscht alle Einträge.") : t("PIN vergessen? Löscht alle Einträge.")}>
+      <Row label={t("Tresor zurücksetzen")}>
         <Button onClick={() => (confirmReset ? void vault.reset().then(refreshVault) : setConfirmReset(true))}>
           <span className={confirmReset ? "text-red" : undefined}>{confirmReset ? t("Wirklich alles löschen?") : t("Zurücksetzen")}</span>
         </Button>

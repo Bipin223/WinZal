@@ -92,6 +92,8 @@ export function ClipboardView() {
   }, [all.length === 0]);
 
   const copy = async (id: number) => {
+    // Presentation mode hides previews; it must not copy them blindly either.
+    if (hidden) return;
     await clipboard.copy(id);
     setCopied(id);
     scroller.current?.scrollTo({ left: 0, behavior: "smooth" });

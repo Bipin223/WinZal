@@ -1,15 +1,15 @@
-import { useId, useState } from "react";
+import { useId } from "react";
 import { motion } from "motion/react";
 import { ArrowCounterClockwise, Plus } from "@phosphor-icons/react";
-import { invoke } from "@tauri-apps/api/core";
-import { relaunch } from "@tauri-apps/plugin-process";
 import { springs } from "../../design/motion";
-import { isNative } from "../../platform/native";
 import { settings, updateSettings, type Settings } from "../../settings/store";
 import { Slider, Switch } from "../../ui/controls";
 import { SelectedDot } from "../../ui/SelectedDot";
 import { ColorPickerPanel } from "../../ui/ColorPicker";
 import { t } from "../../i18n";
+import { ClockTime } from "../../notch/ClockTime";
+import { formatTimeParts } from "../../lib/format";
+import { useMinute } from "../../lib/useMinute";
 import { DARK_SURFACE, LIGHT_SURFACE, useThemeLight } from "./theme";
 
 type Appearance = Settings["appearance"];
@@ -29,18 +29,26 @@ const DEFAULTS: Appearance = {
   lineThickness: 5,
   dragAnimation: true,
   clockWeather: true,
+  clockShowWeather: true,
+  clockShowDate: true,
+  clockShowDay: true,
   musicInPill: true,
   clockAccent: "#ff453a",
   clockText: "large",
-  clockBold: true,
+  clockClosedWeight: 800,
+  clockOpenWeight: 700,
+  clockEmphasis: true,
   lyricsInPill: false,
   lyricsLayout: "inline",
+  motion: 100,
   lyricsTextSize: 12,
+  lyricsOffset: 0,
   lyricsPillWidth: "normal",
   lyricsVisualizer: true,
   lyricsVisualizerStyle: "wave",
   lyricsAnimation: "apple",
   gpuAcceleration: false,
+  gpuPreference: "auto",
 };
 
 function fillWithAlpha(hex: string, alpha: number): string {
@@ -55,25 +63,10 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
   const a = settings.use().appearance;
   const display = settings.use().display;
   const line = display.idleStyle === "line";
+  const now = useMinute();
+  const previewTime = formatTimeParts(now);
   const themeLight = useThemeLight();
   const set = (patch: Partial<Appearance>) => updateSettings({ appearance: { ...a, ...patch } });
-  const [restarting, setRestarting] = useState(false);
-
-  const setRenderMode = async (gpu: boolean) => {
-    if (restarting) return;
-    // Persist in localStorage for the UI, in Rust's mode file for the next launch,
-    // then restart WebView2: --disable-gpu cannot be changed while it runs.
-    set({ gpuAcceleration: gpu });
-    if (!isNative) return;
-    setRestarting(true);
-    try {
-      await invoke("set_webview_render_mode", { mode: gpu ? "gpu" : "cpu" });
-      await relaunch();
-    } catch {
-      set({ gpuAcceleration: !gpu });
-      setRestarting(false);
-    }
-  };
 
   const alpha = a.material === "glass" ? 0.62 : a.material === "dark" ? 0.82 : 1;
   const previewFill = fillWithAlpha(a.theme === "custom" ? a.themeColor : themeLight ? LIGHT_SURFACE : DARK_SURFACE, alpha);
@@ -84,55 +77,158 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
       {mode === "appearance" && <Preview fill={previewFill} accent={accent} corners={a.corners} islandStyle={a.style} />}
       {mode === "notch" && (
         <>
-      <Section label={t("Geschlossen")}>
-        <Choice
-          label={t("Idle Appearance")}
-          value={display.idleStyle}
-          options={[
-            ["notch", t("Notch")],
-            ["line", t("Linie")],
-          ]}
-          onChange={(idleStyle) => updateSettings((current) => ({ display: { ...current.display, idleStyle: idleStyle as "notch" | "line" } }))}
-        />
-      </Section>
-      <Section label={line ? t("Line size") : t("Notch size")}>
-        <div className="mb-2 flex h-11 items-center justify-center rounded-[10px] bg-fill-2">
-          <div
-            className="rounded-full bg-black shadow-[0_6px_18px_rgb(0_0_0/0.35)] transition-[width,height] duration-200"
-            style={{ width: line ? a.lineWidth : 206 + a.islandWidth, height: line ? a.lineThickness : a.islandHeight }}
-          />
-        </div>
-        <div className="grid grid-cols-[3fr_2fr] gap-3">
-          <div>
+          <Section label={t("Closed pill")}>
+            <Choice
+              label={t("Idle Appearance")}
+              value={display.idleStyle}
+              options={[
+                ["notch", t("Notch")],
+                ["line", t("Line")],
+              ]}
+              onChange={(idleStyle) =>
+                updateSettings((current) => ({ display: { ...current.display, idleStyle: idleStyle as "notch" | "line" } }))
+              }
+            />
+            <div className="mt-2 mb-2 flex h-20 items-center justify-center rounded-[10px] bg-fill-2">
+              {line ? (
+                <div
+                  className="relative rounded-full bg-black shadow-[0_6px_18px_rgb(0_0_0/0.35)]"
+                  style={{ width: a.lineWidth, height: a.lineThickness }}
+                >
+                  <span
+                    aria-hidden
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                    style={{
+                      width: 8,
+                      height: Math.max(2, a.lineThickness),
+                      background: "#ffd60a",
+                      boxShadow: "0 0 10px 1px rgb(255 214 10 / 0.55)",
+                    }}
+                  />
+                </div>
+              ) : (
+                <div
+                  className="flex items-center justify-center rounded-full bg-black shadow-[0_6px_18px_rgb(0_0_0/0.35)] transition-[width,height] duration-200"
+                  style={{ width: 206 + a.islandWidth, height: a.islandHeight }}
+                >
+                  {a.clockWeather && (
+                    <ClockTime
+                      time={previewTime.time}
+                      className={`tabular text-white ${a.clockText === "large" ? "text-[15px]" : "text-[13px]"}`}
+                      emphasizeHour={a.clockEmphasis}
+                      weight={a.clockClosedWeight}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="grid grid-cols-[3fr_2fr] gap-3">
+              <div>
+                <div className="flex items-center justify-between text-caption font-medium text-label-2">
+                  <span>{t("Length")}</span>
+                  <span className="tabular text-label-3">{line ? a.lineWidth : 206 + a.islandWidth} px</span>
+                </div>
+                <Slider
+                  label={t("Length")}
+                  value={line ? a.lineWidth : 206 + a.islandWidth}
+                  min={line ? 40 : 140}
+                  max={740}
+                  step={1}
+                  onChange={(length) => (line ? set({ lineWidth: length }) : set({ islandWidth: length - 206 }))}
+                />
+              </div>
+              <div>
+                <div className="flex items-center justify-between text-caption font-medium text-label-2">
+                  <span>{t("Width")}</span>
+                  <span className="tabular text-label-3">{line ? a.lineThickness : a.islandHeight} px</span>
+                </div>
+                <Slider
+                  label={t("Width")}
+                  value={line ? a.lineThickness : a.islandHeight}
+                  min={line ? 1 : 20}
+                  max={line ? 24 : 64}
+                  step={1}
+                  onChange={(width) => (line ? set({ lineThickness: width }) : set({ islandHeight: width }))}
+                />
+              </div>
+            </div>
+            {!line && (
+              <>
+                <div className="mt-2">
+                  <Choice
+                    label={t("Clock size")}
+                    value={a.clockText}
+                    options={[
+                      ["compact", t("Compact")],
+                      ["large", t("Large")],
+                    ]}
+                    onChange={(clockText) => set({ clockText: clockText as Appearance["clockText"] })}
+                  />
+                </div>
+                <div className="mt-2">
+                  <div className="flex items-center justify-between text-caption font-medium text-label-2">
+                    <span>{t("Weight")}</span>
+                    <span className="tabular text-label-3">{a.clockClosedWeight}</span>
+                  </div>
+                  <Slider
+                    label={t("Weight")}
+                    value={a.clockClosedWeight}
+                    min={400}
+                    max={1000}
+                    step={100}
+                    onChange={(clockClosedWeight) => set({ clockClosedWeight })}
+                  />
+                </div>
+                <div className="mt-2 flex flex-col gap-1.5">
+                  <ToggleRow label={t("Closed clock")} checked={a.clockWeather} onChange={(clockWeather) => set({ clockWeather })} />
+                  {a.clockWeather && (
+                    <>
+                      <div className="flex min-h-6 items-center justify-between gap-3 text-caption">
+                        <span className="font-medium text-label-2">{t("Time")}</span>
+                        <span className="text-label-3">{t("Always shown")}</span>
+                      </div>
+                      <ToggleRow label={t("Weather")} checked={a.clockShowWeather} onChange={(clockShowWeather) => set({ clockShowWeather })} />
+                      <ToggleRow label={t("Date")} checked={a.clockShowDate} onChange={(clockShowDate) => set({ clockShowDate })} />
+                      <ToggleRow label={t("Day")} checked={a.clockShowDay} onChange={(clockShowDay) => set({ clockShowDay })} />
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </Section>
+
+          <Section label={t("Extended pill")}>
+            <div className="mb-2 flex h-[72px] items-center justify-center rounded-[10px] bg-fill-2">
+              <div className="flex items-center rounded-[14px] bg-black px-5 py-3">
+                <ClockTime
+                  time={previewTime.time}
+                  className="tabular text-[34px] text-white"
+                  emphasizeHour={a.clockEmphasis}
+                  weight={a.clockOpenWeight}
+                />
+                {previewTime.period && <span className="ml-1 text-[11px] font-semibold text-white/55">{previewTime.period}</span>}
+              </div>
+            </div>
             <div className="flex items-center justify-between text-caption font-medium text-label-2">
-              <span>{t("Length")}</span>
-              <span className="tabular text-label-3">{line ? a.lineWidth : 206 + a.islandWidth} px</span>
+              <span>{t("Weight")}</span>
+              <span className="tabular text-label-3">{a.clockOpenWeight}</span>
             </div>
             <Slider
-              label={t("Length")}
-              value={line ? a.lineWidth : 206 + a.islandWidth}
-              min={line ? 100 : 160}
-              max={420}
-              step={1}
-              onChange={(length) => (line ? set({ lineWidth: length }) : set({ islandWidth: length - 206 }))}
+              label={t("Weight")}
+              value={a.clockOpenWeight}
+              min={400}
+              max={1000}
+              step={100}
+              onChange={(clockOpenWeight) => set({ clockOpenWeight })}
             />
-          </div>
-          <div>
-            <div className="flex items-center justify-between text-caption font-medium text-label-2">
-              <span>{t("Width")}</span>
-              <span className="tabular text-label-3">{line ? a.lineThickness : a.islandHeight} px</span>
+            <div className="mt-2">
+              <ToggleRow label={t("Emphasized hour")} checked={a.clockEmphasis} onChange={(clockEmphasis) => set({ clockEmphasis })} />
             </div>
-            <Slider
-              label={t("Width")}
-              value={line ? a.lineThickness : a.islandHeight}
-              min={line ? 2 : 26}
-              max={line ? 12 : 40}
-              step={1}
-              onChange={(width) => (line ? set({ lineThickness: width }) : set({ islandHeight: width }))}
-            />
-          </div>
-        </div>
-      </Section>
+            <div className="mt-2">
+              <div className="mb-1 text-caption font-medium text-label-2">{t("Clock accent")}</div>
+              <Swatches value={a.clockAccent} colors={CLOCK_ACCENTS} onChange={(clockAccent) => set({ clockAccent })} />
+            </div>
+          </Section>
         </>
       )}
       {mode === "appearance" && (
@@ -163,32 +259,6 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
       </Section>
       <Section label={t("Equalization Accent")}>
         <Swatches value={a.accent} colors={ACCENTS} onChange={(accent) => set({ accent })} />
-      </Section>
-      <Section label={t("Uhr-Akzent")}>
-        <Swatches value={a.clockAccent} colors={CLOCK_ACCENTS} onChange={(clockAccent) => set({ clockAccent })} />
-      </Section>
-      <Section label={t("Uhr-Text")}>
-        <ToggleRow label={t("Clock & weather")} checked={a.clockWeather} onChange={(clockWeather) => set({ clockWeather })} />
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <Choice
-            label={t("Closed pill")}
-            value={a.clockText}
-            options={[
-              ["compact", t("Kompakt")],
-              ["large", t("Groß")],
-            ]}
-            onChange={(clockText) => set({ clockText: clockText as Appearance["clockText"] })}
-          />
-          <Choice
-            label={t("Expanded")}
-            value={a.clockBold ? "bold" : "regular"}
-            options={[
-              ["regular", t("Regular")],
-              ["bold", t("Bold")],
-            ]}
-            onChange={(value) => set({ clockBold: value === "bold" })}
-          />
-        </div>
       </Section>
       <div className="grid grid-cols-2 gap-1.5">
         <div className="rounded-[12px] bg-fill-1 p-2">
@@ -222,13 +292,6 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
           onChange={(dragAnimation) => set({ dragAnimation })}
         />
       </Section>
-      <Section label={t("Performance")}>
-        <ToggleRow
-          label={restarting ? t("Restarting WinZal...") : t("GPU acceleration")}
-          checked={a.gpuAcceleration}
-          onChange={(v) => void setRenderMode(v)}
-        />
-      </Section>
       <button
         onClick={() =>
           updateSettings({
@@ -240,11 +303,24 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
               lineWidth: a.lineWidth,
               lineThickness: a.lineThickness,
               gpuAcceleration: a.gpuAcceleration,
+              gpuPreference: a.gpuPreference,
+              // Clock styling lives on the Notch page; Appearance reset leaves it alone.
+              clockAccent: a.clockAccent,
+              clockText: a.clockText,
+              clockEmphasis: a.clockEmphasis,
+              clockClosedWeight: a.clockClosedWeight,
+              clockOpenWeight: a.clockOpenWeight,
+              clockWeather: a.clockWeather,
+              clockShowWeather: a.clockShowWeather,
+              clockShowDate: a.clockShowDate,
+              clockShowDay: a.clockShowDay,
               // Music lives in its own settings page; Appearance reset leaves it alone.
               musicInPill: a.musicInPill,
               lyricsInPill: a.lyricsInPill,
               lyricsLayout: a.lyricsLayout,
               lyricsTextSize: a.lyricsTextSize,
+              lyricsOffset: a.lyricsOffset,
+              motion: a.motion,
               lyricsPillWidth: a.lyricsPillWidth,
               lyricsVisualizer: a.lyricsVisualizer,
               lyricsVisualizerStyle: a.lyricsVisualizerStyle,
@@ -326,7 +402,7 @@ function StyleCard(props: { active: boolean; label: string; floating?: boolean; 
           </div>
         )}
       </div>
-      <div className="truncate text-caption font-semibold text-label">{props.label}</div>
+      <div className="truncate text-caption font-medium text-label">{props.label}</div>
     </button>
   );
 }
@@ -334,7 +410,7 @@ function StyleCard(props: { active: boolean; label: string; floating?: boolean; 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="shrink-0 rounded-[12px] bg-fill-1 px-3 py-2">
-      <div className="mb-1.5 text-footnote font-semibold text-label-2">{label}</div>
+      <div className="mb-1.5 text-footnote font-medium text-label-2">{label}</div>
       {children}
     </div>
   );

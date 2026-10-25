@@ -61,13 +61,9 @@ function Header() {
   return (
     <div className="relative flex items-end justify-between">
       <div>
-        <div
-          className={`tabular text-[34px] leading-none tracking-[-0.03em] text-label ${
-            appearance.clockBold ? "font-bold" : "font-semibold"
-          }`}
-        >
-          <ClockTime time={time} emphasizeHour />
-          {period && <span className="ml-1 text-title font-semibold tracking-normal text-label-3">{period}</span>}
+        <div className="tabular text-[34px] leading-none tracking-[-0.03em] text-label">
+          <ClockTime time={time} emphasizeHour={appearance.clockEmphasis} weight={appearance.clockOpenWeight} />
+          {period && <span className="ml-1 text-title tracking-normal text-label-3">{period}</span>}
         </div>
         <div className="mt-1 text-footnote text-label-3">{date}</div>
       </div>

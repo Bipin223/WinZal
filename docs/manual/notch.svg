@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="300" viewBox="0 0 900 300">
+  <rect width="900" height="300" fill="#0b0b0c"/>
+  <text x="450" y="28" text-anchor="middle" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" letter-spacing="2.4">CLOSED PILL · EXTENDED · LINE</text>
+
+  <!-- closed pill -->
+  <g>
+    <rect x="318" y="58" width="264" height="40" rx="20" fill="#000" stroke="#242426"/>
+    <text x="372" y="84" fill="#ff453a" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="17" font-weight="700">9</text>
+    <text x="382" y="84" fill="#f2f2f4" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="17" font-weight="700">:41</text>
+    <text x="414" y="83" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9" font-weight="600">PM</text>
+    <text x="434" y="83" fill="#7c7c82" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="9">· Sat 25 Oct</text>
+    <circle cx="540" cy="78" r="6" fill="#ffd60a"/>
+    <text x="552" y="82" fill="#a8a8ae" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10" font-weight="600">18°</text>
+    <text x="450" y="122" text-anchor="middle" fill="#5f5f65" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10">time stays; weather, date and day are optional</text>
+  </g>
+
+  <!-- open -->
+  <g>
+    <rect x="230" y="140" width="440" height="76" rx="24" fill="#000" stroke="#242426"/>
+    <text x="254" y="164" fill="#f2f2f4" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="14" font-weight="700">Overview</text>
+    <circle cx="622" cy="158" r="8" fill="#1c1c1e"/><circle cx="622" cy="158" r="3" fill="#a8a8ae"/>
+    <circle cx="598" cy="158" r="8" fill="#1c1c1e"/><circle cx="598" cy="158" r="3" fill="#a8a8ae"/>
+    <circle cx="646" cy="158" r="8" fill="#1c1c1e"/><circle cx="646" cy="158" r="3" fill="#a8a8ae"/>
+    <rect x="254" y="176" width="120" height="22" rx="7" fill="#151517"/>
+    <rect x="384" y="176" width="120" height="22" rx="7" fill="#151517"/>
+    <rect x="514" y="176" width="132" height="22" rx="7" fill="#151517"/>
+    <text x="450" y="232" text-anchor="middle" fill="#5f5f65" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10">the same notch grows into a tool window</text>
+  </g>
+
+  <!-- line -->
+  <g>
+    <rect x="330" y="244" width="240" height="6" rx="3" fill="#000" stroke="#242426"/>
+  </g>
+  <text x="450" y="272" text-anchor="middle" fill="#5f5f65" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10">line mode: a thin strip with the yellow locator</text>
+</svg>

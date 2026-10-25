@@ -5,12 +5,12 @@ import {
   ArrowsInLineHorizontal,
   DotsSixVertical,
   Keyboard,
+  Lightning,
   LockSimple,
   Monitor,
   MusicNotesSimple,
   Palette,
   Play,
-  Plugs,
   SlidersHorizontal,
   SquaresFour,
   Stop,
@@ -20,19 +20,25 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 import { content, fade, springs } from "../../design/motion";
+import { invoke } from "@tauri-apps/api/core";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { isNative } from "../../platform/native";
 import { alarmSounds, playAlarm, stopAlarm, type AlarmDuration } from "../../lib/sound";
 import { nav } from "../../notch/nav";
 import { requestSize } from "../../notch/size";
 import { tabs } from "../../notch/tabs";
-import { autostart, display, fetchFps, fpsHelperReady, secrets, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName, type UsageId } from "../../platform/services";
-import { settings, updateAsk, updateSettings, type AskProvider } from "../../settings/store";
-import { BrandLogo, brandName } from "../../ui/brands";
+import { autostart, display, fetchFps, fetchUsage, fpsHelperReady, secrets, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName } from "../../platform/services";
+import { settings, updateAsk, updateSettings, type AskProvider, type Settings, type TypeRole, DEFAULT_TYPOGRAPHY } from "../../settings/store";
+import { TYPE_ROLES, typeValues } from "../appearance/typography";
 import { ChatBubbleIcon } from "../../ui/ChatBubbleIcon";
+import { DiscordLogo } from "../../ui/brands";
 import { Button, Group, Row, Segmented, Select, Slider, Switch, TextField } from "../../ui/controls";
 import { SelectedDot } from "../../ui/SelectedDot";
 import { effortLevels, listModels, providerInfo } from "../ask/providers";
 import { discordState, reconnectDiscord } from "../discord/store";
 import { fps } from "../system/gaming";
+import { FpsStat, GamingStat } from "../system/LiveGaming";
+import { gamingWidth } from "../system/gamingOverlay";
 import { PlaceSearch } from "../weather/WeatherView";
 import { AppearanceView } from "../appearance/AppearanceView";
 import { MusicSettings } from "./MusicSettings";
@@ -40,23 +46,26 @@ import { AboutView } from "./AboutView";
 import { VaultSettings } from "../vault/VaultSettings";
 import { detectPlace } from "../weather/store";
 import { focusMode, refreshFocusMode, setFocusMode } from "../../notch/focus";
+import { silentMode, setSilentMode } from "../../notch/silent";
 import { checkForUpdate, installUpdate, update } from "../../lib/update";
 import { between, changelog, itemText, markSeen, useUnseen } from "../../lib/changelog";
 import { privacy, togglePresentation, usePresenting } from "../privacy/store";
 import { locale, t, tBackend } from "../../i18n";
+import { usageError } from "../usage/UsageView";
 
-type PageId = "general" | "notch" | "appearance" | "display" | "music" | "tools" | "timer" | "ai" | "discord" | "about";
+type PageId = "general" | "notch" | "appearance" | "display" | "performance" | "music" | "tools" | "timer" | "ai" | "discord" | "about";
 
 const pages: { id: PageId; label: string; icon: Icon }[] = [
   { id: "general", label: "Allgemein", icon: SlidersHorizontal },
   { id: "notch", label: "Notch", icon: Monitor },
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "display", label: "Display", icon: Monitor },
+  { id: "performance", label: "Performance", icon: Lightning },
   { id: "music", label: "Musik", icon: MusicNotesSimple },
   { id: "tools", label: "Tools", icon: SquaresFour },
   { id: "timer", label: "Timer", icon: Timer },
   { id: "ai", label: "AI", icon: ChatBubbleIcon as unknown as Icon },
-  { id: "discord", label: "Discord", icon: Plugs },
+  { id: "discord", label: "Discord", icon: DiscordLogo },
   { id: "about", label: "About", icon: UserCircle },
 ];
 
@@ -67,6 +76,9 @@ const sectionPage: Record<string, PageId> = {
   display: "display",
   appearance: "appearance",
   notch: "notch",
+  performance: "performance",
+  gpu: "performance",
+  fps: "performance",
   music: "music",
   lyrics: "music",
   presentation: "display",
@@ -87,6 +99,7 @@ const PAGE_HEIGHT: Record<PageId, number> = {
   notch: 460,
   appearance: 460,
   display: 460,
+  performance: 460,
   music: 460,
   tools: 460,
   timer: 460,
@@ -168,9 +181,12 @@ export function SettingsView() {
             {page === "display" && (
               <>
                 <Display />
+                <Typography />
+                <GamingSettings />
                 <Presentation />
               </>
             )}
+            {page === "performance" && <Performance />}
             {page === "music" && <MusicSettings />}
             {page === "tools" && (
               <>
@@ -182,7 +198,7 @@ export function SettingsView() {
             {page === "ai" && (
               <>
                 <Ask />
-                <UsageProviders />
+                <UsageSettings />
                 <KeysNote />
               </>
             )}
@@ -231,7 +247,7 @@ function Updates() {
       <AnimatePresence initial={false}>
         {(u.phase === "available" || u.phase === "downloading") && u.version && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={fade} className="overflow-hidden">
-            <Row label={t("Version {v} verfügbar", { v: u.version })} hint={t("Lädt, installiert und startet neu")}>
+            <Row label={t("Version {v} verfügbar", { v: u.version })}>
               {u.phase === "downloading" ? (
                 <div className="h-1.5 w-28 overflow-hidden rounded-full bg-fill-2">
                   <div className="h-full origin-left rounded-full bg-label transition-transform duration-150 ease-linear" style={{ transform: `scaleX(${u.progress})` }} />
@@ -372,13 +388,7 @@ function Ask() {
     value: m,
     label: m,
   }));
-  const hint = loading
-    ? t("Loading models…")
-    : error
-      ? error
-      : models.length
-        ? t("{n} models available", { n: models.length })
-        : undefined;
+
 
   return (
     <Group title={t("AI-Chat")} id="settings-ask">
@@ -392,7 +402,7 @@ function Ask() {
         />
       </Row>
       {provider === "custom" && (
-        <Row label={t("Base-URL")} hint={t("OpenAI-kompatibel, endet meist auf /v1")}>
+        <Row label={t("Base-URL")}>
           <TextField
             value={s.ask.configs.custom.baseUrl}
             onChange={(baseUrl) => updateAsk("custom", { baseUrl: baseUrl.trim() })}
@@ -406,7 +416,7 @@ function Ask() {
         label={t("API-Schlüssel")}
         onSaved={() => void load()}
       />
-      <Row label={t("Modell")} hint={hint}>
+      <Row label={t("Modell")} hint={error ?? undefined}>
         <div className="flex items-center gap-1.5">
           {models.length ? (
             <Select
@@ -435,7 +445,7 @@ function Ask() {
           </button>
         </div>
       </Row>
-      <Row label="Effort" hint={t("Wie gründlich das Modell nachdenkt")}>
+      <Row label="Effort">
         <Segmented
           id="ask-effort-settings"
           size="sm"
@@ -519,7 +529,7 @@ function General() {
           />
         )}
       </Row>
-      <Row label={t("Tastenkürzel")} hint={t("Öffnet und schließt die Notch von überall")}>
+      <Row label={t("Tastenkürzel")}>
         <span className="flex items-center gap-1 text-caption text-label-2">
           <Keyboard size={13} weight="bold" className="text-label-3" />
           {["Strg", "Alt", "Leertaste"].map((k) => (
@@ -561,7 +571,7 @@ function Display() {
 
   return (
     <Group id="settings-display">
-      <Row label={t("Sichtbarkeit")} hint={d.visibility === "always" ? t("Bleibt über jedem Fenster, auch im Vollbild") : t("Verschwindet bei Spielen, Videos und Präsentationen")}>
+      <Row label={t("Sichtbarkeit")}>
         <Segmented
           id="display-visibility"
           size="sm"
@@ -584,7 +594,7 @@ function Display() {
         </Row>
       )}
       {d.offset !== 0 && (
-        <Row label={t("Position")} hint={t("Notch an der Kopfzeile oder geschlossen ziehen, um sie zu verschieben")}>
+        <Row label={t("Position")}>
           <Button onClick={() => updateSettings((cur) => ({ display: { ...cur.display, offset: 0 } }))}>
             <span className="flex items-center gap-1.5">
               <ArrowsInLineHorizontal size={13} weight="bold" /> {t("Zur Mitte")}
@@ -592,25 +602,282 @@ function Display() {
           </Button>
         </Row>
       )}
-      <Row label={t("Nicht stören")} hint={t("Schaltet Windows' Do Not Disturb. 3× schnell auf die Notch klicken schaltet ebenfalls um.")}>
+      <Row label={t("Silent mode")}>
+        <Switch label={t("Silent mode")} checked={silentMode.use()} onChange={setSilentMode} />
+      </Row>
+      <Row label={t("Nicht stören")}>
         <Switch label={t("Nicht stören")} checked={focus} onChange={setFocusMode} />
       </Row>
-      <Row
-        label={t("Gaming-Overlay")}
-        hint={t("FPS und Auslastung nur für Genshin Impact oder eine eigene .exe")}
-      >
-        <Switch
-          label={t("Gaming-Overlay")}
-          checked={s.gaming.mode === "games"}
-          onChange={(on) => updateSettings((cur) => ({ gaming: { ...cur.gaming, mode: on ? "games" : "off" } }))}
-        />
-      </Row>
-      {s.gaming.mode === "games" && <GamingApps />}
-      <FpsUnlockRow />
-      <Row label={t("Aufnahme-Punkte")} hint={t("Rot: Bildschirm wird aufgenommen (immer sichtbar) · Grün: Mikrofon/Kamera aktiv")}>
+      <Row label={t("Aufnahme-Punkte")}>
         <Switch label={t("Aufnahme-Punkte")} checked={s.privacyDots} onChange={(privacyDots) => updateSettings({ privacyDots })} />
       </Row>
     </Group>
+  );
+}
+
+/** Font roles: size and weight offsets, 0 = default. */
+function Typography() {
+  const typo = settings.use().typography;
+  const [role, setRole] = useState<TypeRole>("body");
+  const axis = typo[role];
+  const info = TYPE_ROLES.find((r) => r.value === role)!;
+  const eff = typeValues(role, axis);
+  const setAxis = (patch: Partial<{ size: number; weight: number }>) =>
+    updateSettings((cur) => ({
+      typography: { ...cur.typography, [role]: { ...cur.typography[role], ...patch } },
+    }));
+  const formatSize = (value: number) => (value === 0 ? t("Default") : `${value > 0 ? "+" : ""}${value.toFixed(1)} px`);
+  const formatWeight = (value: number) => (value === 0 ? t("Default") : `${value > 0 ? "+" : ""}${value}`);
+  return (
+    <Group title={t("Font")} id="settings-font">
+      <div className="grid grid-cols-5 gap-1.5 px-3 pt-3">
+        {TYPE_ROLES.map((entry) => (
+          <button
+            key={entry.value}
+            type="button"
+            onClick={() => setRole(entry.value)}
+            className={`relative overflow-hidden rounded-[10px] border p-1 transition-colors ${
+              role === entry.value ? "border-label bg-fill-2" : "border-separator bg-fill-1 hover:bg-fill-2"
+            }`}
+          >
+            <div className="flex h-9 items-center justify-center rounded-[7px] bg-fill-2">
+              <span className={`${entry.className} text-label`}>Aa</span>
+            </div>
+            <div className="mt-1 text-center text-[9px] font-medium text-label">{t(entry.label)}</div>
+            {role === entry.value && <SelectedDot className="absolute top-1.5 right-1.5" />}
+          </button>
+        ))}
+      </div>
+      <div className="mx-3 mt-2 rounded-[10px] bg-fill-2 px-3 py-3">
+        <div className={info.className}>{t(info.sample)}</div>
+        <div className="mt-1 text-[10px] text-label-4">
+          {eff.size % 1 === 0 ? eff.size : eff.size.toFixed(1)} px · {eff.weight}
+        </div>
+      </div>
+      <Row label={t("Size")}>
+        <div className="flex w-48 items-center gap-2">
+          <Slider
+            label={t("Size")}
+            value={axis.size}
+            min={-4}
+            max={8}
+            step={0.5}
+            onChange={(size) => setAxis({ size })}
+          />
+          <span className="tabular w-16 text-right text-caption text-label-3">{formatSize(axis.size)}</span>
+        </div>
+      </Row>
+      <Row label={t("Weight")}>
+        <div className="flex w-48 items-center gap-2">
+          <Slider
+            label={t("Weight")}
+            value={axis.weight}
+            min={-300}
+            max={300}
+            step={50}
+            onChange={(weight) => setAxis({ weight })}
+          />
+          <span className="tabular w-16 text-right text-caption text-label-3">{formatWeight(axis.weight)}</span>
+        </div>
+      </Row>
+      <div className="flex items-center justify-between gap-2 px-3 pt-1 pb-2">
+        <span className="text-caption text-label-4">{t("0 = default")}</span>
+        <Button onClick={() => updateSettings({ typography: DEFAULT_TYPOGRAPHY })}>{t("Reset font")}</Button>
+      </div>
+    </Group>
+  );
+}
+
+/** Game overlay: live look, what to show, and how the values are drawn. */
+function GamingSettings() {
+  const g = settings.use().gaming;
+  const setG = (patch: Partial<Settings["gaming"]>) => updateSettings((cur) => ({ gaming: { ...cur.gaming, ...patch } }));
+  const width = gamingWidth(g);
+  const flags: { key: "showFps" | "showCpu" | "showTemps" | "showGpu" | "showRam"; label: string }[] = [
+    { key: "showFps", label: "FPS" },
+    { key: "showCpu", label: "CPU" },
+    { key: "showTemps", label: t("Temperatures") },
+    { key: "showGpu", label: "GPU" },
+    { key: "showRam", label: "RAM" },
+  ];
+  const styles: { value: Settings["gaming"]["style"]; label: string }[] = [
+    { value: "text", label: t("Text") },
+    { value: "bars", label: t("Bars") },
+    { value: "dots", label: t("Dots") },
+  ];
+  return (
+    <Group title={t("Gaming")} id="settings-gaming">
+      <div className="px-3 pt-3 pb-2">
+        <div className="relative flex h-16 items-center justify-center rounded-[10px] bg-fill-2 px-2">
+          <span className="absolute top-1.5 right-2 text-[9px] font-semibold tracking-wide text-label-4 uppercase">
+            {g.mode === "games" ? t("On") : t("Off")}
+          </span>
+          <div
+            className={`flex items-center justify-between rounded-full bg-black px-3 text-white ${g.mode === "games" ? "" : "opacity-50"}`}
+            style={{ width: Math.min(width, 380), maxWidth: "100%", height: 30 }}
+          >
+            {g.showFps && <FpsStat f={{ value: 64, error: null }} preview />}
+            {g.showCpu && (
+              <GamingStat label="CPU" value={37} temp={g.showTemps ? 28 : null} kind={g.style} preview />
+            )}
+            {g.showGpu && (
+              <GamingStat label="GPU" value={48} temp={g.showTemps ? 81 : null} kind={g.style} preview />
+            )}
+            {g.showRam && <GamingStat label="RAM" value={69} kind={g.style} preview />}
+            {!g.showFps && !g.showCpu && !g.showGpu && !g.showRam && (
+              <span aria-hidden className="mx-auto size-1 rounded-full bg-white/40" />
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1 px-3 pb-2">
+        {flags.map((flag) => (
+          <div key={flag.key} className="flex min-h-6 items-center justify-between gap-2">
+            <span className="text-caption font-medium text-label-2">{flag.label}</span>
+            <Switch
+              label={flag.label}
+              checked={g[flag.key]}
+              onChange={(on) => setG({ [flag.key]: on } as Partial<Settings["gaming"]>)}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="px-3 pb-2">
+        <div className="mb-1.5 text-footnote font-medium text-label-2">{t("Stat style")}</div>
+        <div className="grid grid-cols-3 gap-1.5">
+          {styles.map((style) => (
+            <button
+              key={style.value}
+              type="button"
+              onClick={() => setG({ style: style.value })}
+              className={`relative overflow-hidden rounded-[10px] border p-1 transition-colors ${
+                g.style === style.value ? "border-label bg-fill-2" : "border-separator bg-fill-1 hover:bg-fill-2"
+              }`}
+            >
+              <div className="flex h-8 items-center justify-center rounded-[7px] bg-black">
+                <GamingStat label="CPU" value={37} kind={style.value} preview />
+              </div>
+              <div className="mt-1 text-center text-[9px] font-medium text-label">{style.label}</div>
+              {g.style === style.value && <SelectedDot className="absolute top-1.5 right-1.5" />}
+            </button>
+          ))}
+        </div>
+      </div>
+      <Row label={t("Gaming overlay")}>
+        <Switch
+          label={t("Gaming overlay")}
+          checked={g.mode === "games"}
+          onChange={(on) => setG({ mode: on ? "games" : "off" })}
+        />
+      </Row>
+      <Row label={t("Transparent in games")}>
+        <Switch label={t("Transparent in games")} checked={g.transparent} onChange={(transparent) => setG({ transparent })} />
+      </Row>
+      <Row label={t("Custom power in games")}>
+        <Switch label={t("Custom power in games")} checked={g.autoPower} onChange={(autoPower) => setG({ autoPower })} />
+      </Row>
+      {g.mode === "games" && <GamingApps />}
+    </Group>
+  );
+}
+
+/** Rendering mode and FPS access: all performance switches in one place. */
+function Performance() {
+  const a = settings.use().appearance;
+  const [restarting, setRestarting] = useState(false);
+  const [hoverMotion, setHoverMotion] = useState(false);
+  const restartWith = async (run: () => Promise<void>, revert: () => void) => {
+    if (restarting) return;
+    if (!isNative) return;
+    setRestarting(true);
+    try {
+      await run();
+      await relaunch();
+    } catch {
+      revert();
+      setRestarting(false);
+    }
+  };
+  const setRenderMode = (gpu: boolean) => {
+    updateSettings({ appearance: { ...a, gpuAcceleration: gpu } });
+    void restartWith(
+      () => invoke("set_webview_render_mode", { mode: gpu ? "gpu" : "cpu" }),
+      () => updateSettings({ appearance: { ...a, gpuAcceleration: !gpu } }),
+    );
+  };
+  const setGpuPreference = (gpuPreference: Settings["appearance"]["gpuPreference"]) => {
+    updateSettings({ appearance: { ...a, gpuPreference } });
+    void restartWith(
+      () => invoke("set_gpu_preference", { mode: gpuPreference }),
+      () => updateSettings({ appearance: { ...a, gpuPreference: a.gpuPreference } }),
+    );
+  };
+  return (
+    <>
+      <Group title={t("Motion")} id="settings-motion">
+        <div className="px-3 pt-2 pb-3">
+          <div
+            className="flex h-16 items-center justify-center rounded-[10px] bg-fill-2"
+            onPointerEnter={() => setHoverMotion(true)}
+            onPointerLeave={() => setHoverMotion(false)}
+          >
+            <motion.div
+              className="rounded-full bg-notch"
+              initial={false}
+              animate={
+                !hoverMotion || a.motion === 0
+                  ? { width: 92, height: 14 }
+                  : { width: [92, 150, 92], height: [14, 30, 14] }
+              }
+              transition={
+                !hoverMotion || a.motion === 0
+                  ? { duration: 0 }
+                  : { duration: 2.4 - (a.motion / 100) * 1.2, repeat: Infinity, repeatType: "reverse", ease: [0.23, 1, 0.32, 1] }
+              }
+              style={{ borderRadius: 999 }}
+            />
+          </div>
+          <div className="mt-2 flex items-center justify-between text-caption font-medium text-label-2">
+            <span>{t("Motion intensity")}</span>
+            <span className="tabular text-label-3">{a.motion}%</span>
+          </div>
+          <Slider
+            label={t("Motion intensity")}
+            value={a.motion}
+            min={0}
+            max={100}
+            step={5}
+            onChange={(motion) => updateSettings({ appearance: { ...a, motion } })}
+          />
+          <div className="mt-1 flex justify-between text-[10px] font-medium text-label-4">
+            <span>{t("Off")}</span>
+            <span>{t("Reduced")}</span>
+            <span>{t("Full")}</span>
+          </div>
+        </div>
+      </Group>
+      <Group title={t("Performance")} id="settings-performance">
+        <Row label={restarting ? t("Restarting WinZal...") : t("GPU acceleration")}>
+          <Switch label={t("GPU acceleration")} checked={a.gpuAcceleration} onChange={setRenderMode} />
+        </Row>
+        {a.gpuAcceleration && (
+          <Row label={t("Graphics card")}>
+            <Segmented
+              id="performance-gpu-preference"
+              size="sm"
+              value={a.gpuPreference}
+              onChange={(gpuPreference) => setGpuPreference(gpuPreference as Settings["appearance"]["gpuPreference"])}
+              options={[
+                { value: "auto", label: t("Auto") },
+                { value: "igpu", label: "iGPU" },
+                { value: "dgpu", label: "dGPU" },
+              ]}
+            />
+          </Row>
+        )}
+        <FpsUnlockRow />
+      </Group>
+    </>
   );
 }
 
@@ -633,11 +900,11 @@ function GamingApps() {
 
   return (
     <Group title={t("FPS-Spiel")} id="settings-gaming-apps">
-      <Row label="Genshin Impact" hint={t("Immer enthalten")}>
+      <Row label="Genshin Impact">
         <SelectedDot />
       </Row>
       {custom.map((id) => (
-        <Row key={id} label={friendlyAppName(id)} hint={id}>
+        <Row key={id} label={friendlyAppName(id)}>
           <button
             type="button"
             aria-label={t("Entfernen")}
@@ -648,7 +915,7 @@ function GamingApps() {
           </button>
         </Row>
       ))}
-      <Row label={t("Eigene .exe")} hint={t("Name oder Pfad, z. B. C:\\Games\\game.exe")}>
+      <Row label={t("Eigene .exe")}>
         <div className="flex items-center gap-1.5">
           <TextField value={manual} onChange={setManual} onSubmit={addManual} placeholder="game.exe" width="w-32" />
           <Button onClick={addManual}>{t("Hinzufügen")}</Button>
@@ -669,18 +936,17 @@ function friendlyAppName(id: string): string {
 
 /** Presentation mode: one switch, plus automatic while the screen is recorded or shared. */
 function Presentation() {
-  const { manual, auto } = settings.use().presentation;
+  const { auto } = settings.use().presentation;
   const presenting = usePresenting();
   const recording = privacy.use().screen;
   return (
     <Group title={t("Präsentationsmodus")} id="settings-presentation">
       <Row
         label={t("Präsentationsmodus")}
-        hint={presenting && !manual ? t("Aktiv – Bildschirmaufnahme erkannt") : t("Blendet Zwischenablage, Kontostände und Tresor aus")}
       >
         <Switch label={t("Präsentationsmodus")} checked={presenting} onChange={togglePresentation} />
       </Row>
-      <Row label={t("Bei Bildschirmaufnahme")} hint={t("Teams, Discord, OBS … – schaltet sich danach wieder ab")}>
+      <Row label={t("Bei Bildschirmaufnahme")}>
         <Switch
           label={t("Bei Bildschirmaufnahme")}
           checked={auto}
@@ -688,7 +954,7 @@ function Presentation() {
         />
       </Row>
       {auto && recording && !presenting && (
-        <Row label={t("Für diese Aufnahme aus")} hint={t("Schaltet sich bei der nächsten wieder ein")} />
+        <Row label={t("Für diese Aufnahme aus")} />
       )}
     </Group>
   );
@@ -820,47 +1086,99 @@ function Alarm() {
           <span className="tabular w-8 text-right text-caption text-label-2">{Math.round(a.volume * 100)}</span>
         </div>
       </Row>
-      <Row label={t("Dauer")} hint={t("Wie lange der Alarm klingelt")}>
+      <Row label={t("Dauer")}>
         <Segmented id="alarm-duration" size="sm" value={String(a.duration)} onChange={(v) => set({ duration: Number(v) as AlarmDuration })} options={durations.map((o) => ({ ...o, label: t(o.label) }))} />
       </Row>
     </Group>
   );
 }
 
-/** AI usage: which plans are shown. Data comes from the signed-in apps. */
-const usageSources: { id: UsageId | "grok"; hint: string; available: boolean }[] = [
-  { id: "claude", hint: "Über die Anmeldung von Claude Code", available: true },
-  { id: "codex", hint: "Über die Anmeldung der Codex CLI", available: true },
-  { id: "gemini", hint: "Über die Anmeldung der Gemini CLI", available: true },
-  { id: "cursor", hint: "Über die Anmeldung der Cursor-App", available: true },
-  { id: "grok", hint: "xAI bietet keinen Abruf der Abo-Limits", available: false },
-];
-
-function UsageProviders() {
+/** AI usage: one custom endpoint, configured here. */
+function UsageSettings() {
   const usage = settings.use().usage;
+  const cfg = usage.config;
+  const [testing, setTesting] = useState(false);
+  const [test, setTest] = useState<{ ok: boolean; text: string } | null>(null);
+  const setCfg = (patch: Partial<Settings["usage"]["config"]>) =>
+    updateSettings((cur) => ({ usage: { ...cur.usage, config: { ...cur.usage.config, ...patch } } }));
+
+  const runTest = async () => {
+    setTesting(true);
+    setTest(null);
+    try {
+      const [provider] = await fetchUsage(["custom"], cfg);
+      const window = provider?.windows[0];
+      const error = provider?.error;
+      setTest(
+        window
+          ? { ok: true, text: `${Math.round(window.usedPercent)} %` }
+          : { ok: false, text: error ? t(usageError[error] ?? error) : t("No data") },
+      );
+    } catch (e) {
+      setTest({ ok: false, text: tBackend(String(e)) });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const windowOptions = [
+    { value: "session", label: t("Session") },
+    { value: "daily", label: t("Today") },
+    { value: "weekly", label: t("Week") },
+    { value: "monthly", label: t("Month") },
+  ];
+
   return (
     <Group title={t("AI-Nutzung")} id="settings-usage">
-      {usageSources.map((src) => (
-        <Row
-          key={src.id}
-          label={
-            <span className={`flex items-center gap-2 ${src.available ? "" : "text-label-3"}`}>
-              <BrandLogo id={src.id} size={14} /> {brandName[src.id]}
-            </span>
-          }
-          hint={t(src.hint)}
-        >
-          {src.available ? (
-            <Switch
-              label={brandName[src.id]}
-              checked={usage[src.id as UsageId]}
-              onChange={(on) => updateSettings((cur) => ({ usage: { ...cur.usage, [src.id]: on } }))}
+      <Row label={t("Show AI usage")}>
+        <Switch
+          label={t("Show AI usage")}
+          checked={usage.custom}
+          onChange={(custom) => updateSettings((cur) => ({ usage: { ...cur.usage, custom } }))}
+        />
+      </Row>
+      {usage.custom && (
+        <>
+          <Row label={t("Name")}>
+            <TextField value={cfg.name} onChange={(name) => setCfg({ name })} placeholder="My AI" width="w-52" />
+          </Row>
+          <Row label={t("Endpoint")}>
+            <TextField value={cfg.url} onChange={(url) => setCfg({ url })} placeholder="https://…" width="w-52" />
+          </Row>
+          <Row label={t("Auth header")}>
+            <TextField value={cfg.header} onChange={(header) => setCfg({ header })} placeholder="Authorization" width="w-40" />
+          </Row>
+          <SecretRow name="usage.custom" label={t("Header value")} />
+          <Row label={t("Value path")}>
+            <TextField value={cfg.valuePath} onChange={(valuePath) => setCfg({ valuePath })} placeholder="data.used" width="w-52" />
+          </Row>
+          <Row label={t("Limit path")}>
+            <TextField value={cfg.limitPath} onChange={(limitPath) => setCfg({ limitPath })} placeholder="data.limit" width="w-52" />
+          </Row>
+          <Row label={t("Reset path")}>
+            <TextField value={cfg.resetPath} onChange={(resetPath) => setCfg({ resetPath })} placeholder="data.reset" width="w-52" />
+          </Row>
+          <Row label={t("Window")}>
+            <Select
+              width="w-40"
+              value={cfg.window}
+              options={windowOptions}
+              onChange={(window) => setCfg({ window: window as Settings["usage"]["config"]["window"] })}
             />
-          ) : (
-            <span className="text-caption text-label-4">{t("Nicht verfügbar")}</span>
-          )}
-        </Row>
-      ))}
+          </Row>
+          <Row label={t("Plan")}>
+            <TextField value={cfg.plan} onChange={(plan) => setCfg({ plan })} placeholder="Pro" width="w-32" />
+          </Row>
+          <Row label={t("Test")}>
+            <div className="flex items-center gap-2">
+              {test && <span className={`text-caption ${test.ok ? "text-green" : "text-red"}`}>{test.text}</span>}
+              <Button onClick={() => void runTest()} disabled={testing}>
+                {testing ? t("Testing…") : t("Test")}
+              </Button>
+            </div>
+          </Row>
+        </>
+      )}
     </Group>
   );
 }
@@ -878,16 +1196,8 @@ function FpsUnlockRow() {
       alive = false;
     };
   }, []);
-  const hint = {
-    idle: t("Einmalige Windows-Abfrage – bleibt nach Neustarts aktiv, schaltet FPS, CPU-Temperatur und Lenovo-Lüfter frei"),
-    busy: t("Bitte die Windows-Abfrage bestätigen …"),
-    ok: t("Freigeschaltet – bleibt nach Neustarts aktiv"),
-    relogin: t("Fertig – einmal ab- und wieder anmelden, dann laufen die FPS"),
-    cancelled: t("Abgebrochen"),
-    failed: t("Hat nicht geklappt – noch einmal versuchen oder WinZal als Administrator starten"),
-  }[state];
   return (
-    <Row label={t("FPS & CPU-Temperatur")} hint={hint}>
+    <Row label={t("FPS & CPU-Temperatur")}>
       {state === "ok" || state === "relogin" ? (
         <SelectedDot size={8} />
       ) : (
@@ -914,7 +1224,7 @@ function Weather() {
   const [searching, setSearching] = useState(false);
   return (
     <Group title={t("Wetter")} id="settings-weather">
-      <Row label={t("Standort")} hint={w?.auto ? t("Ungefähr, aus deiner IP-Adresse") : undefined}>
+      <Row label={t("Standort")}>
         <Segmented<"auto" | "manual">
           id="weather-mode"
           size="sm"

@@ -1,5 +1,6 @@
 import { createStore } from "../../lib/store";
 import { fetchPrivacy, type PrivacyState } from "../../platform/services";
+import { onPresentationSet, onPresentationToggle, trayPresentation } from "../../platform/native";
 import { settings, updateSettings } from "../../settings/store";
 
 /*
@@ -33,6 +34,25 @@ syncPolling();
 
 function isPresenting(manual: boolean, auto: boolean, screen: boolean, off: boolean): boolean {
   return manual || (auto && screen && !off);
+}
+
+/** Same rule as `usePresenting`, for non-React callers (tray/shortcut). */
+export function presentingNow(): boolean {
+  const { manual, auto } = settings.get().presentation;
+  return isPresenting(manual, auto, privacy.get().screen, snoozed.get());
+}
+
+/** Global Ctrl+Alt+P and the tray item. */
+export function startPresentationMode() {
+  const sync = () => trayPresentation(presentingNow());
+  onPresentationToggle(() => togglePresentation());
+  onPresentationSet((on) => {
+    if (presentingNow() !== on) togglePresentation();
+  });
+  settings.subscribe(sync);
+  privacy.subscribe(sync);
+  snoozed.subscribe(sync);
+  sync();
 }
 
 /**

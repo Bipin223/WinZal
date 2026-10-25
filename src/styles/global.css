@@ -25,6 +25,7 @@ body,
 body {
   font-family: var(--font-sans);
   font-optical-sizing: auto;
+  font-weight: 400;
   /* ss03 = curly quotes, cv05 = l with a tail, both closer to SF Pro. */
   font-feature-settings: "ss03", "cv05";
   -webkit-font-smoothing: antialiased;
@@ -224,6 +225,9 @@ body {
 .anim-word {
   animation-name: anim-word;
 }
+.anim-kinetic {
+  animation-name: anim-kinetic;
+}
 @keyframes anim-apple {
   0%,
   6% {
@@ -278,6 +282,26 @@ body {
     transform: translateY(-2px);
   }
 }
+@keyframes anim-kinetic {
+  0%,
+  6% {
+    opacity: 0;
+    filter: blur(7px);
+    transform: perspective(220px) rotateX(-70deg) translateY(8px) scale(0.9);
+  }
+  22%,
+  74% {
+    opacity: 1;
+    filter: blur(0);
+    transform: perspective(220px) rotateX(0deg) translateY(0) scale(1);
+  }
+  88%,
+  100% {
+    opacity: 0;
+    filter: blur(5px);
+    transform: perspective(220px) rotateX(45deg) translateY(-6px) scale(0.96);
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .privacy-dot[data-pulse],
@@ -289,7 +313,29 @@ body {
   .lyric-ripple,
   .lyric-aurora,
   .anim-preview,
-  .anim-word {
+  .anim-word,
+  .anim-kinetic {
     animation: none;
   }
+}
+
+/* Settings → Performance → Motion. */
+:root[data-motion="reduced"] * {
+  transition-duration: 0.12s !important;
+  animation-duration: 0.3s !important;
+}
+:root[data-motion="reduced"] .lyric-wave,
+:root[data-motion="reduced"] .lyric-pulse,
+:root[data-motion="reduced"] .lyric-ripple,
+:root[data-motion="reduced"] .lyric-aurora,
+:root[data-motion="reduced"] .anim-preview,
+:root[data-motion="reduced"] .anim-word,
+:root[data-motion="reduced"] .anim-kinetic {
+  animation-duration: 1.4s !important;
+}
+:root[data-motion="off"] *,
+:root[data-motion="off"] *::before,
+:root[data-motion="off"] *::after {
+  animation: none !important;
+  transition: none !important;
 }

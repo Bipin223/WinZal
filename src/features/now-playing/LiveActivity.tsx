@@ -170,20 +170,26 @@ function LyricLine({
   next: string | null;
   layout: "inline" | "lines";
   size: number;
-  animation: "apple" | "word" | "reveal";
+  animation: "apple" | "word" | "reveal" | "kinetic";
   index: number;
   start: number;
   end: number;
 }) {
   const inline = layout === "inline";
-  const wordMode = animation === "word";
+  const kinetic = animation === "kinetic";
+  const wordMode = animation === "word" || kinetic;
   const motions = {
     apple: {
-      enter: { opacity: 0, y: 10, scale: 0.94 },
-      active: { opacity: 1, y: 0, scale: 1 },
-      leave: { opacity: 0, y: -8, scale: 0.97 },
+      enter: { opacity: 0, y: 10, scale: 0.94, filter: "blur(6px)" },
+      active: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" },
+      leave: { opacity: 0, y: -8, scale: 0.97, filter: "blur(5px)" },
     },
     word: {
+      enter: { opacity: 0 },
+      active: { opacity: 1 },
+      leave: { opacity: 0 },
+    },
+    kinetic: {
       enter: { opacity: 0 },
       active: { opacity: 1 },
       leave: { opacity: 0 },
@@ -200,36 +206,44 @@ function LyricLine({
   const stagger = words.length > 1 ? Math.min(0.36, Math.max(0.04, ((end - start) * 0.75) / (words.length - 1))) : 0;
   const nextSize = Math.max(8, size - 3);
   return (
-    <AnimatePresence mode="popLayout" initial={false}>
+    // Wait mode: the old line leaves before the next one enters, so the two
+    // never overlap while the pill is expanding.
+    <AnimatePresence mode="wait" initial={false}>
       <motion.div
         key={index}
         className="relative z-10 flex min-w-0 max-w-full flex-col items-center justify-center"
         initial={enter}
         animate={active}
-        exit={leave}
+        exit={{ ...leave, transition: { duration: 0.15, ease: [0.4, 0, 1, 1] } }}
         transition={transition}
       >
-        <LyricText
-          className="font-semibold text-label"
-          resetKey={`${index}-${inline}-${size}`}
-          style={{ fontSize: `${size}px`, lineHeight: inline ? `${Math.round(size + 2)}px` : `${Math.round(size + 1)}px` }}
-        >
-          {wordMode && words.length > 1
-            ? words.map((word, i) => (
-                <motion.span
-                  key={`${index}-${i}`}
-                  className="inline-block"
-                  initial={{ opacity: 0, y: 7, scale: 0.9, filter: "blur(8px)" }}
-                  animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-                  transition={{ ...springs.lyricWord, delay: i * stagger }}
-                  style={{ transformOrigin: "50% 90%" }}
-                >
-                  {word}
-                  {i < words.length - 1 ? "\u00A0" : ""}
-                </motion.span>
-              ))
-            : current}
-        </LyricText>
+        <div className="w-full overflow-hidden py-[1px]">
+          <LyricText
+            className="font-semibold text-label"
+            resetKey={`${index}-${inline}-${size}`}
+            style={{ fontSize: `${size}px`, lineHeight: inline ? `${Math.round(size + 2)}px` : `${Math.round(size + 1)}px` }}
+          >
+            {wordMode && words.length > 1
+              ? words.map((word, i) => (
+                  <motion.span
+                    key={`${index}-${i}`}
+                    className="inline-block"
+                    initial={
+                      kinetic
+                        ? { opacity: 0, y: 12, scale: 0.9, rotateX: -70, filter: "blur(9px)" }
+                        : { opacity: 0, y: 7, scale: 0.9, filter: "blur(8px)" }
+                    }
+                    animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0, filter: "blur(0px)" }}
+                    transition={{ ...springs.lyricWord, delay: i * (kinetic ? Math.min(0.07, stagger) : stagger) }}
+                    style={{ transformOrigin: "50% 90%", transformPerspective: 600 }}
+                  >
+                    {word}
+                    {i < words.length - 1 ? "\u00A0" : ""}
+                  </motion.span>
+                ))
+              : current}
+          </LyricText>
+        </div>
         {!inline && next && (
           <span
             data-fade-text

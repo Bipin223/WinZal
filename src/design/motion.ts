@@ -13,29 +13,52 @@ const slow = Number(new URLSearchParams(location.search).get("slow")) || 1;
 
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+// 0 = off, 1 = full. Set from Settings → Performance → Motion.
+let motionScale = 1;
+export function setMotionScale(value: number) {
+  motionScale = Math.max(0, Math.min(1, value));
+}
+
 function spring(visualDuration: number, bounce: number): Transition {
-  if (reduceMotion) return { type: "spring", visualDuration: 0.2 * slow, bounce: 0 };
-  return { type: "spring", visualDuration: visualDuration * slow, bounce };
+  const factor = 0.25 + 0.75 * motionScale;
+  if (reduceMotion || motionScale === 0) return { type: "spring", visualDuration: 0.001, bounce: 0 };
+  return { type: "spring", visualDuration: visualDuration * factor * slow, bounce };
 }
 
 export const springs = {
   /** Notch opens: lively, a noticeable but short overshoot. */
-  open: spring(0.42, 0.24),
+  get open() {
+    return spring(0.42, 0.24);
+  },
   /** Notch closes: faster than opening, no bounce. */
-  close: spring(0.32, 0.04),
+  get close() {
+    return spring(0.32, 0.04);
+  },
   /** Hover nudge: small and playful, says "I see you". */
-  peek: spring(0.26, 0.32),
+  get peek() {
+    return spring(0.26, 0.32);
+  },
   /** Shape change while open (tab switch, live activity). */
-  morph: spring(0.36, 0.14),
+  get morph() {
+    return spring(0.36, 0.14);
+  },
   /** Small elements inside (tab pill, toggles). */
-  snappy: spring(0.24, 0.12),
+  get snappy() {
+    return spring(0.24, 0.12);
+  },
   /** Apple Music lyric line: soft scale/slide, never overshoots. */
-  lyrics: spring(0.46, 0),
+  get lyrics() {
+    return spring(0.46, 0);
+  },
   /** Word-by-word lyric: a fluid rise with a gentle, lively overshoot. */
-  lyricWord: spring(0.52, 0.22),
+  get lyricWord() {
+    return spring(0.52, 0.22);
+  },
   /** Closed notch growing/shrinking for a lyric line. */
-  lyricWidth: spring(0.42, 0),
-} as const;
+  get lyricWidth() {
+    return spring(0.42, 0);
+  },
+};
 
 const easeOut = [0.23, 1, 0.32, 1] as const;
 

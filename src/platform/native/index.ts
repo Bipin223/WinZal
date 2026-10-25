@@ -15,6 +15,18 @@ export function setPinned(pinned: boolean) {
   if (isNative) void invoke("set_pinned", { pinned });
 }
 
+/** Ghost mode: click-through until three quick clicks wake the notch. */
+export function setSilent(silent: boolean) {
+  if (isNative) void invoke("set_silent", { silent });
+}
+
+/** Three quick clicks while silent. */
+export function onSilentExit(handler: () => void): () => void {
+  if (!isNative) return () => {};
+  const off = listen("notch://silent-exit", handler);
+  return () => void off.then((f) => f());
+}
+
 /**
  * Drops the notch below the Windows Hello credential prompt while it is open,
  * then restores it as always-on-top. Without this the always-on-top notch
@@ -48,6 +60,40 @@ export function onShortcut(handler: () => void): () => void {
   if (!isNative) return () => {};
   const off = listen("notch://shortcut", handler);
   return () => void off.then((f) => f());
+}
+
+/** Global shortcuts / tray: presentation mode. */
+export function onPresentationToggle(handler: () => void): () => void {
+  if (!isNative) return () => {};
+  const off = listen("notch://presentation-toggle", handler);
+  return () => void off.then((f) => f());
+}
+
+export function onPresentationSet(handler: (on: boolean) => void): () => void {
+  if (!isNative) return () => {};
+  const off = listen<boolean>("notch://presentation-set", (e) => handler(e.payload));
+  return () => void off.then((f) => f());
+}
+
+export function trayPresentation(on: boolean) {
+  if (isNative) void invoke("tray_presentation", { on });
+}
+
+/** Global shortcut / tray: silent mode. */
+export function onSilentToggle(handler: () => void): () => void {
+  if (!isNative) return () => {};
+  const off = listen("notch://silent-toggle", handler);
+  return () => void off.then((f) => f());
+}
+
+export function onSilentSet(handler: (on: boolean) => void): () => void {
+  if (!isNative) return () => {};
+  const off = listen<boolean>("notch://silent-set", (e) => handler(e.payload));
+  return () => void off.then((f) => f());
+}
+
+export function traySilent(on: boolean) {
+  if (isNative) void invoke("tray_silent", { on });
 }
 
 /** Tray: left click / "Open" (tab = null) or "Settings" (tab = "settings"). */

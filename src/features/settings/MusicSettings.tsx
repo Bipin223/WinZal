@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { settings, updateSettings, type Settings } from "../../settings/store";
 import { t } from "../../i18n";
 import { LyricAnimationPreview } from "../now-playing/LyricAnimationPreview";
@@ -13,6 +14,8 @@ import { Group, Row, Segmented, Slider, Switch } from "../../ui/controls";
 export function MusicSettings() {
   const a = settings.use().appearance;
   const set = (patch: Partial<typeof a>) => updateSettings((cur) => ({ appearance: { ...cur.appearance, ...patch } }));
+  const [hoverAnim, setHoverAnim] = useState<string | null>(null);
+  const [hoverViz, setHoverViz] = useState<string | null>(null);
   const visualizers: { value: LyricVisualizerStyle; label: string }[] = [
     { value: "wave", label: t("Welle") },
     { value: "pulse", label: t("Puls") },
@@ -22,8 +25,9 @@ export function MusicSettings() {
   ];
   const animations: { value: Settings["appearance"]["lyricsAnimation"]; label: string }[] = [
     { value: "apple", label: t("Apple Music") },
-    { value: "word", label: t("Wort für Wort") },
-    { value: "reveal", label: t("Aufdecken") },
+    { value: "word", label: t("Word by Word") },
+    { value: "kinetic", label: t("Kinetic") },
+    { value: "reveal", label: t("Reveal") },
   ];
 
   return (
@@ -31,7 +35,6 @@ export function MusicSettings() {
       <Group title={t("Wiedergabe")} id="settings-music">
         <Row
           label={t("Musik in der geschlossenen Notch")}
-          hint={t("Cover, Titel und Equalizer, während Musik läuft")}
         >
           <Switch
             label={t("Musik in der geschlossenen Notch")}
@@ -43,7 +46,6 @@ export function MusicSettings() {
       <Group title={t("Songtext")} id="settings-lyrics">
         <Row
           label={t("Songtext in der geschlossenen Pille")}
-          hint={t("Synchronisierte Zeile von LRCLIB, wenn verfügbar")}
         >
           <Switch
             label={t("Songtext in der geschlossenen Pille")}
@@ -65,7 +67,7 @@ export function MusicSettings() {
                 ]}
               />
             </Row>
-            <Row label={t("Textgröße")} hint={t("Pille und Visualisierung wachsen mit")}>
+            <Row label={t("Textgröße")}>
               <div className="flex w-44 items-center gap-2">
                 <Slider
                   label={t("Textgröße")}
@@ -76,6 +78,22 @@ export function MusicSettings() {
                   onChange={(lyricsTextSize) => set({ lyricsTextSize })}
                 />
                 <span className="tabular w-11 shrink-0 text-right text-caption text-label-3">{a.lyricsTextSize.toFixed(1)} px</span>
+              </div>
+            </Row>
+            <Row label={t("Lyrics offset")}>
+              <div className="flex w-44 items-center gap-2">
+                <Slider
+                  label={t("Lyrics offset")}
+                  value={a.lyricsOffset}
+                  min={-1}
+                  max={1}
+                  step={0.1}
+                  onChange={(lyricsOffset) => set({ lyricsOffset })}
+                />
+                <span className="tabular w-11 shrink-0 text-right text-caption text-label-3">
+                  {a.lyricsOffset > 0 ? "+" : ""}
+                  {a.lyricsOffset.toFixed(1)} s
+                </span>
               </div>
             </Row>
             <Row label={t("Pillenbreite")}>
@@ -91,7 +109,7 @@ export function MusicSettings() {
                 ]}
               />
             </Row>
-            <Row label={t("Visualisierung")} hint={t("Im Songtext, in der Akzentfarbe des Covers")}>
+            <Row label={t("Visualisierung")}>
               <Switch label={t("Visualisierung")} checked={a.lyricsVisualizer} onChange={(lyricsVisualizer) => set({ lyricsVisualizer })} />
             </Row>
             {a.lyricsVisualizer && (
@@ -103,6 +121,8 @@ export function MusicSettings() {
                       key={visualizer.value}
                       type="button"
                       onClick={() => set({ lyricsVisualizerStyle: visualizer.value })}
+                      onPointerEnter={() => setHoverViz(visualizer.value)}
+                      onPointerLeave={() => setHoverViz((v) => (v === visualizer.value ? null : v))}
                       className={`relative overflow-hidden rounded-[10px] border p-1 transition-colors ${
                         a.lyricsVisualizerStyle === visualizer.value
                           ? "border-label bg-fill-2"
@@ -110,7 +130,7 @@ export function MusicSettings() {
                       }`}
                     >
                       <div className="h-8 overflow-hidden rounded-[7px] bg-black">
-                        <LyricVisualizer style={visualizer.value} playing preview />
+                        <LyricVisualizer style={visualizer.value} playing={hoverViz === visualizer.value} preview />
                       </div>
                       <div className="mt-1 text-center text-[9px] font-medium text-label">{visualizer.label}</div>
                       {a.lyricsVisualizerStyle === visualizer.value && (
@@ -123,12 +143,14 @@ export function MusicSettings() {
             )}
             <div className="px-3 pb-3">
               <div className="mb-1.5 text-footnote font-medium text-label-2">{t("Animation")}</div>
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5">
                 {animations.map((animation) => (
                   <button
                     key={animation.value}
                     type="button"
                     onClick={() => set({ lyricsAnimation: animation.value })}
+                    onPointerEnter={() => setHoverAnim(animation.value)}
+                    onPointerLeave={() => setHoverAnim((v) => (v === animation.value ? null : v))}
                     className={`relative overflow-hidden rounded-[10px] border p-1 transition-colors ${
                       a.lyricsAnimation === animation.value
                         ? "border-label bg-fill-2"
@@ -136,7 +158,13 @@ export function MusicSettings() {
                     }`}
                   >
                     <div className="h-8 overflow-hidden rounded-[7px] bg-black">
-                      <LyricAnimationPreview animation={animation.value} />
+                      {hoverAnim === animation.value ? (
+                        <LyricAnimationPreview animation={animation.value} />
+                      ) : (
+                        <div className="flex h-full items-center justify-center px-1">
+                          <span className="truncate text-[9px] font-semibold whitespace-nowrap text-white/80">When you light the candle</span>
+                        </div>
+                      )}
                     </div>
                     <div className="mt-1 text-center text-[9px] font-medium text-label">{animation.label}</div>
                     {a.lyricsAnimation === animation.value && (

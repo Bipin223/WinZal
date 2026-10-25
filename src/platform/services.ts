@@ -15,6 +15,7 @@ export type SecretName =
   | "ai.gemini"
   | "ai.groq"
   | "ai.custom"
+  | "usage.custom"
   | "discord.secret";
 
 const mockSecrets = new Map<SecretName, string>();
@@ -32,10 +33,28 @@ export const secrets = {
 
 // ---------- AI usage ----------
 
-export type UsageId = "claude" | "codex" | "gemini" | "cursor";
+export type UsageId = "custom";
+
+/** User-defined usage endpoint (Settings → AI). */
+export interface CustomUsageConfig {
+  name: string;
+  url: string;
+  /** Header name, e.g. "Authorization". Empty = no auth header. */
+  header: string;
+  /** Dot path to the used value, e.g. "data.used". */
+  valuePath: string;
+  /** Optional dot path to the limit. Empty = the value is already a percentage. */
+  limitPath: string;
+  /** Optional dot path to an ISO date or Unix time. */
+  resetPath: string;
+  /** session | daily | weekly | monthly */
+  window: "session" | "daily" | "weekly" | "monthly";
+  /** Optional plan label. */
+  plan: string;
+}
 
 export interface UsageWindow {
-  /** session | weekly | weekly-opus | weekly-sonnet | daily | monthly | model:<Name> */
+  /** session | daily | weekly | monthly */
   kind: string;
   usedPercent: number;
   resetsAt: number | null;
@@ -45,44 +64,27 @@ export interface UsageWindow {
 
 export interface UsageProvider {
   id: UsageId;
+  name?: string | null;
   plan: string | null;
   windows: UsageWindow[];
-  /** not-found | not-signed-in | expired | rate-limited | offline | failed (with data: stale). */
+  /** not-configured | invalid-url | no-key | invalid-path | rate-limited | offline | failed (with data: stale). */
   error: string | null;
   updatedAt: number;
 }
 
-export function fetchUsage(providers: string[]): Promise<UsageProvider[]> {
-  if (isNative) return invoke<UsageProvider[]>("usage_fetch", { providers });
+export function fetchUsage(providers: string[], custom?: CustomUsageConfig | null): Promise<UsageProvider[]> {
+  if (isNative) return invoke<UsageProvider[]>("usage_fetch", { providers, custom: custom ?? null });
   const now = Date.now();
-  const h = 3600_000;
-  const d = 86_400_000;
-  const all: UsageProvider[] = [
-    {
-      id: "claude",
-      plan: "Max",
-      windows: [
-        { kind: "session", usedPercent: 44, resetsAt: now + 2.4 * h, windowSecs: 5 * 3600 },
-        { kind: "weekly", usedPercent: 61, resetsAt: now + 3.1 * d, windowSecs: 7 * 86_400 },
-        { kind: "weekly-opus", usedPercent: 18, resetsAt: now + 3.1 * d, windowSecs: 7 * 86_400 },
-      ],
-      error: null,
-      updatedAt: now,
-    },
-    {
-      id: "codex",
-      plan: "Plus",
-      windows: [
-        { kind: "session", usedPercent: 71, resetsAt: now + 0.8 * h, windowSecs: 5 * 3600 },
-        { kind: "weekly", usedPercent: 23, resetsAt: now + 5.2 * d, windowSecs: 7 * 86_400 },
-      ],
-      error: null,
-      updatedAt: now - 4 * 60_000,
-    },
-    { id: "gemini", plan: null, windows: [], error: "not-found", updatedAt: now },
-    { id: "cursor", plan: null, windows: [], error: "not-found", updatedAt: now },
-  ];
-  return new Promise((r) => setTimeout(() => r(all.filter((p) => providers.includes(p.id))), 350));
+  if (!providers.includes("custom") || !custom) return Promise.resolve([]);
+  const provider: UsageProvider = {
+    id: "custom",
+    name: custom.name || "Custom",
+    plan: custom.plan || null,
+    windows: [{ kind: custom.window, usedPercent: 42, resetsAt: now + 2.4 * 3600_000, windowSecs: 5 * 3600 }],
+    error: null,
+    updatedAt: now,
+  };
+  return new Promise((r) => setTimeout(() => r([provider]), 350));
 }
 
 // ---------- System ----------

@@ -67,7 +67,7 @@ export function DiscordView() {
       <motion.div className="flex items-center gap-3" initial={{ opacity: 0, transform: "translateY(4px)" }} animate={{ opacity: 1, transform: "translateY(0px)" }} transition={content.enter}>
         <GuildIcon call={call} size={44} />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-title font-semibold">{call.channelName}</div>
+          <div className="truncate text-title">{call.channelName}</div>
           <div className="truncate text-footnote text-label-2">{call.guildName ?? t("Privater Anruf")}</div>
         </div>
       </motion.div>

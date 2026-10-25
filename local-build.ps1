@@ -2,18 +2,24 @@
 # No NSIS installer, no updater signing, no GitHub release.
 #
 # Usage:
-#   .\local-build.ps1                  # release build + update installed app
+#   .\local-build.ps1                  # fast release build + update installed app
 #   .\local-build.ps1 -DebugBuild      # debug build for testing
 #   .\local-build.ps1 -SkipBuild       # reuse the last build, just replace/relaunch
 #   .\local-build.ps1 -NoStart         # build/replace but do not relaunch
+#   .\local-build.ps1 -FullProfile     # use Cargo.toml's shipped profile (slow LTO)
 #
 # The installed app stays at %LOCALAPPDATA%\WinZal\winzal.exe, so autostart,
 # Start Menu/Desktop shortcuts and the FPS helper task keep working.
+#
+# Local release builds deliberately skip the shipped full-LTO/codegen-units=1
+# profile: no LTO + 16 codegen units recompile and link in a fraction of the
+# time. Only use -FullProfile when preparing a GitHub/installer release.
 [CmdletBinding()]
 param(
     [switch]$DebugBuild,
     [switch]$SkipBuild,
-    [switch]$NoStart
+    [switch]$NoStart,
+    [switch]$FullProfile
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,6 +33,15 @@ $targetExe = Join-Path $root "src-tauri\target\$flavor\winzal.exe"
 $started = Get-Date
 
 Write-Host "WinZal local updater ($flavor)" -ForegroundColor Cyan
+
+if (-not $DebugBuild -and -not $FullProfile -and -not $SkipBuild) {
+    # Fast local profile. Cargo.toml stays untouched for shipped builds.
+    $env:CARGO_PROFILE_RELEASE_LTO = "false"
+    $env:CARGO_PROFILE_RELEASE_CODEGEN_UNITS = "16"
+    Write-Host "Profile: no LTO, 16 codegen units (fast local build)"
+} elseif ($flavor -eq "release" -and -not $SkipBuild) {
+    Write-Host "Profile: shipped (full LTO, 1 codegen unit) - slow"
+}
 
 if ($SkipBuild) {
     if (-not (Test-Path $targetExe)) {

@@ -9,7 +9,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde::Deserialize;
 use tauri::{AppHandle, Emitter, Manager, State, WebviewWindow};
@@ -46,6 +46,8 @@ pub struct HitState {
     rect: Mutex<HitRect>,
     /// While true (e.g. typing), the window stays clickable.
     pinned: Mutex<bool>,
+    /// Ghost mode: fully click-through until three quick clicks wake it.
+    silent: AtomicBool,
     /// Set after show(): reapply click-through on the next poll.
     refresh: AtomicBool,
 }
@@ -66,6 +68,14 @@ pub fn set_pinned(pinned: bool, state: State<'_, HitState>) {
     *state.pinned.lock().unwrap() = pinned;
 }
 
+/// Silent mode: the notch becomes a ghost and ignores the mouse. Three quick
+/// clicks inside its old hit zone bring it back.
+#[tauri::command]
+pub fn set_silent(silent: bool, state: State<'_, HitState>) {
+    state.silent.store(silent, Ordering::Relaxed);
+    state.refresh();
+}
+
 /// ~60 Hz is plenty: hover delays are 180–220 ms anyway.
 const POLL: Duration = Duration::from_millis(16);
 /// Cursor far away from the notch (and no button held): poll slower. Reaching the
@@ -84,6 +94,9 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
         let mut drag_from: Option<(f64, f64)> = None;
         let mut drag_active = false;
         let mut far = false;
+        // Three-click wake while silent.
+        let mut clicks = 0u32;
+        let mut last_click = Instant::now();
 
         loop {
             thread::sleep(if far { POLL_FAR } else { POLL });
@@ -123,16 +136,30 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
             was_down = dragging;
 
             let inside = if drag_active { rect.grown() } else { rect }.contains(x, y);
-            let ignore = !inside && !*state.pinned.lock().unwrap();
+            let mut silent = state.silent.load(Ordering::Relaxed);
+            if silent && inside && dragging && !was_down {
+                let now = Instant::now();
+                clicks = if now.duration_since(last_click) <= Duration::from_millis(800) { clicks + 1 } else { 1 };
+                last_click = now;
+                if clicks >= 3 {
+                    clicks = 0;
+                    silent = false;
+                    state.silent.store(false, Ordering::Relaxed);
+                    let _ = window.emit("notch://silent-exit", ());
+                }
+            } else if !silent {
+                clicks = 0;
+            }
+            let ignore = silent || (!inside && !*state.pinned.lock().unwrap());
 
             // Only call on change: every call goes through the event loop.
             if last_ignore != Some(ignore) {
                 let _ = window.set_ignore_cursor_events(ignore);
                 last_ignore = Some(ignore);
             }
-            if last_inside != Some(inside) {
-                let _ = window.emit("notch://hover", inside);
-                last_inside = Some(inside);
+            if last_inside != Some(inside && !silent) {
+                let _ = window.emit("notch://hover", inside && !silent);
+                last_inside = Some(inside && !silent);
             }
         }
     });

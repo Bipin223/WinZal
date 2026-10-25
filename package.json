@@ -2,6 +2,8 @@
   "name": "winzal",
   "private": true,
   "version": "1.7.6",
+  "author": "Bipin Rizal",
+  "description": "A Windows dynamic island.",
   "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {

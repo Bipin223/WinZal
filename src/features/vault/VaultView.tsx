@@ -255,7 +255,7 @@ function VaultContent() {
             <Fingerprint size={14} weight="bold" />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-caption font-semibold text-label">{t("Windows Hello schützt den Tresor")}</div>
+            <div className="truncate text-caption font-medium text-label">{t("Windows Hello schützt den Tresor")}</div>
             <div className="truncate text-[9px] leading-[11px] text-label-3">
               {t("Einträge mit Gesicht, Finger oder Windows-PIN versiegeln")}
             </div>
@@ -302,7 +302,6 @@ function Setup() {
       key="new"
       setup
       title={t("Tresor einrichten")}
-      hint={t("Lege einen 4-stelligen PIN fest. Alles bleibt verschlüsselt auf diesem PC.")}
       onSubmit={async (pin) => {
         setFirst(pin);
         return null;
@@ -313,7 +312,6 @@ function Setup() {
       key="confirm"
       setup
       title={t("PIN bestätigen")}
-      hint={t("Gib den PIN noch einmal ein.")}
       onCancel={() => setFirst(null)}
       onSubmit={async (pin) => {
         if (pin !== first) return t("PINs stimmen nicht überein");

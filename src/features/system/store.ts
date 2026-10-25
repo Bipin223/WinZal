@@ -33,9 +33,11 @@ let timer: ReturnType<typeof setInterval> | null = null;
 let timerMs = 0;
 /** Mounted views that show the values (see `useSystemShown`). */
 const shown = createStore(0);
+/** Mounted views that need the expensive GPU counters. */
+const fullShown = createStore(0);
 
 function poll() {
-  const full = shown.get() > 0;
+  const full = fullShown.get() > 0;
   void fetchSystem(full).then((next) => {
     const steps = full ? 1 : Math.round(BACKGROUND_MS / SHOWN_MS);
     system.set(({ stats, history: h, tick }) => {
@@ -89,10 +91,14 @@ export function startSystemPolling() {
   shown.subscribe(apply);
 }
 
-/** For views that show the values: full polling once a second while mounted. */
-export function useSystemShown() {
+/** For views that show the values. `full = false` skips the GPU counters. */
+export function useSystemShown(full = true) {
   useEffect(() => {
     shown.set((n) => n + 1);
-    return () => shown.set((n) => n - 1);
-  }, []);
+    if (full) fullShown.set((n) => n + 1);
+    return () => {
+      shown.set((n) => n - 1);
+      if (full) fullShown.set((n) => n - 1);
+    };
+  }, [full]);
 }

@@ -355,7 +355,7 @@ function WifiTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
       {menuOpen && (
         <div className="absolute bottom-full left-0 z-50 mb-2 w-[290px] overflow-hidden rounded-[12px] bg-elevated p-1.5 shadow-2xl">
           <div className="flex items-center justify-between px-2 py-1">
-            <span className="text-[10px] font-semibold tracking-wide text-label-3 uppercase">
+            <span className="text-[10px] font-medium tracking-wide text-label-3 uppercase">
               {t("Wi-Fi networks")}
             </span>
             <button
@@ -527,7 +527,7 @@ function BluetoothTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
       {menuOpen && (
         <div className="absolute bottom-full left-0 z-50 mb-2 w-[290px] overflow-hidden rounded-[12px] bg-elevated p-1.5 shadow-2xl">
           <div className="flex items-center justify-between px-2 py-1">
-            <span className="text-[10px] font-semibold tracking-wide text-label-3 uppercase">
+            <span className="text-[10px] font-medium tracking-wide text-label-3 uppercase">
               {t("Bluetooth devices")}
             </span>
             <button
@@ -683,7 +683,7 @@ function PowerTile() {
       />
       {menuOpen && (
         <div className="absolute right-0 bottom-full z-50 mb-2 w-[212px] overflow-hidden rounded-[12px] bg-elevated p-1.5 shadow-2xl">
-          <div className="px-2 py-1 text-[10px] font-semibold tracking-wide text-label-3 uppercase">{t("Power mode")}</div>
+          <div className="px-2 py-1 text-[10px] font-medium tracking-wide text-label-3 uppercase">{t("Power mode")}</div>
           <div className="grid grid-cols-2 gap-0.5">
             {options.map((option) => (
               <button

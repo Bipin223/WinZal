@@ -41,8 +41,9 @@ pub struct Privacy {
 pub fn privacy_state() -> Privacy {
     let own = std::env::current_exe().ok().map(|p| p.to_string_lossy().replace('\\', "#").to_lowercase());
     let busy = |cap: &str| in_use(&format!(r"{BASE}\{cap}"), own.as_deref());
+    let processes = process_list();
     let wgc = busy("graphicsCaptureProgrammatic") || busy("graphicsCaptureWithoutBorder");
-    let screen = wgc || obs_recording() || recorder_writing();
+    let screen = wgc || obs_recording(&processes) || recorder_writing(&processes);
     Privacy { mic: busy("microphone"), camera: busy("webcam"), screen }
 }
 
@@ -126,10 +127,9 @@ struct ObsCache {
 /// OBS writes "Recording Start/Stop" and "Streaming Start/Stop" to the current log.
 /// The last marker wins. This works for every OBS-based recorder, regardless of the
 /// capture method, and costs one small tail read when the log changes.
-fn obs_recording() -> bool {
+fn obs_recording(processes: &[(u32, String)]) -> bool {
     static CACHE: OnceLock<Mutex<ObsCache>> = OnceLock::new();
     let cache = CACHE.get_or_init(Default::default);
-    let processes = process_list();
     if !processes.iter().any(|(_, name)| is_obs(name)) {
         let mut c = cache.lock().unwrap();
         c.path = None;
@@ -207,7 +207,7 @@ struct IoCache {
     rates: HashMap<u32, (u64, Instant)>,
 }
 
-fn recorder_writing() -> bool {
+fn recorder_writing(processes: &[(u32, String)]) -> bool {
     static CACHE: OnceLock<Mutex<IoCache>> = OnceLock::new();
     let cache = CACHE.get_or_init(Default::default);
     let now = Instant::now();
@@ -218,13 +218,13 @@ fn recorder_writing() -> bool {
     c.at = Some(now);
     let mut active = false;
     let mut seen = Vec::new();
-    for (pid, name) in process_list() {
-        if !is_recorder(&name) {
+    for (pid, name) in processes {
+        if !is_recorder(name) {
             continue;
         }
-        seen.push(pid);
-        let Some(written) = writes(pid) else { continue };
-        if let Some((previous, at)) = c.rates.insert(pid, (written, now)) {
+        seen.push(*pid);
+        let Some(written) = writes(*pid) else { continue };
+        if let Some((previous, at)) = c.rates.insert(*pid, (written, now)) {
             let seconds = now.duration_since(at).as_secs_f64().max(0.2);
             // 1.5 MB/s is far above an idle recorder's log writes and well below
             // a 1080p recording (usually 4–30 MB/s).

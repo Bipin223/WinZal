@@ -237,7 +237,7 @@ export function TotpForm(props: { onDone: () => void; run: (action: () => Promis
       </div>
 
       <Group>
-        <Row label={t("Name")} hint={scan?.issuer ? t("Vorschlag: {name}", { name: scan.issuer }) : undefined}>
+        <Row label={t("Name")}>
           <TextField value={name} onChange={setName} placeholder={t("z. B. GitHub")} width={FIELD} onSubmit={() => void save()} />
         </Row>
         {!scan && (

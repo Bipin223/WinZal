@@ -30,8 +30,8 @@ export const geometry = {
   peek: { w: 222, h: 34, r: 12, ear: 7 },
   /** Closed with a live activity (music): side slots for cover + equalizer. */
   live: { w: 284, h: 30, r: 10, ear: 6 },
-  /** Gaming mode: wider slots for FPS/CPU + temp on the left and GPU/RAM on the right. */
-  gaming: { w: 480, h: 30, r: 10, ear: 6 },
+  /** Gaming mode: compact FPS/CPU + GPU/RAM, width is computed per item. */
+  gaming: { w: 400, h: 30, r: 10, ear: 6 },
   /** Focus mode "line": a thin strip at the screen edge, just enough to find it again. */
   line: { w: 150, h: 5, r: 2.5, ear: 3 },
   /** Hover on the line: it stays a line, just a touch bigger, then opens straight away. */
