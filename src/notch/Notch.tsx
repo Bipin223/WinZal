@@ -372,10 +372,11 @@ export function Notch() {
                 key="open"
                 className="absolute top-0 left-1/2 flex flex-col"
                 style={{ width: size.w, height: size.h, marginLeft: -size.w / 2 }}
-                // No scale here: scaling re-rasterizes the small dock icons at shifting subpixels every frame, which reads as jitter (issue #3).
-                initial={{ opacity: 0, transform: "translateY(-6px)" }}
+                // Opacity + a short slide only: scaling or blurring the whole
+                // panel re-rasterizes the visualization and reads as jank.
+                initial={{ opacity: 0, transform: "translateY(-4px)" }}
                 animate={{ opacity: 1, transform: "translateY(0px)", transition: content.enter }}
-                exit={{ opacity: 0, transform: "translateY(-4px)", transition: content.exit }}
+                exit={{ opacity: 0, transform: "translateY(-3px)", transition: content.exit }}
               >
                 <Header
                   title={t(tab.label)}
@@ -391,9 +392,9 @@ export function Notch() {
                     <motion.div
                       key={tab.id}
                       className="absolute inset-0"
-                      initial={{ opacity: 0, transform: "translateY(3px)" }}
+                      initial={{ opacity: 0, transform: "translateY(2px)" }}
                       animate={{ opacity: 1, transform: "translateY(0px)", transition: content.enter }}
-                      exit={{ opacity: 0, transform: "translateY(-3px)", transition: content.exit }}
+                      exit={{ opacity: 0, transform: "translateY(-2px)", transition: content.exit }}
                     >
                       <tab.View />
                     </motion.div>

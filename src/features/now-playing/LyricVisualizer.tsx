@@ -108,14 +108,13 @@ export function LyricGlow({ style, playing, expanded = false }: { style: LyricGl
             <span className="bokeh-leak leak-a" />
             <span className="bokeh-leak leak-b" />
             <span className="bokeh-leak leak-c" />
-            <span className="bokeh-leak leak-d" />
           </>
         )}
       </div>
     );
   }
   if (style === "leaves") {
-    const count = expanded ? 26 : 10;
+    const count = expanded ? 20 : 10;
     return (
       <div className={`lyr-glow lyr-glow-leaves ${paused}`} aria-hidden>
         {Array.from({ length: count }, (_, i) => {
@@ -151,7 +150,7 @@ export function LyricGlow({ style, playing, expanded = false }: { style: LyricGl
     );
   }
   // night sky
-  const starCount = expanded ? 60 : 18;
+  const starCount = expanded ? 40 : 18;
   return (
     <div className={`lyr-glow lyr-glow-night ${paused}`} aria-hidden>
       {expanded && (

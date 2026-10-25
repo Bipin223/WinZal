@@ -81,10 +81,11 @@ export function NowPlayingView() {
       {appearance.lyricsVisualizer && (
         <motion.div
           className={`np-glow np-glow-${appearance.lyricsGlowStyle} pointer-events-none absolute inset-0 origin-top`}
-          initial={{ opacity: 0.55, scaleX: 0.72, scaleY: 0.5, y: -6, filter: "blur(14px)" }}
-          animate={{ opacity: 1, scaleX: 1, scaleY: 1, y: 0, filter: "blur(0px)" }}
-          exit={{ opacity: 0, scaleX: 0.72, scaleY: 0.5, y: -6, filter: "blur(14px)", transition: { duration: 0.2 } }}
-          transition={{ type: "spring", stiffness: 170, damping: 22, mass: 0.9 }}
+          initial={{ opacity: 0.35, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, transition: { duration: 0.18 } }}
+          transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+          style={{ willChange: "opacity, transform" }}
           aria-hidden
         >
           <LyricGlow style={appearance.lyricsGlowStyle} playing={np.isPlaying} expanded />

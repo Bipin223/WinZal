@@ -233,6 +233,7 @@ body {
   overflow: hidden;
   pointer-events: none;
   border-radius: inherit;
+  contain: paint;
 }
 /* Closed pill default: keep the glow in the text bay, feathered before the
    cover and equalizer. The full-pill option keeps the old wash. */
@@ -461,10 +462,9 @@ body {
   position: absolute;
   height: 18px;
   border-radius: 50%;
-  filter: blur(22px);
+  filter: blur(16px);
   opacity: .2;
   pointer-events: none;
-  mix-blend-mode: screen;
   will-change: translate, opacity;
 }
 .leak-a {
@@ -615,9 +615,8 @@ body {
 .lyr-glow-night .galaxy {
   position: absolute;
   border-radius: 50%;
-  filter: blur(20px);
+  filter: blur(14px);
   opacity: .3;
-  mix-blend-mode: screen;
 }
 .lyr-glow-night .galaxy-a {
   width: 58%;
