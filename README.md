@@ -31,7 +31,7 @@
 
 WinZal turns the top edge of Windows into a Dynamic Island. It sits out of the way as a small black pill, opens when you hover, click or press **Ctrl + Alt + Space**, and morphs into a compact control center. The window itself never resizes — only the shape inside it moves — so the animations stay smooth and the app stays light.
 
-It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Electron, no bundled Chromium, no account and no background analytics. Android is not part of this repository anymore; WinZal is Windows-only.
+It is a native **Windows 10 / 11 x64** app built with Tauri and WebView2. No Electron, no bundled Chromium, no account and no background analytics. WinZal is Windows-only.
 
 ## Features
 
