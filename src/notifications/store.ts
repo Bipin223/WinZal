@@ -54,7 +54,7 @@ export function previewIsland() {
     app: "Messages",
     title: "Bipin",
     body: "Bro, lunch at 1?",
-    color: "#2f8fff",
+    color: "#34c759",
   });
 }
 
@@ -64,7 +64,7 @@ export function previewTimer() {
     app: "Timer",
     title: "Focus session",
     body: "25:00 · deep work",
-    color: "#ffb347",
+    color: "#ff9f0a",
     duration: 6500,
   });
 }
@@ -75,7 +75,18 @@ export function notifyTimerFinished() {
     app: "Timer",
     title: "Focus finished",
     body: "Time for a short break",
-    color: "#ffb347",
+    color: "#ff9f0a",
+    duration: 6500,
+  });
+}
+
+export function notifyUpdateAvailable(version: string) {
+  return notify({
+    kind: "download",
+    app: "WinZal",
+    title: "Update available",
+    body: `Version ${version} is ready`,
+    color: "#5fe9e3",
     duration: 6500,
   });
 }

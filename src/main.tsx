@@ -20,6 +20,8 @@ import { startGamingWatch } from "./features/system/gaming";
 import { startDiscord } from "./features/discord/store";
 import { startDiscordPresence } from "./features/discord/presence";
 import { startUpdateWatch } from "./lib/update";
+import { update } from "./lib/update";
+import { notifyUpdateAvailable } from "./notifications/store";
 import { showcase } from "./dev/showcase-data";
 import { startShowcase } from "./dev/showcase";
 import { startTheme } from "./features/appearance/theme";
@@ -36,6 +38,23 @@ startGamingWatch();
 startDiscord();
 startDiscordPresence();
 startUpdateWatch();
+
+// Show one island notification per newly discovered update.
+let lastUpdateNotice = "";
+const watchUpdateNotice = () => {
+  const u = update.get();
+  if (u.phase !== "available" || !u.version || u.version === lastUpdateNotice) return;
+  lastUpdateNotice = u.version;
+  try {
+    if (localStorage.getItem("winzal:update-notified") === u.version) return;
+    localStorage.setItem("winzal:update-notified", u.version);
+  } catch {
+    // localStorage unavailable: still show the notification.
+  }
+  notifyUpdateAvailable(u.version);
+};
+update.subscribe(watchUpdateNotice);
+watchUpdateNotice();
 
 // Send display settings (monitor, fullscreen, offset, gaming) to Rust on start and on every change.
 let lastDisplay = "";

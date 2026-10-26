@@ -2,8 +2,8 @@ import { useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   CheckCircle,
+  ChatTeardropDots,
   DownloadSimple,
-  EnvelopeSimple,
   Info,
   MusicNotesSimple,
   PhoneCall,
@@ -14,7 +14,7 @@ import { content, springs } from "../design/motion";
 import { dismissNotification, notifications, type AppNotification } from "./store";
 
 const ICONS: Record<AppNotification["kind"], Icon> = {
-  message: EnvelopeSimple,
+  message: ChatTeardropDots,
   music: MusicNotesSimple,
   download: DownloadSimple,
   timer: Timer,
@@ -31,16 +31,17 @@ function NotificationIcon({ item, size }: { item: AppNotification; size: number 
   const Icon = ICONS[item.kind];
   return (
     <span
-      className="relative grid shrink-0 place-items-center overflow-hidden rounded-[12px] text-white"
+      className="relative grid shrink-0 place-items-center overflow-hidden rounded-[13px] text-white"
       style={{
         width: size,
         height: size,
-        background: `linear-gradient(180deg, ${item.color}dd, ${item.color}88)`,
-        boxShadow: `inset 0 0 0 1px rgb(255 255 255 / 0.16), 0 6px 16px -7px ${item.color}`,
+        background: `linear-gradient(160deg, ${item.color} 0%, ${item.color} 55%, ${item.color}cc 100%)`,
+        boxShadow: `inset 0 1px 0 rgb(255 255 255 / 0.45), inset 0 0 0 1px rgb(255 255 255 / 0.18), 0 7px 18px -8px ${item.color}`,
       }}
     >
-      <span className="absolute inset-0 bg-gradient-to-b from-white/25 to-transparent" />
-      <Icon size={Math.round(size * 0.48)} weight="fill" className="relative" />
+      <span className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent" />
+      <span className="absolute -top-2 -left-2 size-2/3 rounded-full bg-white/20 blur-[7px]" />
+      <Icon size={Math.round(size * 0.5)} weight="fill" className="relative drop-shadow-[0_1px_1px_rgb(0_0_0/0.25)]" />
     </span>
   );
 }
