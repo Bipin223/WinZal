@@ -1256,13 +1256,21 @@ function FpsUnlockRow() {
 /** Weather location: automatic via IP or fixed, right here without opening the weather tool. */
 /** Live demo for the two notification surfaces. */
 function NotificationsDemo() {
+  const on = settings.use().notifications;
   return (
     <Group title={t("Notifications")} id="settings-notifications">
+      <Row label={t("Notifications")}>
+        <Switch
+          label={t("Notifications")}
+          checked={on}
+          onChange={(notifications) => updateSettings({ notifications })}
+        />
+      </Row>
       <Row label={t("Preview")}>
         <div className="flex items-center gap-1.5">
-          <Button onClick={previewIsland}>{t("Island")}</Button>
-          <Button onClick={previewTimer}>{t("Timer")}</Button>
-          <Button onClick={previewDiscord}>Discord</Button>
+          <Button onClick={previewIsland} disabled={!on}>{t("Island")}</Button>
+          <Button onClick={previewTimer} disabled={!on}>{t("Timer")}</Button>
+          <Button onClick={previewDiscord} disabled={!on}>Discord</Button>
         </div>
       </Row>
       <WindowsToastsRow />

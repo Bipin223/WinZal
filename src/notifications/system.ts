@@ -1,10 +1,15 @@
+import { listen } from "@tauri-apps/api/event";
 import { isNative } from "../platform/native";
-import { listSystemToasts, type SystemToast } from "../platform/services";
-import { notify, type NotificationBrand, type NotificationKind } from "./store";
+import { listSystemToasts, setToastWatch, type SystemToast } from "../platform/services";
+import { dismissAllNotifications, notify, type NotificationBrand, type NotificationKind } from "./store";
 
 const COLORS = ["#2f8fff", "#ff5ea8", "#5fe9e3", "#ff9f0a", "#30d158", "#bf5af2", "#8e8e93"];
 const seen = new Set<number>();
 let seeded = false;
+let watching = false;
+let listenerReady = false;
+let seedTimer: number | undefined;
+const pending: SystemToast[][] = [];
 
 function brandFor(app: string, appId: string): { brand?: NotificationBrand; color?: string } {
   const id = `${app} ${appId}`.toLowerCase();
@@ -43,37 +48,70 @@ function show(toast: SystemToast) {
   });
 }
 
-/**
- * Poll the native listener instead of relying on a cross-window event. This is
- * one cheap command every 1.8 s and survives webview reloads/permission races.
- */
-export function startSystemToastWatch() {
-  if (!isNative) return;
-  let running = false;
-  const tick = async () => {
-    if (running) return;
-    running = true;
-    try {
-      const items = await listSystemToasts();
-      if (!seeded) {
+function consume(items: SystemToast[]) {
+  if (!watching) return;
+  if (!seeded) {
+    pending.push(items);
+    return;
+  }
+  for (const item of items) {
+    if (!seen.has(item.id)) {
+      seen.add(item.id);
+      show(item);
+    }
+  }
+  const live = new Set(items.map((item) => item.id));
+  for (const id of seen) if (!live.has(id)) seen.delete(id);
+}
+
+function seed(attempt: number) {
+  if (!watching) return;
+  seedTimer = window.setTimeout(() => {
+    if (!watching) return;
+    void listSystemToasts()
+      .then((items) => {
+        if (!watching) return;
         items.forEach((item) => seen.add(item.id));
         seeded = true;
-        return;
-      }
-      for (const item of items) {
-        if (!seen.has(item.id)) {
-          seen.add(item.id);
-          show(item);
+        pending.splice(0).forEach(consume);
+      })
+      .catch(() => {
+        if (attempt < 15) seed(attempt + 1);
+        else if (watching) {
+          seeded = true;
+          pending.splice(0).forEach(consume);
         }
-      }
-      const live = new Set(items.map((item) => item.id));
-      for (const id of seen) if (!live.has(id)) seen.delete(id);
-    } catch {
-      // Listener not allowed yet.
-    } finally {
-      running = false;
-    }
-  };
-  void tick();
-  window.setInterval(() => void tick(), 1800);
+      });
+  }, attempt === 0 ? 0 : 2000);
+}
+
+/**
+ * The native listener emits only when Windows' toast list changes. There is no
+ * periodic poll; the one-time list read just seeds existing toasts so opening
+ * WinZal does not replay yesterday's notifications.
+ */
+export function startSystemToastWatch() {
+  if (!isNative || watching) return;
+  watching = true;
+  if (!listenerReady) {
+    listenerReady = true;
+    void listen<SystemToast[]>("notification://toasts", (event) => consume(event.payload));
+  }
+  void setToastWatch(true);
+  seeded = false;
+  seen.clear();
+  pending.length = 0;
+  seed(0);
+}
+
+/** Off: drop the native listener, stop seeding and clear any visible card. */
+export function stopSystemToastWatch() {
+  if (!isNative) return;
+  watching = false;
+  window.clearTimeout(seedTimer);
+  seeded = false;
+  seen.clear();
+  pending.length = 0;
+  void setToastWatch(false);
+  dismissAllNotifications();
 }

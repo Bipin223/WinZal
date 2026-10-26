@@ -214,6 +214,7 @@ pub fn run() {
             toasts::toast_access,
             toasts::toast_request,
             toasts::toast_list,
+            toasts::toast_watch,
             controls::volume_get,
             controls::volume_set,
             mixer::mixer_list,
@@ -297,6 +298,7 @@ pub fn run() {
             ambient::restore_power(app.handle().clone());
             media::spawn(app.handle().clone());
             clipboard::spawn(app.handle().clone());
+            toasts::spawn(app.handle().clone());
             audio::spawn(app.handle().clone(), &app.state::<audio::AudioState>());
             // If another app owns the shortcut, the notch still runs, just without it.
             let _ = app.global_shortcut().register(shortcut);

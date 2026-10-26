@@ -16,6 +16,7 @@
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
+use std::io::Cursor;
 use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -312,6 +313,10 @@ struct Artwork {
     fingerprint: u64,
 }
 
+/// Covers display at 56 CSS px max (112 device px at 200 %). 256 px keeps
+/// full quality while cutting the decoded bitmap from several MB to ~256 KB.
+const ARTWORK_EDGE: u32 = 256;
+
 fn read(session: &Session, artwork: &mut Artwork) -> windows::core::Result<NowPlaying> {
     let props = session.TryGetMediaPropertiesAsync()?.join()?;
     let title = props.Title()?.to_string();
@@ -377,14 +382,44 @@ fn load_thumbnail(
         return Ok(());
     }
 
-    // Keep the cover byte-for-byte, at its original resolution.
-    artwork.data = Some(format!(
-        "data:{};base64,{}",
-        image_mime(&bytes),
-        base64::engine::general_purpose::STANDARD.encode(&bytes)
-    ));
+    let data = encode_cover(&bytes).unwrap_or_else(|| {
+        format!(
+            "data:{};base64,{}",
+            image_mime(&bytes),
+            base64::engine::general_purpose::STANDARD.encode(&bytes)
+        )
+    });
+    artwork.data = Some(data);
     artwork.fingerprint = fingerprint;
     Ok(())
+}
+
+/// Downscale only covers larger than the display needs. Small covers stay
+/// byte-for-byte; large ones are resized once and encoded at high quality.
+fn encode_cover(bytes: &[u8]) -> Option<String> {
+    let format = image::guess_format(bytes).ok()?;
+    let image = image::load_from_memory_with_format(bytes, format).ok()?;
+    if image.width() <= ARTWORK_EDGE && image.height() <= ARTWORK_EDGE {
+        return None;
+    }
+    let image = image.resize(ARTWORK_EDGE, ARTWORK_EDGE, image::imageops::FilterType::Lanczos3);
+    let mut out = Vec::new();
+    if image.color().has_alpha() {
+        image.write_to(&mut Cursor::new(&mut out), image::ImageFormat::Png).ok()?;
+        Some(format!(
+            "data:image/png;base64,{}",
+            base64::engine::general_purpose::STANDARD.encode(&out)
+        ))
+    } else {
+        let rgb = image.to_rgb8();
+        image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, 90)
+            .encode_image(&rgb)
+            .ok()?;
+        Some(format!(
+            "data:image/jpeg;base64,{}",
+            base64::engine::general_purpose::STANDARD.encode(&out)
+        ))
+    }
 }
 
 /// MIME type from the image bytes. The stream's ContentType can't be trusted: for a file

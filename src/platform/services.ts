@@ -377,6 +377,11 @@ export function listSystemToasts(): Promise<SystemToast[]> {
   return isNative ? invoke<SystemToast[]>("toast_list") : Promise.resolve([]);
 }
 
+/** Start or stop the native Windows toast listener (off = no checking at all). */
+export function setToastWatch(enabled: boolean): Promise<void> {
+  return isNative ? invoke<void>("toast_watch", { enabled }) : Promise.resolve();
+}
+
 // ---------- Gaming mode ----------
 
 /** FPS of the foreground process (ETW). error: no-admin | failed. */

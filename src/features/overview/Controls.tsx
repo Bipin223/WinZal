@@ -21,6 +21,7 @@ import {
 import { springs } from "../../design/motion";
 import { setPromptMode } from "../../platform/native";
 import {
+  fpsHelperReady,
   systemControls,
   type BluetoothPeer,
   type BluetoothState,
@@ -636,12 +637,29 @@ function PowerTile() {
     settle.current = Date.now() + 20_000;
     setBusy(true);
     setEnergy((e) => (e ? { ...e, saver: target === "saver", scheme: target } : e));
-    void systemControls
-      .setEnergy(target)
+    let finished = false;
+    // The Lenovo helper can hang (stale helper / hidden UAC). Never leave the
+    // tile on "…" forever: clear it and let the user retry.
+    const watchdog = window.setTimeout(() => {
+      if (finished) return;
+      finished = true;
+      busyRef.current = false;
+      settle.current = Date.now() + 2500;
+      setBusy(false);
+      setError(t("Power change timed out. Try again."));
+    }, 10_000);
+    const run = async () => {
+      // Custom needs the elevated Lenovo helper. The task-only start never
+      // prompts; if it is not available, fail clearly instead of hanging.
+      if (target === "custom" && !(await fpsHelperReady())) throw new Error("helper-ready");
+      return systemControls.setEnergy(target);
+    };
+    void run()
       .then(setEnergy)
       .catch(async (raw) => {
         const message = String(raw);
-        if (message.includes("uac-cancelled")) setError(t("Admin permission is needed for Custom."));
+        if (message.includes("helper-ready")) setError(t("Custom needs the elevated FPS helper. Start it from Hardware or the gaming overlay first."));
+        else if (message.includes("uac-cancelled")) setError(t("Admin permission is needed for Custom."));
         else if (message.includes("plugged")) setError(t("Plug in for Max and Custom."));
         else if (message.includes("lenovo") || message.includes("unsupported")) setError(t("Custom mode is not available on this device."));
         else if (message.includes("helper")) setError(t("Could not start the elevated helper."));
@@ -649,6 +667,9 @@ function PowerTile() {
         await systemControls.energy().then(setEnergy).catch(() => setEnergy(null));
       })
       .finally(() => {
+        window.clearTimeout(watchdog);
+        if (finished) return;
+        finished = true;
         busyRef.current = false;
         settle.current = Date.now() + 2500;
         setBusy(false);

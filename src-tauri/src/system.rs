@@ -260,7 +260,7 @@ fn spawn_temp(temp: Arc<Temp>) {
                 temp.cpu.store(if helper_cpu.is_some() { 0 } else { cpu.unwrap_or(0) }, Ordering::Relaxed);
                 temp.gpu.store(if helper_gpu.is_some() { 0 } else { gpu.unwrap_or(0) }, Ordering::Relaxed);
             }
-            thread::sleep(Duration::from_secs(2));
+            thread::sleep(Duration::from_secs(5));
         }
     });
 }

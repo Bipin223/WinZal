@@ -1,4 +1,5 @@
 import { createStore } from "../lib/store";
+import { settings } from "../settings/store";
 
 export type NotificationKind = "message" | "music" | "download" | "timer" | "call" | "success" | "info";
 export type NotificationBrand = "discord";
@@ -33,8 +34,15 @@ export function dismissNotification(id: number) {
   notifications.set((list) => list.filter((item) => item.id !== id));
 }
 
+export function dismissAllNotifications() {
+  timers.forEach((timer) => window.clearTimeout(timer));
+  timers.clear();
+  notifications.set([]);
+}
+
 /** One island at a time: a newer notification replaces the current one. */
 export function notify(input: Omit<AppNotification, "id" | "createdAt" | "duration"> & { duration?: number }) {
+  if (!settings.get().notifications) return 0;
   const item: AppNotification = {
     ...input,
     id: nextId++,

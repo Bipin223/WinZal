@@ -911,7 +911,7 @@ fn temp_loop(shared_addr: usize) {
             }
         }
 
-        if last_read.elapsed() > Duration::from_secs(2) {
+        if last_read.elapsed() > Duration::from_secs(5) {
             last_read = Instant::now();
             let mut mode = None;
             let mut cooling = None;

@@ -272,8 +272,10 @@ export function Notch() {
 
   // Closed for a while → WebView2 may trim memory; back to normal on the first touch
   // (peek), so the hover delay covers paging it back in before the notch opens.
+  // While a game owns the foreground, keep the overlay hot: paging it out every
+  // 30 s is exactly the kind of hitch that shows up as a stutter in-game.
   useEffect(() => {
-    if (status !== "closed") {
+    if (status !== "closed" || gamingLive) {
       setMemoryLow(false);
       return;
     }
@@ -287,16 +289,16 @@ export function Notch() {
       if (interval !== undefined) window.clearInterval(interval);
       setMemoryLow(false);
     };
-  }, [status]);
+  }, [status, gamingLive]);
 
   // While open, page the WebView2 working set out every 20 s. This keeps Task
   // Manager near the memory target without losing the live UI; hot pages fault
-  // back in immediately.
+  // back in immediately. Skip it while gaming for the same reason.
   useEffect(() => {
-    if (status === "closed") return;
+    if (status === "closed" || gamingLive) return;
     const id = window.setInterval(() => trimMemory(), 20_000);
     return () => window.clearInterval(id);
-  }, [status]);
+  }, [status, gamingLive]);
 
   // 1–9 switches tools while open and not typing.
   useEffect(() => {

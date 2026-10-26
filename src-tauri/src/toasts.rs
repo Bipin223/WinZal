@@ -1,11 +1,16 @@
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{mpsc, Mutex, OnceLock};
+use std::thread;
 use std::time::Duration;
 
 use serde::Serialize;
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
+use windows::Foundation::TypedEventHandler;
 use windows::UI::Notifications::Management::{
     UserNotificationListener, UserNotificationListenerAccessStatus,
 };
-use windows::UI::Notifications::{KnownNotificationBindings, NotificationKinds};
+use windows::UI::Notifications::{KnownNotificationBindings, NotificationKinds, UserNotificationChangedEventArgs};
+use windows::Win32::System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED};
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -97,6 +102,92 @@ fn read_toasts() -> Result<Vec<SystemToast>, String> {
 pub fn toast_access() -> &'static str {
     access_status()
 }
+
+static WATCH_ON: AtomicBool = AtomicBool::new(false);
+static WATCH_TX: OnceLock<Mutex<mpsc::Sender<()>>> = OnceLock::new();
+
+/// Turn the Windows toast listener on or off. Off drops the WinRT listener and
+/// its event thread, so nothing is checked while notifications are disabled.
+#[tauri::command]
+pub fn toast_watch(enabled: bool) {
+    WATCH_ON.store(enabled, Ordering::Relaxed);
+    if let Some(tx) = WATCH_TX.get() {
+        let _ = tx.lock().unwrap().send(());
+    }
+}
+
+struct Watch {
+    listener: UserNotificationListener,
+    /// Held so WinRT keeps the event handler alive; never read directly.
+    _handler: TypedEventHandler<UserNotificationListener, UserNotificationChangedEventArgs>,
+    token: i64,
+}
+
+impl Watch {
+    fn start(app: AppHandle) -> Option<Self> {
+        let listener = UserNotificationListener::Current().ok()?;
+        let (tx, rx) = mpsc::channel::<()>();
+        thread::spawn(move || {
+            unsafe {
+                let _ = RoInitialize(RO_INIT_MULTITHREADED);
+            }
+            while rx.recv().is_ok() {
+                // Coalesce a burst of change events into one read.
+                while rx.try_recv().is_ok() {}
+                if let Ok(items) = read_toasts() {
+                    let _ = app.emit("notification://toasts", &items);
+                }
+            }
+        });
+        let handler = TypedEventHandler::<UserNotificationListener, UserNotificationChangedEventArgs>::new(
+            move |_, _| {
+                let _ = tx.send(());
+                Ok(())
+            },
+        );
+        let token = listener.NotificationChanged(&handler).ok()?;
+        Some(Self { listener, _handler: handler, token })
+    }
+}
+
+impl Drop for Watch {
+    fn drop(&mut self) {
+        let _ = self.listener.RemoveNotificationChanged(self.token);
+    }
+}
+
+/// Event-driven Windows toast watch. The listener emits only when the toast
+/// list changes; the frontend has no periodic poll. Disabled by default until
+/// the frontend restores the user's notification setting.
+pub fn spawn(app: AppHandle) {
+    thread::spawn(move || {
+        unsafe {
+            let _ = RoInitialize(RO_INIT_MULTITHREADED);
+        }
+        let (tx, rx) = mpsc::channel::<()>();
+        let _ = WATCH_TX.set(Mutex::new(tx));
+        let mut watch: Option<Watch> = None;
+        loop {
+            let want = WATCH_ON.load(Ordering::Relaxed);
+            if want && watch.is_none() {
+                if access_status() == "allowed" {
+                    watch = Watch::start(app.clone());
+                }
+            } else if !want && watch.is_some() {
+                // Dropping Watch removes the handler and releases the listener.
+                watch = None;
+            }
+            if want && watch.is_none() {
+                // Enabled but not subscribed yet (permission/COM): retry.
+                let _ = rx.recv_timeout(Duration::from_secs(2));
+            } else {
+                // Subscribed or disabled: sleep until the setting changes.
+                let _ = rx.recv();
+            }
+        }
+    });
+}
+
 
 #[tauri::command]
 pub async fn toast_request(app: AppHandle) -> Result<&'static str, String> {

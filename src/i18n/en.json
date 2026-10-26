@@ -379,6 +379,8 @@
   "Admin permission is needed for Custom.": "Admin permission is needed for Custom.",
   "Could not start the elevated helper.": "Could not start the elevated helper.",
   "Could not change the power mode.": "Could not change the power mode.",
+  "Power change timed out. Try again.": "Power change timed out. Try again.",
+  "Custom needs the elevated FPS helper. Start it from Hardware or the gaming overlay first.": "Custom needs the elevated FPS helper. Start it from Hardware or the gaming overlay first.",
   "Custom mode is not available on this device.": "Custom mode is not available on this device.",
   "Glim: warmes Bildschirmlicht": "Glim: warm screen light",
   "Sicher?": "Sure?",

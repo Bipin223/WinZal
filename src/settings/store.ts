@@ -93,6 +93,8 @@ export interface Settings {
   };
   /** Dots like on iPhone: mic/camera (green) or screen recording (red) in use. */
   privacyDots: boolean;
+  /** Windows toasts + island notification cards. Off stops the native listener. */
+  notifications: boolean;
   /** Per-role size/weight offsets; 0 = the built-in default. */
   typography: Record<TypeRole, TypeAxis>;
   /** Notch colours and shape. `accent: "auto"` follows the album art. */
@@ -218,6 +220,7 @@ const DEFAULT_OFF = new Set<string>(["discord", "vault"]);
 const defaults: Settings = {
   openMode: "hover",
   hoverDelay: "normal",
+  notifications: true,
   tools: TOOL_IDS.map((id) => ({ id, enabled: !DEFAULT_OFF.has(id) })),
   usage: {
     custom: false,
