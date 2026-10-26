@@ -8,12 +8,12 @@
         "en": "Five selectable clock faces (Stacked, Split, Scatter, Classic, Word); the closed pill grows and shrinks with time, date, day and weather without clipping"
       },
       {
-        "de": "Songtext-Labor: Word by Word (Standard) und Apple Music, plus acht Effekte (Fill, Glitch, Liquid, Spotlight, Letter bloom, Spark, Orbit, Ambient); drei Equalizer (Bars, Mirror, Ticks); sechs Behind-Glows (Wave, Aurora, Bloom, Bokeh, Leaves, Night sky)",
-        "en": "Lyric lab: Word by Word (default) and Apple Music, plus eight effects (Fill, Glitch, Liquid, Spotlight, Letter bloom, Spark, Orbit, Ambient); three equalizers (Bars, Mirror, Ticks); six behind-glows (Wave, Aurora, Bloom, Bokeh, Leaves, Night sky)"
+        "de": "Songtext-Labor: Word by Word (Standard) und Apple Music, plus sieben Effekte (Fill, Glitch, Liquid, Spotlight, Spark, Orbit, Ambient); drei Equalizer (Bars, Mirror, Ticks); sechs Behind-Glows (Wave, Aurora, Bloom, Bokeh, Leaves, Night sky)",
+        "en": "Lyric lab: Word by Word (default) and Apple Music, plus seven effects (Fill, Glitch, Liquid, Spotlight, Spark, Orbit, Ambient); three equalizers (Bars, Mirror, Ticks); six behind-glows (Wave, Aurora, Bloom, Bokeh, Leaves, Night sky)"
       },
       {
-        "de": "Zeilenwechsel ohne Wartezeit und ohne Überlappung, 50 ms Vorlauf; der erste Word-by-Word-Buchstabe animiert mit und bleibt auf dem Zeitstempel",
-        "en": "Line changes with no wait and no overlap, 50 ms lead; the first Word by Word word animates too and stays on the timestamp"
+        "de": "Zeilenwechsel mit 50 ms Vorlauf und kurzem Crossfade; Spotlight hält nur ein aktives Wort, Orbit und Ambient folgen dem Wort-Takt",
+        "en": "Line changes with a 50 ms lead and a short crossfade; Spotlight keeps one active word, Orbit and Ambient follow the word clock"
       },
       {
         "de": "Nacht-Himmel: Halbmond und Zufallssterne in der geschlossenen Pille; Herbstblätter und Bokeh-Lichtlecks bleiben ebenfalls in der Pille",

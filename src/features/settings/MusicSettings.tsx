@@ -38,7 +38,6 @@ export function MusicSettings() {
     { value: "glitch", label: "Glitch scramble" },
     { value: "liquid", label: "Liquid fill" },
     { value: "spot", label: "Spotlight" },
-    { value: "letters", label: "Letter bloom" },
     { value: "spark", label: "Spark" },
     { value: "orbit", label: "Orbit" },
     { value: "ambient", label: "Ambient" },

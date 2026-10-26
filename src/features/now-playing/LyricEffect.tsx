@@ -1,14 +1,51 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useAnimationFrame } from "motion/react";
 import type { LyricAnimation } from "../../settings/store";
 import { livePosition, type NowPlaying } from "../../platform/media";
 
 type LabAnimation = Exclude<LyricAnimation, "word" | "apple">;
 
+/** Character-weighted word starts, so long words get more of the line. */
+function wordOffsets(words: string[]): number[] {
+  const total = words.reduce((n, word) => n + word.length + 1.7, 0) || 1;
+  let acc = 0;
+  return words.map((word) => {
+    const from = acc / total;
+    acc += word.length + 1.7;
+    return from;
+  });
+}
+
+/** Reveal words one by one on the real line clock, not on a fixed stagger. */
+function useWordReveal(words: string[], start: number, end: number, np: NowPlaying | null, preview: boolean) {
+  const refs = useRef<(HTMLSpanElement | null)[]>([]);
+  const last = useRef(-1);
+  const offsets = wordOffsets(words);
+  useAnimationFrame(() => {
+    const duration = preview ? 2.6 : Math.max(0.35, end - start);
+    const elapsed = preview
+      ? (performance.now() / 1000) % 2.8
+      : np
+        ? livePosition(np) - start
+        : 0;
+    const progress = Math.min(1, Math.max(0, elapsed / (duration * 0.92)));
+    let active = -1;
+    offsets.forEach((from, i) => {
+      if (progress >= from) active = i;
+    });
+    if (active === last.current) return;
+    last.current = active;
+    refs.current.forEach((el, i) => {
+      if (el) el.classList.toggle("in", i <= active);
+    });
+  });
+  return refs;
+}
+
 /**
- * The eight effects from final.html. Fill/focus/liquid/stripe follow the word
- * that is being sung instead of just playing an entrance, so they stay on the
- * timestamp. Word by Word is untouched in LiveActivity.
+ * The remaining lyric effects. Fill/liquid/spotlight/spark/ambient follow the
+ * word that is being sung instead of just playing an entrance, so they stay on
+ * the timestamp. Word by Word and Apple Music live in LiveActivity.
  */
 export function LyricEffect({
   animation,
@@ -28,10 +65,9 @@ export function LyricEffect({
 }) {
   if (animation === "glitch") return <GlitchText text={text} />;
   if (animation === "spot") return <SpotlightText text={text} start={start} end={end} np={np} preview={preview} />;
-  if (animation === "letters") return <LetterBloom text={text} />;
   if (animation === "spark") return <SparkText text={text} start={start} end={end} np={np} preview={preview} />;
-  if (animation === "orbit") return <OrbitText text={text} np={np} />;
-  if (animation === "ambient") return <AmbientText text={text} np={np} />;
+  if (animation === "orbit") return <OrbitText text={text} start={start} end={end} np={np} preview={preview} />;
+  if (animation === "ambient") return <AmbientText text={text} start={start} end={end} np={np} preview={preview} />;
   return (
     <WordProgress
       animation={animation}
@@ -73,17 +109,23 @@ function WordProgress({
       : np
         ? livePosition(np) - timing.current.start
         : 0;
-    const progress = Math.min(1, Math.max(0, elapsed / (duration * 0.88)));
+    const progress = Math.min(1, Math.max(0, elapsed / (duration * 0.92)));
     let acc = 0;
-    let active = -1;
-    words.forEach((word, i) => {
+    const froms = words.map((word) => {
       const from = acc / total;
       acc += word.length + 1.7;
-      const to = acc / total;
+      return from;
+    });
+    let active = -1;
+    froms.forEach((from, i) => {
+      if (progress >= from) active = i;
+    });
+    words.forEach((_, i) => {
+      const from = froms[i];
+      const to = froms[i + 1] ?? 1;
       const p = Math.min(1, Math.max(0, (progress - from) / Math.max(0.0001, to - from)));
       const el = refs.current[i];
       if (!el) return;
-      if (progress >= from) active = i;
       el.classList.toggle("dim", i !== active);
       el.classList.toggle("hot", i === active);
       const fill = el.querySelector<HTMLElement>(".lab-fill");
@@ -140,19 +182,21 @@ function SpotlightText({
       : np
         ? livePosition(np) - timing.current.start
         : 0;
-    const progress = Math.min(1, Math.max(0, elapsed / (duration * 0.88)));
+    const progress = Math.min(1, Math.max(0, elapsed / (duration * 0.92)));
     let acc = 0;
-    let active = -1;
-    let activeP = 0;
-    words.forEach((word, i) => {
+    const froms = words.map((word) => {
       const from = acc / total;
       acc += word.length + 1.7;
-      const to = acc / total;
-      const p = Math.min(1, Math.max(0, (progress - from) / Math.max(0.0001, to - from)));
-      if (progress >= from) {
-        active = i;
-        activeP = p;
-      }
+      return from;
+    });
+    let active = -1;
+    froms.forEach((from, i) => {
+      if (progress >= from) active = i;
+    });
+    const from = active >= 0 ? froms[active] : 0;
+    const to = active >= 0 ? (froms[active + 1] ?? 1) : 1;
+    const activeP = active >= 0 ? Math.min(1, Math.max(0, (progress - from) / Math.max(0.0001, to - from))) : 0;
+    words.forEach((_, i) => {
       const el = refs.current[i];
       if (!el) return;
       el.classList.toggle("dim", i !== active);
@@ -163,7 +207,9 @@ function SpotlightText({
     const centre = el.offsetLeft + el.offsetWidth / 2;
     const next = refs.current[active + 1];
     const nextCentre = next ? next.offsetLeft + next.offsetWidth / 2 : centre;
-    spot.current.style.left = `${(centre + (nextCentre - centre) * activeP).toFixed(2)}px`;
+    const eased = activeP * activeP * (3 - 2 * activeP);
+    const x = centre + (nextCentre - centre) * eased;
+    spot.current.style.transform = `translate3d(${x.toFixed(2)}px, -50%, 0) translate(-50%, 0)`;
   });
 
   return (
@@ -174,27 +220,12 @@ function SpotlightText({
           {i < words.length - 1 ? "\u00A0" : ""}
         </span>
       ))}
-      <i ref={spot} className="lab-spot" aria-hidden />
-    </span>
-  );
-}
-
-/** Per-character bloom, 18 ms apart, softened so it lands with the line. */
-function LetterBloom({ text }: { text: string }) {
-  const host = useRef<HTMLSpanElement>(null);
-  useLayoutEffect(() => {
-    const el = host.current;
-    if (!el) return;
-    void el.offsetWidth;
-    el.classList.add("in");
-  }, [text]);
-  return (
-    <span ref={host} className="lab-line lab-letters">
-      {[...text].map((ch, i) => (
-        <span key={i} className="lab-lch" style={{ "--d": `${i * 18}ms` } as CSSProperties}>
-          {ch === " " ? "\u00A0" : ch}
-        </span>
-      ))}
+      <i
+        ref={spot}
+        className="lab-spot"
+        style={{ transform: "translate3d(0px, -50%, 0) translate(-50%, 0)" }}
+        aria-hidden
+      />
     </span>
   );
 }
@@ -228,13 +259,18 @@ function SparkText({
       : np
         ? livePosition(np) - timing.current.start
         : 0;
-    const progress = Math.min(1, Math.max(0, elapsed / (duration * 0.88)));
+    const progress = Math.min(1, Math.max(0, elapsed / (duration * 0.92)));
     let acc = 0;
-    let active = -1;
-    words.forEach((word, i) => {
+    const froms = words.map((word) => {
       const from = acc / total;
       acc += word.length + 1.7;
+      return from;
+    });
+    let active = -1;
+    froms.forEach((from, i) => {
       if (progress >= from) active = i;
+    });
+    words.forEach((_, i) => {
       const el = refs.current[i];
       if (!el) return;
       el.classList.toggle("dim", i !== active);
@@ -250,7 +286,7 @@ function SparkText({
     const host = layer.current;
     if (!el || !host) return;
     const centre = el.offsetLeft + el.offsetWidth / 2;
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 5; i++) {
       const spark = document.createElement("i");
       const angle = Math.random() * Math.PI * 2;
       const radius = 9 + Math.random() * 15;
@@ -261,7 +297,7 @@ function SparkText({
       spark.style.setProperty("--dy", `${(Math.sin(angle) * radius - 7).toFixed(1)}px`);
       spark.style.animationDelay = `${(Math.random() * 0.05).toFixed(2)}s`;
       host.appendChild(spark);
-      window.setTimeout(() => spark.remove(), 760);
+      window.setTimeout(() => spark.remove(), 700);
     }
   });
 
@@ -278,28 +314,81 @@ function SparkText({
   );
 }
 
-/** Per-word float inside a slowly breathing line. */
-function AmbientText({ text, np }: { text: string; np: NowPlaying | null }) {
+/** Gentle float/breathe; no per-word blur, and the active word follows the clock. */
+function AmbientText({
+  text,
+  start,
+  end,
+  np,
+  preview,
+}: {
+  text: string;
+  start: number;
+  end: number;
+  np: NowPlaying | null;
+  preview: boolean;
+}) {
+  const words = text.split(/\s+/).filter(Boolean);
+  const refs = useRef<(HTMLSpanElement | null)[]>([]);
+  const last = useRef(-1);
+  const offsets = wordOffsets(words);
+  useAnimationFrame(() => {
+    const duration = preview ? 2.6 : Math.max(0.35, end - start);
+    const elapsed = preview
+      ? (performance.now() / 1000) % 2.8
+      : np
+        ? livePosition(np) - start
+        : 0;
+    const progress = Math.min(1, Math.max(0, elapsed / (duration * 0.92)));
+    let active = -1;
+    offsets.forEach((from, i) => {
+      if (progress >= from) active = i;
+    });
+    if (active === last.current) return;
+    last.current = active;
+    refs.current.forEach((el, i) => {
+      if (el) el.classList.toggle("ambient-active", i === active);
+    });
+  });
   return (
     <span className={`lab-line lab-ambient-line${np && !np.isPlaying ? " lyr-paused" : ""}`}>
-      {text.split(/\s+/).filter(Boolean).map((word, i, all) => (
-        <span key={i} className="lab-ambient-word" style={{ "--i": i } as CSSProperties}>
+      {words.map((word, i) => (
+        <span
+          key={i}
+          ref={(el) => { refs.current[i] = el; }}
+          className="lab-ambient-word"
+          style={{ "--i": i } as CSSProperties}
+        >
           {word}
-          {i < all.length - 1 ? "\u00A0" : ""}
+          {i < words.length - 1 ? "\u00A0" : ""}
         </span>
       ))}
     </span>
   );
 }
 
-/** Words orbit in from above, one after another, with only a soft blur. */
-function OrbitText({ text, np }: { text: string; np: NowPlaying | null }) {
+/** Each word orbits in only when its part of the line is reached. */
+function OrbitText({
+  text,
+  start,
+  end,
+  np,
+  preview,
+}: {
+  text: string;
+  start: number;
+  end: number;
+  np: NowPlaying | null;
+  preview: boolean;
+}) {
+  const words = text.split(/\s+/).filter(Boolean);
+  const refs = useWordReveal(words, start, end, np, preview);
   return (
     <span className={`lab-line lab-orbit-line${np && !np.isPlaying ? " lyr-paused" : ""}`}>
-      {text.split(/\s+/).filter(Boolean).map((word, i, all) => (
-        <span key={i} className="lab-orb" style={{ "--d": `${i * 80}ms` } as CSSProperties}>
+      {words.map((word, i) => (
+        <span key={i} ref={(el) => { refs.current[i] = el; }} className="lab-orb">
           {word}
-          {i < all.length - 1 ? "\u00A0" : ""}
+          {i < words.length - 1 ? "\u00A0" : ""}
         </span>
       ))}
     </span>

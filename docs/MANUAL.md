@@ -170,7 +170,7 @@ Idle memory is roughly **10 MB UI + 20 MB helper**, plus WebView2 shared process
 ## Music & lyrics
 
 - Lyrics come from LRCLIB and are cached per track.
-- Transitions: **Word by Word** (default), **Apple Music** (the whole line springs in while the next line stays dim below), plus eight effects: **Word fill sweep, Glitch scramble, Liquid fill, Spotlight, Letter bloom, Spark, Orbit and Ambient**. Lines replace in one commit and never overlap. Tracks without synced lyrics show the real media/video title.
+- Transitions: **Word by Word** (default), **Apple Music** (the whole line springs in while the next line stays dim below), plus seven effects: **Word fill sweep, Glitch scramble, Liquid fill, Spotlight, Spark, Orbit and Ambient**. Lines change on the timestamp with a short crossfade. Tracks without synced lyrics show the real media/video title.
 - **Lyrics offset:** ±1 s in 0.1 s steps; positive makes lines appear later.
 - **Equalizer:** **Bars, Mirror and Ticks**. **Behind glow:** **Wave, Aurora, Bloom, Bokeh, Leaves and Night sky**. Wave is a moving ocean swell with a translucent fill below the crest; Aurora is two soft accent curtains; Night sky has a half moon and random twinkling stars. Both follow the Equalization Accent. The visualization stays in the closed pill; the expanded Now Playing panel has no background layer, which keeps memory use down.
 - **Output device:** the Now Playing mixer lists Windows playback endpoints. Pick speakers, headphones or Bluetooth and Windows switches its default output immediately.

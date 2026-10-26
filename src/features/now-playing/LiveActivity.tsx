@@ -70,7 +70,7 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
       </LiveEdge>
       <FadeBox fade={!appearance.lyricsInPill || !current}>
         {appearance.lyricsInPill && current ? (
-          <LyricLine
+          <LyricSwap
             current={current}
             next={next}
             layout={appearance.lyricsLayout}
@@ -160,6 +160,56 @@ function FadeBox({ children, fade = true }: { children: ReactNode; fade?: boolea
   );
 }
 
+type LyricLineProps = {
+  current: string;
+  next: string | null;
+  layout: "inline" | "lines";
+  size: number;
+  weight: number;
+  animation: LyricAnimation;
+  index: number;
+  start: number;
+  end: number;
+  np: NowPlaying;
+};
+
+/**
+ * Crossfades the outgoing line into the incoming one. Both layers are
+ * absolutely positioned inside the text bay, so the swap never re-lays out the
+ * pill. Ambient gets a longer, softer fall; the other effects keep a quick fade.
+ */
+export function LyricSwap(props: LyricLineProps) {
+  const ambient = props.animation === "ambient";
+  const apple = props.animation === "apple";
+  const exit = ambient
+    ? { opacity: 0, y: -4, scale: 0.985, transition: { duration: 0.18, ease: [0.4, 0, 1, 1] as const } }
+    : apple
+      ? { opacity: 0, y: -8, scale: 0.97, transition: { duration: 0.16, ease: [0.4, 0, 1, 1] as const } }
+      : { opacity: 0, y: -2, transition: { duration: 0.1, ease: [0.4, 0, 1, 1] as const } };
+  return (
+    <div className="relative flex h-full w-full items-center justify-center">
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={`${props.index}-${props.animation}`}
+          className="absolute inset-0 z-10 flex min-w-0 flex-col items-center justify-center"
+          initial={apple ? { opacity: 0, y: 10, scale: 0.94 } : ambient ? { opacity: 0, y: 2 } : { opacity: 0.92, y: 2 }}
+          animate={
+            apple
+              ? { opacity: 1, y: 0, scale: 1, transition: springs.lyrics }
+              : ambient
+                ? { opacity: 1, y: 0, transition: { duration: 0.26, ease: [0.23, 1, 0.32, 1] as const } }
+                : { opacity: 1, y: 0, transition: { duration: 0.1, ease: [0.23, 1, 0.32, 1] as const } }
+          }
+          exit={exit}
+          style={apple ? { transformOrigin: "50% 90%" } : undefined}
+        >
+          <LyricLine {...props} />
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+}
+
 /**
  * One or two lyric lines in the middle of the closed pill. Layout and animation
  * are separate options: "inline" keeps one shortened line, "lines" shows the
@@ -177,38 +227,24 @@ function LyricLine({
   start,
   end,
   np,
-}: {
-  current: string;
-  next: string | null;
-  layout: "inline" | "lines";
-  size: number;
-  weight: number;
-  animation: LyricAnimation;
-  index: number;
-  start: number;
-  end: number;
-  np: NowPlaying;
-}) {
+}: LyricLineProps) {
   const inline = layout === "inline";
   const apple = animation === "apple";
   // Replace the line in one commit: no exit wait, no overlap, no 180 ms fade
   // before the new words become readable. The first word is already visible;
   // the rest of the chosen effect still animates from the exact timestamp.
   const words = current.split(/\s+/).filter(Boolean);
-  const stagger = words.length > 1 ? Math.min(0.36, Math.max(0.04, ((end - start) * 0.75) / (words.length - 1))) : 0;
+  // Character-weighted delays keep Word by Word on the estimated sung cadence.
+  const total = words.reduce((n, word) => n + word.length + 1.7, 0) || 1;
+  let acc = 0;
+  const wordDelays = words.map((word) => {
+    const at = (acc / total) * Math.max(0.1, end - start) * 0.82;
+    acc += word.length + 1.7;
+    return at;
+  });
   const nextSize = Math.max(8, size - 3);
   return (
-      <motion.div
-        key={index}
-        className="relative z-10 flex min-w-0 max-w-full flex-col items-center justify-center"
-        initial={apple ? { opacity: 0, y: 10, scale: 0.94 } : { opacity: 0.92, y: 2 }}
-        animate={
-          apple
-            ? { opacity: 1, y: 0, scale: 1, transition: springs.lyrics }
-            : { opacity: 1, y: 0, transition: { duration: 0.09, ease: [0.23, 1, 0.32, 1] } }
-        }
-        style={apple ? { transformOrigin: "50% 90%" } : undefined}
-      >
+      <div className="relative z-10 flex min-w-0 max-w-full flex-col items-center justify-center">
         <div className="w-full overflow-hidden py-[1px]">
           <LyricText
             className="text-label"
@@ -225,7 +261,7 @@ function LyricLine({
                     // animates like the rest while still landing on the stamp.
                     initial={{ opacity: 0.15, y: 5, scale: 0.92, filter: "blur(5px)" }}
                     animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-                    transition={{ ...springs.lyricWord, delay: i * stagger + (i === 0 ? 0.02 : 0) }}
+                    transition={{ ...springs.lyricWord, delay: wordDelays[i] + (i === 0 ? 0.02 : 0) }}
                     style={{ transformOrigin: "50% 90%", transformPerspective: 600 }}
                   >
                     {word}
@@ -251,7 +287,7 @@ function LyricLine({
             {next}
           </span>
         )}
-      </motion.div>
+      </div>
   );
 }
 
@@ -279,12 +315,17 @@ function LyricText({
     let alive = true;
     const measure = () => {
       if (!alive) return;
-      const over = Math.max(0, el.scrollWidth - el.clientWidth);
+      // Measure the text itself, not the absolutely positioned spotlight or
+      // spark layer. scrollWidth includes those wide overlays, which used to
+      // trigger the marquee and slide the whole line left ("Say" -> "y").
+      const text = el.firstElementChild as HTMLElement | null;
+      const over = el.clientWidth > 8 ? Math.max(0, (text?.offsetWidth ?? el.scrollWidth) - el.clientWidth) : 0;
       setShift((prev) => (Math.abs(prev - over) > 1 ? over : prev));
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
     void document.fonts?.ready.then(measure);
     return () => {
       alive = false;
@@ -296,9 +337,9 @@ function LyricText({
       ref={box}
       data-fade-text
       className={`block max-w-full ${className}`}
-      // Clip horizontally for the marquee, but leave room for descenders (g, y)
-      // above and below the line box so the glyphs are never sliced.
-      style={{ ...style, clipPath: "inset(-12px 0px)" }}
+      // The text bay clips, not this inner box: that lets the 150 px spotlight
+      // spill past the word while the marquee still stops at the bay edge.
+      style={style}
     >
       <motion.span
         className="inline-block whitespace-nowrap"

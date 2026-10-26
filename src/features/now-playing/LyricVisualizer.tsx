@@ -111,13 +111,9 @@ export function LyricGlow({ style, playing, expanded = false }: { style: LyricGl
             />
           );
         })}
-        {expanded && (
-          <>
-            <span className="bokeh-leak leak-a" />
-            <span className="bokeh-leak leak-b" />
-            <span className="bokeh-leak leak-c" />
-          </>
-        )}
+        <span className="bokeh-leak leak-a" />
+        <span className="bokeh-leak leak-b" />
+        <span className="bokeh-leak leak-c" />
       </div>
     );
   }

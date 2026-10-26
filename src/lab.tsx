@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createRoot } from "react-dom/client";
-import { motion } from "motion/react";
 import "./styles/global.css";
 import "./lab.css";
-import { LyricEffect } from "./features/now-playing/LyricEffect";
+import { LyricSwap } from "./features/now-playing/LiveActivity";
 import { LyricGlow, LyricEqualizer } from "./features/now-playing/LyricVisualizer";
 import { Equalizer } from "./features/now-playing/Equalizer";
-import { springs } from "./design/motion";
 import type { LyricAnimation, LyricEqualizerStyle, LyricGlowStyle } from "./settings/store";
 import type { NowPlaying } from "./platform/media";
 
@@ -27,7 +25,6 @@ const ANIMATIONS: { value: LyricAnimation; label: string }[] = [
   { value: "glitch", label: "Glitch scramble" },
   { value: "liquid", label: "Liquid fill" },
   { value: "spot", label: "Spotlight" },
-  { value: "letters", label: "Letter bloom" },
   { value: "spark", label: "Spark" },
   { value: "orbit", label: "Orbit" },
   { value: "ambient", label: "Ambient" },
@@ -49,27 +46,6 @@ const EQUALIZERS: { value: LyricEqualizerStyle; label: string }[] = [
   { value: "ticks", label: "Ticks" },
 ];
 
-function WordLine({ text, index }: { text: string; index: number }) {
-  const words = text.split(/\s+/).filter(Boolean);
-  const stagger = words.length > 1 ? Math.min(0.36, Math.max(0.04, (LINE_SECONDS * 0.75) / (words.length - 1))) : 0;
-  return (
-    <span style={{ display: "inline-flex", alignItems: "baseline", whiteSpace: "nowrap" }}>
-      {words.map((word, i) => (
-        <motion.span
-          key={`${index}-${i}`}
-          style={{ display: "inline-block" }}
-          initial={{ opacity: 0.15, y: 5, scale: 0.92, filter: "blur(5px)" }}
-          animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-          transition={{ ...springs.lyricWord, delay: i * stagger + (i === 0 ? 0.02 : 0) }}
-        >
-          {word}
-          {i < words.length - 1 ? "\u00A0" : ""}
-        </motion.span>
-      ))}
-    </span>
-  );
-}
-
 function Lab() {
   const params = new URLSearchParams(window.location.search);
   const requestedAnimation = params.get("anim") as LyricAnimation | null;
@@ -77,7 +53,7 @@ function Lab() {
   const onlyGlow = params.get("only") as LyricGlowStyle | null;
   const locked = !!onlyGlow && GLOWS.some((item) => item.value === onlyGlow);
   const [animation, setAnimation] = useState<LyricAnimation>(
-    requestedAnimation && ANIMATIONS.some((item) => item.value === requestedAnimation) ? requestedAnimation : "fill",
+    requestedAnimation && ANIMATIONS.some((item) => item.value === requestedAnimation) ? requestedAnimation : "word",
   );
   const [glow, setGlow] = useState<LyricGlowStyle>(
     locked ? onlyGlow : requestedGlow && GLOWS.some((item) => item.value === requestedGlow) ? requestedGlow : "wave",
@@ -86,7 +62,6 @@ function Lab() {
   const [playing, setPlaying] = useState(true);
   const [line, setLine] = useState(0);
   const [pausedAt, setPausedAt] = useState(0);
-  const [morphKey, setMorphKey] = useState(0);
   const [, setTick] = useState(0);
   const lineStart = useRef(performance.now());
 
@@ -133,34 +108,11 @@ function Lab() {
     }
   };
 
-  const lineHost = animation === "word" ? (
-    <WordLine text={text} index={line} />
-  ) : animation === "apple" ? (
-    <motion.span
-      key={line}
-      style={{ display: "inline-block", transformOrigin: "50% 90%" }}
-      initial={{ opacity: 0, y: 10, scale: 0.94 }}
-      animate={{ opacity: 1, y: 0, scale: 1, transition: springs.lyrics }}
-    >
-      {text}
-    </motion.span>
-  ) : (
-    <LyricEffect
-      key={`${line}-${animation}`}
-      animation={animation}
-      text={text}
-      index={line}
-      start={0}
-      end={LINE_SECONDS}
-      np={np}
-    />
-  );
-
   return (
     <div className="lab-page" style={{ "--accent": ACCENT } as CSSProperties}>
       <h1>WinZal · Lyric Lab</h1>
       <p className="sub">
-        Real components, simulated line clock. {LINE_SECONDS.toFixed(1)} s per line. No overlap.
+        Real components, simulated line clock. {LINE_SECONDS.toFixed(1)} s per line. Short crossfade.
       </p>
 
       {!locked && (
@@ -201,7 +153,16 @@ function Lab() {
         </div>
         <div className="lab-group">
           <button className="lab-chip" onClick={toggle}>{playing ? "Pause" : "Play"}</button>
-          <button className="lab-chip" onClick={() => setMorphKey((key) => key + 1)}>Replay morph</button>
+          <button
+            className="lab-chip"
+            onClick={() => {
+              lineStart.current = performance.now();
+              setPausedAt(0);
+              setLine((current) => (current + 1) % LINES.length);
+            }}
+          >
+            Next line
+          </button>
         </div>
       </div>
       )}
@@ -216,7 +177,18 @@ function Lab() {
               </div>
               <span className="lab-art" />
               <div className="lab-text">
-                <span className="relative z-10">{lineHost}</span>
+                <LyricSwap
+                  current={text}
+                  next={LINES[(line + 1) % LINES.length]}
+                  layout="lines"
+                  size={12}
+                  weight={600}
+                  animation={animation}
+                  index={line}
+                  start={0}
+                  end={LINE_SECONDS}
+                  np={np}
+                />
               </div>
               <span className="lab-eq">
                 {equalizer === "bars" ? <Equalizer playing={playing} height={14} /> : <LyricEqualizer style={equalizer} playing={playing} />}
@@ -226,18 +198,9 @@ function Lab() {
         </div>
 
         <div className="lab-card">
-          <div className="lab-card-title">Expanded Music · same visualization</div>
+          <div className="lab-card-title">Expanded Music · no background layer (app)</div>
           <div className="lab-expanded-shell">
             <div className="lab-expanded np-now">
-              <motion.div
-                key={morphKey}
-                className={`np-glow np-glow-${glow} pointer-events-none absolute inset-0 origin-top`}
-                initial={{ opacity: 0.55, scaleX: 0.72, scaleY: 0.5, y: -6, filter: "blur(14px)" }}
-                animate={{ opacity: 1, scaleX: 1, scaleY: 1, y: 0, filter: "blur(0px)" }}
-                transition={{ type: "spring", stiffness: 170, damping: 22, mass: 0.9 }}
-              >
-                <LyricGlow style={glow} playing={playing} expanded />
-              </motion.div>
               <div className="lab-expanded-content">
                 <div className="lab-expanded-head">
                   <span className="lab-expanded-art" />

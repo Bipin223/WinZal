@@ -146,8 +146,10 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
   }, [enabled, playing, lines, np?.position, offset]);
 
   if (index < 0 || !lines[index]) return { current: null, next: null, index: -1, start: 0, end: 0, status };
-  const start = lines[index].at;
-  const end = lines[index + 1]?.at ?? (np && np.duration > start ? np.duration : start + 4);
+  // Effects run on the line clock; include the user's offset so word progress
+  // stays on the audible line, not the raw LRC timestamp.
+  const start = lines[index].at + offset;
+  const end = lines[index + 1] ? lines[index + 1].at + offset : np && np.duration > start ? np.duration : start + 4;
   return {
     current: lines[index].text,
     next: lines[index + 1]?.text ?? null,

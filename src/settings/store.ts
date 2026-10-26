@@ -23,7 +23,6 @@ export type LyricAnimation =
   | "glitch"
   | "liquid"
   | "spot"
-  | "letters"
   | "spark"
   | "orbit"
   | "ambient";
@@ -369,9 +368,8 @@ settings.set((s) => {
       // supplies the new effects.
       lyricsAnimation: (() => {
         const stored = (s.appearance as { lyricsAnimation?: string } | undefined)?.lyricsAnimation;
-        const valid: LyricAnimation[] = ["word", "apple", "fill", "glitch", "liquid", "spot", "letters", "spark", "orbit", "ambient"];
+        const valid: LyricAnimation[] = ["word", "apple", "fill", "glitch", "liquid", "spot", "spark", "orbit", "ambient"];
         if (stored === "focus" || stored === "stripe" || stored === "warp") return "spot";
-        if (stored === "dissolve" || stored === "dots" || stored === "cascade") return "letters";
         if (stored === "sway" || stored === "float") return "ambient";
         if (stored === "irid") return "fill";
         if (stored === "duet") return "word";
