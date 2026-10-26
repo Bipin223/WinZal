@@ -55,7 +55,9 @@ fn trim_async() {
 
 fn trim_working_sets() {
     let me = sysinfo::Pid::from_u32(std::process::id());
-    let mut sys = sysinfo::System::new_all();
+    // `new_all` also refreshes CPU/memory/disks; one process refresh is enough
+    // to build the parent map and keeps this 20 s job cheap.
+    let mut sys = sysinfo::System::new();
     sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
 
     let mut pids = Vec::new();

@@ -7,7 +7,7 @@
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap uap3 uap10 rescap">
 
-  <Identity Name="WinZal.Notch" Publisher="CN=WinZal" Version="1.7.8.8" />
+  <Identity Name="WinZal.Notch" Publisher="CN=WinZal" Version="1.7.8.14" />
 
   <Properties>
     <DisplayName>WinZal</DisplayName>
@@ -40,11 +40,4 @@
     <uap3:Capability Name="userNotificationListener" />
   </Capabilities>
 </Package>
-
-
-
-
-
-
-
 

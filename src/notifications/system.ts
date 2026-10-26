@@ -49,7 +49,10 @@ function show(toast: SystemToast) {
  */
 export function startSystemToastWatch() {
   if (!isNative) return;
+  let running = false;
   const tick = async () => {
+    if (running) return;
+    running = true;
     try {
       const items = await listSystemToasts();
       if (!seeded) {
@@ -67,6 +70,8 @@ export function startSystemToastWatch() {
       for (const id of seen) if (!live.has(id)) seen.delete(id);
     } catch {
       // Listener not allowed yet.
+    } finally {
+      running = false;
     }
   };
   void tick();

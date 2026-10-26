@@ -108,8 +108,25 @@ if (isNative) {
 
 // No native hover tooltips anywhere in the notch. Components can keep their
 // title props for semantics, but Chromium's tooltip must never appear.
-const stripTitles = () => document.querySelectorAll("[title]").forEach((el) => el.removeAttribute("title"));
-stripTitles();
+const stripTitle = (root: Element) => {
+  if (root.hasAttribute("title")) root.removeAttribute("title");
+  root.querySelectorAll("[title]").forEach((el) => el.removeAttribute("title"));
+};
+const stripTitles = (records: MutationRecord[]) => {
+  for (const record of records) {
+    if (record.type === "attributes") {
+      const el = record.target;
+      if (el instanceof Element && el.hasAttribute("title")) el.removeAttribute("title");
+      continue;
+    }
+    // Only visit what was added. A whole-document query on every mutation was
+    // the single busiest DOM observer while lyrics/visualizations update.
+    for (const node of record.addedNodes) {
+      if (node instanceof Element) stripTitle(node);
+    }
+  }
+};
+document.querySelectorAll("[title]").forEach((el) => el.removeAttribute("title"));
 new MutationObserver(stripTitles).observe(document.documentElement, {
   subtree: true,
   childList: true,

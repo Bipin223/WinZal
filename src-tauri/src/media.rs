@@ -13,7 +13,9 @@
 //!   session that is still playing.
 //! - Controls go to the shown app, not to whatever Windows considers current.
 
+use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
 use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -190,7 +192,8 @@ pub fn spawn(app: AppHandle) {
     thread::spawn(move || {
         let mut last: Option<NowPlaying> = None;
         let mut last_sent_at = SystemTime::now();
-        let mut artwork = Artwork { key: String::new(), since: Instant::now(), data: None };
+        let mut artwork =
+            Artwork { key: String::new(), since: Instant::now(), data: None, fingerprint: 0 };
         // First playing session wins: app id → when we first saw it playing.
         let mut playing_since: HashMap<String, Instant> = HashMap::new();
         // Requested once and reused: a new manager per poll is a cross-process
@@ -304,6 +307,9 @@ struct Artwork {
     key: String,
     since: Instant,
     data: Option<String>,
+    /// Hash of the source bytes, so the 10 s settle polling can reuse the
+    /// already encoded cover instead of re-encoding it on every 400 ms poll.
+    fingerprint: u64,
 }
 
 fn read(session: &Session, artwork: &mut Artwork) -> windows::core::Result<NowPlaying> {
@@ -316,11 +322,16 @@ fn read(session: &Session, artwork: &mut Artwork) -> windows::core::Result<NowPl
     if artwork.key != key {
         artwork.key = key;
         artwork.since = Instant::now();
-        artwork.data = props.Thumbnail().ok().and_then(|t| load_thumbnail(&t).ok());
-    } else if artwork.data.is_none() || artwork.since.elapsed() < ARTWORK_SETTLE {
+        // Never carry the previous track's cover into a new one; if this track
+        // has none, the placeholder is correct.
+        artwork.data = None;
+    }
+    if artwork.data.is_none() || artwork.since.elapsed() < ARTWORK_SETTLE {
         // Some apps deliver the cover shortly after the title, and until then
-        // Windows may still hand out the previous track's cover (Spotifast).
-        artwork.data = props.Thumbnail().ok().and_then(|t| load_thumbnail(&t).ok());
+        // Windows may still hand out the previous track's cover (Spotify).
+        if let Ok(thumbnail) = props.Thumbnail() {
+            let _ = load_thumbnail(&thumbnail, artwork);
+        }
     }
 
     let playback = session.GetPlaybackInfo()?;
@@ -345,7 +356,10 @@ fn read(session: &Session, artwork: &mut Artwork) -> windows::core::Result<NowPl
     Ok(NowPlaying { title, artist, artwork: artwork.data.clone(), is_playing, position, duration, can_seek, app_id })
 }
 
-fn load_thumbnail(reference: &windows::Storage::Streams::IRandomAccessStreamReference) -> windows::core::Result<String> {
+fn load_thumbnail(
+    reference: &windows::Storage::Streams::IRandomAccessStreamReference,
+    artwork: &mut Artwork,
+) -> windows::core::Result<()> {
     let stream = reference.OpenReadAsync()?.join()?;
     let size = stream.Size()? as u32;
     if size == 0 {
@@ -355,7 +369,22 @@ fn load_thumbnail(reference: &windows::Storage::Streams::IRandomAccessStreamRefe
     reader.LoadAsync(size)?.join()?;
     let mut bytes = vec![0u8; size as usize];
     reader.ReadBytes(&mut bytes)?;
-    Ok(format!("data:{};base64,{}", image_mime(&bytes), base64::engine::general_purpose::STANDARD.encode(bytes)))
+
+    let mut hasher = DefaultHasher::new();
+    bytes.hash(&mut hasher);
+    let fingerprint = hasher.finish();
+    if fingerprint == artwork.fingerprint && artwork.data.is_some() {
+        return Ok(());
+    }
+
+    // Keep the cover byte-for-byte, at its original resolution.
+    artwork.data = Some(format!(
+        "data:{};base64,{}",
+        image_mime(&bytes),
+        base64::engine::general_purpose::STANDARD.encode(&bytes)
+    ));
+    artwork.fingerprint = fingerprint;
+    Ok(())
 }
 
 /// MIME type from the image bytes. The stream's ContentType can't be trusted: for a file

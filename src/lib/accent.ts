@@ -4,12 +4,22 @@
  * so the color reads well on black.
  */
 const FALLBACK = "#ffffff";
+/**
+ * Covers are data URLs, so an unbounded map would keep every track's base64
+ * string alive for the whole session. A small LRU is enough for the few covers
+ * on screen and lets the rest be collected.
+ */
+const CACHE_LIMIT = 24;
 const cache = new Map<string, string>();
 
 export async function accentFrom(src: string | null): Promise<string> {
   if (!src) return FALLBACK;
   const hit = cache.get(src);
-  if (hit) return hit;
+  if (hit) {
+    cache.delete(src);
+    cache.set(src, hit);
+    return hit;
+  }
 
   const img = new Image();
   img.src = src;
@@ -40,6 +50,10 @@ export async function accentFrom(src: string | null): Promise<string> {
   const [h, s, l] = rgbToHsl(r / total, g / total, b / total);
   // Almost gray covers → neutral white instead of a muddy color.
   const color = s < 0.12 ? FALLBACK : hsl(h, Math.min(1, s * 1.15 + 0.1), Math.min(0.72, Math.max(0.6, l)));
+  if (cache.size >= CACHE_LIMIT) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) cache.delete(oldest);
+  }
   cache.set(src, color);
   return color;
 }

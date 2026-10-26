@@ -13,6 +13,7 @@ import { useDragToMove } from "./drag";
 import { LiveSlot, useLiveActivity } from "./live";
 import { GamingSatellite } from "./GamingSatellite";
 import { NotificationLayer } from "../notifications/NotificationLayer";
+import { notifications } from "../notifications/store";
 import { DOCK_HEIGHT, HEADER_HEIGHT, geometry, openGeometry, type NotchGeometry } from "./geometry";
 import { HeaderButton, headerSlot } from "./header";
 import { ClockMeta, CompactClock } from "./ClockFace";
@@ -701,13 +702,18 @@ function useNativeBridge(
 
     // The shape's size is animated by a spring → ResizeObserver fires every frame.
     // Notifications are separate fixed cards; their union keeps them clickable.
+    let frame = 0;
+    let cardFrame = 0;
+    let cardTimer = 0;
+    let cardTimerLate = 0;
+    const cards = new Set<HTMLElement>();
     const report = () => {
       const r = el.getBoundingClientRect();
       let left = r.left;
       let top = r.top;
       let right = r.right;
       let bottom = r.bottom;
-      document.querySelectorAll<HTMLElement>("[data-notification-hit]").forEach((card) => {
+      cards.forEach((card) => {
         const c = card.getBoundingClientRect();
         if (c.width <= 0 || c.height <= 0) return;
         left = Math.min(left, c.left);
@@ -724,21 +730,42 @@ function useNativeBridge(
         vh: document.documentElement.clientHeight || window.innerHeight,
       });
     };
-    const ro = new ResizeObserver(report);
-    ro.observe(el);
-    const observeCards = () => {
-      document.querySelectorAll<HTMLElement>("[data-notification-hit]").forEach((card) => ro.observe(card));
+    // Several observers can fire in one frame; send one hit rect per frame.
+    const schedule = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        report();
+      });
     };
-    observeCards();
-    const mo = new MutationObserver(() => {
-      report();
-      observeCards();
+    const ro = new ResizeObserver(schedule);
+    ro.observe(el);
+    const refreshCards = () => {
+      const next = new Set(document.querySelectorAll<HTMLElement>("[data-notification-hit]"));
+      for (const card of cards) if (!next.has(card)) ro.unobserve(card);
+      for (const card of next) if (!cards.has(card)) ro.observe(card);
+      cards.clear();
+      next.forEach((card) => cards.add(card));
+      schedule();
+    };
+    // The store changes before React commits. Check immediately, after the
+    // commit frame, and once the exit spring has removed a dismissed card.
+    // This replaces the old body-wide MutationObserver, which ran on every
+    // unrelated DOM update (lyrics, clock, visualizations).
+    const unsubscribe = notifications.subscribe(() => {
+      refreshCards();
+      window.cancelAnimationFrame(cardFrame);
+      cardFrame = window.requestAnimationFrame(refreshCards);
+      window.clearTimeout(cardTimer);
+      window.clearTimeout(cardTimerLate);
+      cardTimer = window.setTimeout(refreshCards, 40);
+      cardTimerLate = window.setTimeout(refreshCards, 450);
     });
-    mo.observe(document.body, { childList: true, subtree: true });
+    refreshCards();
+    report();
     // A display/DPI change can alter the CSS viewport without resizing the hit
     // zone, so report that too.
-    window.addEventListener("resize", report);
-    report();
+    window.addEventListener("resize", schedule);
 
     const offHover = onNativeHover((inside) => (inside ? onEnter() : onLeave()));
     // Text field focused → hold (clickable, no collapse) until focus leaves.
@@ -753,9 +780,13 @@ function useNativeBridge(
     el.addEventListener("focusout", onFocusOut);
 
     return () => {
+      window.cancelAnimationFrame(frame);
+      window.cancelAnimationFrame(cardFrame);
+      window.clearTimeout(cardTimer);
+      window.clearTimeout(cardTimerLate);
+      unsubscribe();
       ro.disconnect();
-      mo.disconnect();
-      window.removeEventListener("resize", report);
+      window.removeEventListener("resize", schedule);
       offHover();
       el.removeEventListener("focusin", onFocusIn);
       el.removeEventListener("focusout", onFocusOut);
