@@ -1,7 +1,7 @@
-﻿//! Now Playing via GlobalSystemMediaTransportControls (GSMTC).
+//! Now Playing via GlobalSystemMediaTransportControls (GSMTC).
 //!
 //! Covers everything Windows shows in its volume flyout: Spotify, browsers
-//! (YouTube, SoundCloud â€¦), Apple Music, VLC and so on. A thread polls the sessions
+//! (YouTube, SoundCloud …), Apple Music, VLC and so on. A thread polls the sessions
 //! and emits `media://update` when something changes.
 //! Polling instead of WinRT events: more robust when sessions switch, negligible cost.
 //!

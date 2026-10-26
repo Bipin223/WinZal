@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState, type ClipboardEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ClipboardEvent, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowUp, Chats, Copy, FileText, ImageSquare, NotePencil, Plus, Stop, Translate, TextAlignLeft, Trash, X, type Icon } from "@phosphor-icons/react";
 import { content, fade } from "../../design/motion";
@@ -138,7 +138,7 @@ const quick: { icon: Icon; label: string; prompt: (text: string) => string }[] =
 ];
 
 /*
- *   Ask                                    grok-4.7  [Ã—] [ðŸ“Œ]
+ *   Ask                                    grok-4.7  [×] [ðŸ“Œ]
  *   ┌───────────────────────────────────────────────â”
  *   │                         What time is it in NY? │
  *   │ The answer …â–                                 │

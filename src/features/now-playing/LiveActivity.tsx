@@ -49,7 +49,7 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
       animate={{ opacity: 1, filter: "blur(0px)", transition: content.enter }}
       exit={{ opacity: 0, filter: "blur(4px)", transition: content.exit }}
     >
-      {appearance.lyricsInPill && current && appearance.lyricsVisualizer && (
+      {appearance.lyricsVisualizer && (
         <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
           <LyricGlow style={appearance.lyricsGlowStyle} playing={np.isPlaying} />
         </div>

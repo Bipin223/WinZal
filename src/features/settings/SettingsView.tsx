@@ -225,17 +225,17 @@ function Updates() {
   const busy = u.phase === "checking" || u.phase === "downloading";
   const status = {
     idle: undefined,
-    checking: t("Suche â€¦"),
+    checking: t("Suche …"),
     current: t("Du hast die neueste Version"),
     available: t("Neue Version gefunden"),
-    downloading: t("Wird geladen â€¦ {n} %", { n: Math.round(u.progress * 100) }),
-    error: t("PrÃ¼fung fehlgeschlagen â€“ spÃ¤ter erneut versuchen"),
+    downloading: t("Wird geladen … {n} %", { n: Math.round(u.progress * 100) }),
+    error: t("Prüfung fehlgeschlagen – später erneut versuchen"),
   }[u.phase];
   const upcoming = u.notes && u.version && u.current ? between(u.notes, u.current, u.version) : [];
 
   return (
     <Group title={t("Updates")} id="settings-updates">
-      <Row label={t("Version {v}", { v: u.current ?? "â€“" })} status={status}>
+      <Row label={t("Version {v}", { v: u.current ?? "–" })} status={status}>
         <Button disabled={busy} onClick={() => void checkForUpdate()}>
           {t("Jetzt suchen")}
         </Button>
@@ -243,7 +243,7 @@ function Updates() {
       <AnimatePresence initial={false}>
         {(u.phase === "available" || u.phase === "downloading") && u.version && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={fade} className="overflow-hidden">
-            <Row label={t("Version {v} verfÃ¼gbar", { v: u.version })}>
+            <Row label={t("Version {v} verfügbar", { v: u.version })}>
               {u.phase === "downloading" ? (
                 <div className="h-1.5 w-28 overflow-hidden rounded-full bg-fill-2">
                   <div className="h-full origin-left rounded-full bg-label transition-transform duration-150 ease-linear" style={{ transform: `scaleX(${u.progress})` }} />
@@ -393,14 +393,14 @@ function Ask() {
           <TextField
             value={s.ask.configs.custom.baseUrl}
             onChange={(baseUrl) => updateAsk("custom", { baseUrl: baseUrl.trim() })}
-            placeholder="https://â€¦/v1"
+            placeholder="https://…/v1"
             width="w-52"
           />
         </Row>
       )}
       <SecretRow
         name={`ai.${provider}` as SecretName}
-        label={t("API-SchlÃ¼ssel")}
+        label={t("API-Schlüssel")}
         onSaved={() => void load()}
       />
       <Row label={t("Modell")} error={error ?? undefined}>
@@ -473,7 +473,7 @@ function General() {
           ]}
         />
       </Row>
-      <Row label={t("Ã–ffnen")}>
+      <Row label={t("Öffnen")}>
         <Segmented
           id="open-mode"
           size="sm"
@@ -488,7 +488,7 @@ function General() {
       <AnimatePresence initial={false}>
         {s.openMode === "hover" && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={fade} className="overflow-hidden">
-            <Row label={t("Hover-VerzÃ¶gerung")}>
+            <Row label={t("Hover-Verzögerung")}>
               <Segmented
                 id="hover-delay"
                 size="sm"
@@ -516,7 +516,7 @@ function General() {
           />
         )}
       </Row>
-      <Row label={t("TastenkÃ¼rzel")}>
+      <Row label={t("Tastenkürzel")}>
         <span className="flex items-center gap-1 text-caption text-label-2">
           <Keyboard size={13} weight="bold" className="text-label-3" />
           {["Strg", "Alt", "Leertaste"].map((k) => (
@@ -554,7 +554,7 @@ function Display() {
       window.clearTimeout(stop);
     };
   }, []);
-  const label = (m: MonitorInfo, i: number) => `${m.primary ? t("Hauptbildschirm") : t("Bildschirm {n}", { n: i + 1 })} Â· ${m.width}Ã—${m.height}`;
+  const label = (m: MonitorInfo, i: number) => `${m.primary ? t("Hauptbildschirm") : t("Bildschirm {n}", { n: i + 1 })} · ${m.width}×${m.height}`;
 
   return (
     <Group id="settings-display">
@@ -608,8 +608,8 @@ function Display() {
           ]}
         />
       </Row>
-      <Row label={t("Nicht stÃ¶ren")}>
-        <Switch label={t("Nicht stÃ¶ren")} checked={focus} onChange={setFocusMode} />
+      <Row label={t("Nicht stören")}>
+        <Switch label={t("Nicht stören")} checked={focus} onChange={setFocusMode} />
       </Row>
       <Row label={t("Aufnahme-Punkte")}>
         <Switch label={t("Aufnahme-Punkte")} checked={s.privacyDots} onChange={(privacyDots) => updateSettings({ privacyDots })} />
@@ -654,7 +654,7 @@ function Typography() {
       <div className="mx-3 mt-2 rounded-[10px] bg-fill-2 px-3 py-3">
         <div className={info.className}>{t(info.sample)}</div>
         <div className="mt-1 text-[10px] text-label-4">
-          {eff.size % 1 === 0 ? eff.size : eff.size.toFixed(1)} px Â· {eff.weight}
+          {eff.size % 1 === 0 ? eff.size : eff.size.toFixed(1)} px · {eff.weight}
         </div>
       </div>
       <Row label={t("Size")}>
@@ -939,7 +939,7 @@ function GamingApps() {
       <Row label={t("Eigene .exe")}>
         <div className="flex items-center gap-1.5">
           <TextField value={manual} onChange={setManual} onSubmit={addManual} placeholder="game.exe" width="w-32" />
-          <Button onClick={addManual}>{t("HinzufÃ¼gen")}</Button>
+          <Button onClick={addManual}>{t("Hinzufügen")}</Button>
         </div>
       </Row>
     </Group>
@@ -961,11 +961,11 @@ function Presentation() {
   const presenting = usePresenting();
   const recording = privacy.use().screen;
   return (
-    <Group title={t("PrÃ¤sentationsmodus")} id="settings-presentation">
+    <Group title={t("Präsentationsmodus")} id="settings-presentation">
       <Row
-        label={t("PrÃ¤sentationsmodus")}
+        label={t("Präsentationsmodus")}
       >
-        <Switch label={t("PrÃ¤sentationsmodus")} checked={presenting} onChange={togglePresentation} />
+        <Switch label={t("Präsentationsmodus")} checked={presenting} onChange={togglePresentation} />
       </Row>
       <Row label={t("Bei Bildschirmaufnahme")}>
         <Switch
@@ -975,18 +975,18 @@ function Presentation() {
         />
       </Row>
       {auto && recording && !presenting && (
-        <Row label={t("FÃ¼r diese Aufnahme aus")} />
+        <Row label={t("Für diese Aufnahme aus")} />
       )}
     </Group>
   );
 }
 
 const discordStatus: Record<string, string> = {
-  off: "Aus â€“ Tool â€žDiscordâ€œ einschalten",
+  off: "Aus – Tool „Discord“ einschalten",
   "no-config": "Client-ID und Secret fehlen",
-  "no-client": "Discord lÃ¤uft nicht",
-  connecting: "Verbinde â€¦",
-  authorizing: "In Discord bestÃ¤tigen",
+  "no-client": "Discord läuft nicht",
+  connecting: "Verbinde …",
+  authorizing: "In Discord bestätigen",
   ready: "Verbunden",
   error: "Fehler",
 };
@@ -1011,7 +1011,7 @@ function Discord() {
         </Row>
         {s.discord.presence && (
           <>
-            <Row label={t("Wird angezeigt nach â€žListening toâ€œ")}>
+            <Row label={t("Wird angezeigt nach „Listening to“")}>
               <Segmented<"title" | "artist" | "app">
                 id="discord-status"
                 size="sm"
@@ -1019,7 +1019,7 @@ function Discord() {
                 onChange={(statusLine) => updateSettings((cur) => ({ discord: { ...cur.discord, statusLine } }))}
                 options={[
                   { value: "title", label: t("Titel") },
-                  { value: "artist", label: t("KÃ¼nstler") },
+                  { value: "artist", label: t("Künstler") },
                   { value: "app", label: t("App-Name") },
                 ]}
               />
@@ -1052,7 +1052,7 @@ function Discord() {
 }
 
 const durations: { value: string; label: string }[] = [
-  { value: "0", label: "1Ã—" },
+  { value: "0", label: "1×" },
   { value: "5", label: "5 s" },
   { value: "15", label: "15 s" },
   { value: "30", label: "30 s" },
@@ -1079,8 +1079,8 @@ function Alarm() {
       <Row label={t("Alarm-Ton")}>
         <div className="flex items-center gap-1.5">
           <button
-            aria-label={previewing ? t("Stopp") : t("ProbehÃ¶ren")}
-            title={previewing ? t("Stopp") : t("ProbehÃ¶ren")}
+            aria-label={previewing ? t("Stopp") : t("Probehören")}
+            title={previewing ? t("Stopp") : t("Probehören")}
             onClick={() => {
               if (!previewing) return preview();
               stopAlarm();
@@ -1101,9 +1101,9 @@ function Alarm() {
           />
         </div>
       </Row>
-      <Row label={t("LautstÃ¤rke")}>
+      <Row label={t("Lautstärke")}>
         <div className="flex w-52 items-center gap-2">
-          <Slider label={t("LautstÃ¤rke")} value={Math.round(a.volume * 100)} min={5} max={100} step={5} onChange={(v) => set({ volume: v / 100 })} />
+          <Slider label={t("Lautstärke")} value={Math.round(a.volume * 100)} min={5} max={100} step={5} onChange={(v) => set({ volume: v / 100 })} />
           <span className="tabular w-8 text-right text-caption text-label-2">{Math.round(a.volume * 100)}</span>
         </div>
       </Row>
@@ -1164,7 +1164,7 @@ function UsageSettings() {
             <TextField value={cfg.name} onChange={(name) => setCfg({ name })} placeholder="My AI" width="w-52" />
           </Row>
           <Row label={t("Endpoint")}>
-            <TextField value={cfg.url} onChange={(url) => setCfg({ url })} placeholder="https://â€¦" width="w-52" />
+            <TextField value={cfg.url} onChange={(url) => setCfg({ url })} placeholder="https://…" width="w-52" />
           </Row>
           <Row label={t("Auth header")}>
             <TextField value={cfg.header} onChange={(header) => setCfg({ header })} placeholder="Authorization" width="w-40" />
@@ -1194,7 +1194,7 @@ function UsageSettings() {
             <div className="flex items-center gap-2">
               {test && <span className={`text-caption ${test.ok ? "text-green" : "text-red"}`}>{test.text}</span>}
               <Button onClick={() => void runTest()} disabled={testing}>
-                {testing ? t("Testingâ€¦") : t("Test")}
+                {testing ? t("Testing…") : t("Test")}
               </Button>
             </div>
           </Row>
@@ -1263,7 +1263,7 @@ function Weather() {
         />
       </Row>
       <Row label={t("Ort")}>
-        <Button onClick={() => setSearching((v) => !v)}>{w?.name ?? t("Wird erkannt â€¦")}</Button>
+        <Button onClick={() => setSearching((v) => !v)}>{w?.name ?? t("Wird erkannt …")}</Button>
       </Row>
       <AnimatePresence initial={false}>
         {searching && (
@@ -1378,12 +1378,12 @@ function SecretRow({ name, label, onSaved }: { name: SecretName; label: string; 
             setError(null);
           }}
           onSubmit={() => void save()}
-          placeholder={stored ? t("Gespeichert") : t("EinfÃ¼gen")}
+          placeholder={stored ? t("Gespeichert") : t("Einfügen")}
           width="w-40"
         />
         {(value || stored) && (
           <Button onClick={() => void save()} disabled={!value && !stored}>
-            {value ? t("Sichern") : t("LÃ¶schen")}
+            {value ? t("Sichern") : t("Löschen")}
           </Button>
         )}
       </div>

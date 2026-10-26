@@ -1,4 +1,4 @@
-﻿//! Ask: AI chat with streaming.
+//! Ask: AI chat with streaming.
 //!
 //! Providers:
 //! - `openrouter`, `openai`, `custom`: OpenAI-compatible `/chat/completions` (SSE).
@@ -20,7 +20,7 @@ use tauri::{AppHandle, Emitter, State};
 use crate::secrets;
 
 const SYSTEM_PROMPT: &str = "Du bist Ask, ein schneller Assistent in einer kleinen Notch am oberen Bildschirmrand. \
-Antworte knapp und direkt in der Sprache der Frage. Kein Markdown-Overhead: kurze AbsÃ¤tze, Listen nur wenn nÃ¶tig.";
+Antworte knapp und direkt in der Sprache der Frage. Kein Markdown-Overhead: kurze Absätze, Listen nur wenn nötig.";
 
 /// Claude models where the server falls back to a suitable model on refusal
 /// (`fallbacks: "default"`).
@@ -284,9 +284,9 @@ fn http_error(status: u16, body: &str) -> String {
         .and_then(|v| v["error"]["message"].as_str().or(v["message"].as_str()).map(str::to_string))
         .unwrap_or_else(|| body.chars().take(140).collect());
     match status {
-        401 | 403 => format!("SchlÃ¼ssel abgelehnt ({status}) â€“ {}", short(&detail)),
-        404 => format!("Nicht gefunden (404) â€“ Base-URL oder Modell prÃ¼fen. {}", short(&detail)),
-        429 => "Limit erreicht (429) â€“ kurz warten".into(),
+        401 | 403 => format!("Schlüssel abgelehnt ({status}) – {}", short(&detail)),
+        404 => format!("Nicht gefunden (404) – Base-URL oder Modell prüfen. {}", short(&detail)),
+        429 => "Limit erreicht (429) – kurz warten".into(),
         _ => format!("Fehler {status}: {}", short(&detail)),
     }
 }
@@ -309,5 +309,5 @@ fn chat_model(name: &str) -> bool {
 
 fn short(s: &str) -> String {
     let s = s.trim();
-    if s.chars().count() > 160 { format!("{}â€¦", s.chars().take(160).collect::<String>()) } else { s.to_string() }
+    if s.chars().count() > 160 { format!("{}…", s.chars().take(160).collect::<String>()) } else { s.to_string() }
 }

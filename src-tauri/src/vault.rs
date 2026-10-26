@@ -368,7 +368,7 @@ pub fn vault_unlock(pin: String, app: AppHandle, state: State<'_, VaultState>) -
     }
     data.fails += 1;
     let result = if data.fails >= FREE_ATTEMPTS {
-        // 30 s, 60 s, 120 s â€¦ up to 15 min.
+        // 30 s, 60 s, 120 s … up to 15 min.
         let secs = (FIRST_LOCK_SECS << (data.fails - FREE_ATTEMPTS).min(10)).min(MAX_LOCK_SECS);
         data.locked_until = now + secs;
         Err(format!("lockout:{secs}"))
@@ -831,7 +831,7 @@ fn parse_input(text: &str) -> Result<(String, Otp, String), String> {
     Ok((normalize_secret(text).ok_or("secret")?, Otp::default(), String::new()))
 }
 
-/// otpauth://totp/Issuer:account?secret=â€¦&issuer=â€¦&algorithm=SHA1&digits=6&period=30
+/// otpauth://totp/Issuer:account?secret=…&issuer=…&algorithm=SHA1&digits=6&period=30
 fn parse_otpauth(url: &str) -> Option<(String, Otp, String, String)> {
     let rest = url.trim().strip_prefix("otpauth://")?;
     let (kind, rest) = rest.split_once('/')?;
