@@ -4,6 +4,7 @@ import { GpuIcon, RamIcon } from "../../ui/icons";
 import { content } from "../../design/motion";
 import { locale, t } from "../../i18n";
 import { HISTORY, system, useSystemShown } from "./store";
+import { useFpsHelper } from "./gaming";
 
 /*
  *   ┌──────────────────────────────────────────────────────────┐
@@ -18,6 +19,7 @@ import { HISTORY, system, useSystemShown } from "./store";
  */
 export function SystemView() {
   useSystemShown();
+  useFpsHelper(true);
   const { stats: s, history: h, tick } = system.use();
   if (!s) return null;
   const gb = (b: number) => (b / 1024 ** 3).toLocaleString(locale(), { maximumFractionDigits: 1 });

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { createStore } from "../../lib/store";
-import { display, fetchFps, type ForegroundInfo } from "../../platform/services";
+import { display, fetchFps, fpsHelperReady, releaseFpsHelper, type ForegroundInfo } from "../../platform/services";
 
 /*
  * Gaming mode is decided in Rust: it knows the foreground app (and whether the
@@ -26,6 +26,28 @@ export function useGamingLive(): boolean {
 }
 
 export const fps = createStore<{ value: number | null; error: string | null }>({ value: null, error: null });
+
+/* The elevated ETW helper is shared by Gaming and Hardware. Keep it alive
+   while either is visible, then let it exit instead of idling at ~21 MB. */
+let helperUsers = 0;
+let helperRelease: number | undefined;
+
+export function useFpsHelper(active: boolean) {
+  useEffect(() => {
+    if (!active) return;
+    helperUsers += 1;
+    window.clearTimeout(helperRelease);
+    void fpsHelperReady();
+    return () => {
+      helperUsers = Math.max(0, helperUsers - 1);
+      if (helperUsers > 0) return;
+      window.clearTimeout(helperRelease);
+      helperRelease = window.setTimeout(() => {
+        if (helperUsers === 0) void releaseFpsHelper();
+      }, 5000);
+    };
+  }, [active]);
+}
 
 /** Poll FPS once a second while the overlay is visible. */
 export function useFpsPolling() {

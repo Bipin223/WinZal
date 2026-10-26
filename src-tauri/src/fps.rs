@@ -592,6 +592,14 @@ pub async fn fps_unlock() -> &'static str {
     tauri::async_runtime::spawn_blocking(start_helper).await.unwrap_or("failed")
 }
 
+/// Ask the elevated helper to exit after the gaming overlay / Hardware view closes.
+#[tauri::command]
+pub fn fps_release() {
+    if let Some(shared) = shared() {
+        unsafe { (*shared).stop.store(1, Ordering::Relaxed) };
+    }
+}
+
 /// Runs in the elevated process (`--fps-helper <main-pid>`), before Tauri starts.
 pub fn run_helper(mut main_pid: u32) -> ! {
     let Some(shared) = (unsafe { open_mapping(true) }) else { std::process::exit(2) };

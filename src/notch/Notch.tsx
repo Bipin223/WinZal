@@ -7,7 +7,7 @@ import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onSil
 import { PrivacyDots } from "../features/privacy/PrivacyDots";
 import { FOCUS_CLICKS, focusMode, setFocusMode } from "./focus";
 import { silentMode, setSilentMode } from "./silent";
-import { useGamingLive } from "../features/system/gaming";
+import { useFpsHelper, useGamingLive } from "../features/system/gaming";
 import { gamingMeasured, gamingWidth } from "../features/system/gamingOverlay";
 import { useDragToMove } from "./drag";
 import { LiveSlot, useLiveActivity } from "./live";
@@ -52,6 +52,7 @@ export function Notch() {
   const focus = focusMode.use();
   const silent = silentMode.use();
   const gamingLive = useGamingLive();
+  useFpsHelper(gamingLive);
   const measuredGamingWidth = gamingMeasured.use();
   const [measuredClockWidth, setMeasuredClockWidth] = useState(0);
   const clockRow = useRef<HTMLDivElement>(null);

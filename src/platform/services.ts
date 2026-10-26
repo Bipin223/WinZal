@@ -367,6 +367,10 @@ export function fpsHelperReady(): Promise<boolean> {
   return isNative ? invoke<boolean>("fps_helper_ready") : Promise.resolve(false);
 }
 
+export function releaseFpsHelper(): Promise<void> {
+  return isNative ? invoke<void>("fps_release") : Promise.resolve();
+}
+
 export function fetchFps(): Promise<{ fps: number | null; error: string | null }> {
   if (isNative) return invoke("gaming_fps");
   return Promise.resolve({ fps: 138 + Math.round((Math.random() - 0.5) * 14), error: null });
