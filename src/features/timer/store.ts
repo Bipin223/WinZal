@@ -2,6 +2,7 @@ import { useLayoutEffect, useState } from "react";
 import { createStore } from "../../lib/store";
 import { playAlarm, stopAlarm } from "../../lib/sound";
 import { settings } from "../../settings/store";
+import { notifyTimerFinished } from "../../notifications/store";
 
 export type TimerMode = "focus" | "break";
 
@@ -98,6 +99,7 @@ function checkEnd() {
     playAlarm(sound, volume, ring);
     timer.set((t) => ({ ...t, remaining: 0, endsAt: null, finished: true }));
     ringing.set(true);
+    notifyTimerFinished();
     window.clearTimeout(ringTimeout);
     // Same length as in playAlarm ("until stopped" = at most 2 min).
     ringTimeout = window.setTimeout(() => ringing.set(false), (ring === -1 ? 120 : Math.max(3, ring)) * 1000);

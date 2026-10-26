@@ -48,6 +48,7 @@ import { silentMode, setSilentMode } from "../../notch/silent";
 import { checkForUpdate, installUpdate, update } from "../../lib/update";
 import { between, changelog, itemText, markSeen, useUnseen } from "../../lib/changelog";
 import { privacy, togglePresentation, usePresenting } from "../privacy/store";
+import { previewIsland, previewTimer } from "../../notifications/store";
 import { locale, t, tBackend } from "../../i18n";
 import { usageError } from "../usage/UsageView";
 
@@ -170,6 +171,7 @@ export function SettingsView() {
             {page === "general" && (
               <>
                 <General />
+                <NotificationsDemo />
                 <Weather />
                 <Updates />
               </>
@@ -1252,6 +1254,20 @@ function FpsUnlockRow() {
 }
 
 /** Weather location: automatic via IP or fixed, right here without opening the weather tool. */
+/** Live demo for the two notification surfaces. */
+function NotificationsDemo() {
+  return (
+    <Group title={t("Notifications")} id="settings-notifications">
+      <Row label={t("Preview")}>
+        <div className="flex items-center gap-1.5">
+          <Button onClick={previewIsland}>{t("Island")}</Button>
+          <Button onClick={previewTimer}>{t("Timer")}</Button>
+        </div>
+      </Row>
+    </Group>
+  );
+}
+
 function Weather() {
   const { weather: w } = settings.use();
   const [searching, setSearching] = useState(false);

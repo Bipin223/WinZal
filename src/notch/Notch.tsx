@@ -12,6 +12,7 @@ import { gamingMeasured, gamingWidth } from "../features/system/gamingOverlay";
 import { useDragToMove } from "./drag";
 import { LiveSlot, useLiveActivity } from "./live";
 import { GamingSatellite } from "./GamingSatellite";
+import { NotificationLayer } from "../notifications/NotificationLayer";
 import { DOCK_HEIGHT, HEADER_HEIGHT, geometry, openGeometry, type NotchGeometry } from "./geometry";
 import { HeaderButton, headerSlot } from "./header";
 import { ClockMeta, CompactClock } from "./ClockFace";
@@ -423,6 +424,7 @@ export function Notch() {
         <GamingSatellite show={gamingSatellite} playing={!!np?.isPlaying} floating={floating} />
         </motion.div>
       </div>
+      <NotificationLayer />
     </div>
   );
 }
@@ -698,19 +700,41 @@ function useNativeBridge(
     if (!isNative || !el) return;
 
     // The shape's size is animated by a spring → ResizeObserver fires every frame.
+    // Notifications are separate fixed cards; their union keeps them clickable.
     const report = () => {
       const r = el.getBoundingClientRect();
+      let left = r.left;
+      let top = r.top;
+      let right = r.right;
+      let bottom = r.bottom;
+      document.querySelectorAll<HTMLElement>("[data-notification-hit]").forEach((card) => {
+        const c = card.getBoundingClientRect();
+        if (c.width <= 0 || c.height <= 0) return;
+        left = Math.min(left, c.left);
+        top = Math.min(top, c.top);
+        right = Math.max(right, c.right);
+        bottom = Math.max(bottom, c.bottom);
+      });
       setHitRect({
-        x: r.x,
-        y: r.y,
-        w: r.width,
-        h: r.height,
+        x: left,
+        y: top,
+        w: right - left,
+        h: bottom - top,
         vw: document.documentElement.clientWidth || window.innerWidth,
         vh: document.documentElement.clientHeight || window.innerHeight,
       });
     };
     const ro = new ResizeObserver(report);
     ro.observe(el);
+    const observeCards = () => {
+      document.querySelectorAll<HTMLElement>("[data-notification-hit]").forEach((card) => ro.observe(card));
+    };
+    observeCards();
+    const mo = new MutationObserver(() => {
+      report();
+      observeCards();
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
     // A display/DPI change can alter the CSS viewport without resizing the hit
     // zone, so report that too.
     window.addEventListener("resize", report);
@@ -730,6 +754,7 @@ function useNativeBridge(
 
     return () => {
       ro.disconnect();
+      mo.disconnect();
       window.removeEventListener("resize", report);
       offHover();
       el.removeEventListener("focusin", onFocusIn);
