@@ -99,10 +99,7 @@ export function MusicSettings() {
                 <span className="tabular w-11 shrink-0 text-right text-caption text-label-3">{a.lyricsTextSize.toFixed(1)} px</span>
               </div>
             </Row>
-            <Row
-              label={t("Lyric timing")}
-              hint={t("Word uses exact word timings when available; Line uses one timestamp per line.")}
-            >
+            <Row label={t("Lyric timing")}>
               <Segmented
                 id="lyrics-sync-mode"
                 size="sm"
@@ -114,10 +111,7 @@ export function MusicSettings() {
                 ]}
               />
             </Row>
-            <Row
-              label={t("Global lyric offset")}
-              hint={t("Shifts every track. Use Sync in Now Playing for one track.")}
-            >
+            <Row label={t("Global lyric offset")}>
               <div className="flex w-44 items-center gap-2">
                 <Slider
                   label={t("Global lyric offset")}
@@ -288,12 +282,6 @@ export function MusicSettings() {
           </>
         )}
       </Group>
-      <div className="px-1 pt-1 text-[10px] leading-relaxed text-label-4">
-        Lyrics: LRCLIB ·{" "}
-        <a href="https://lrc.red" target="_blank" rel="noreferrer" className="underline hover:text-label">
-          lrc.red
-        </a>
-      </div>
     </>
   );
 }
@@ -313,7 +301,7 @@ function CurrentTrackOffset() {
   const value = a.lyricsTrackOffsets[key] ?? 0;
   const nudge = (delta: number) => setLyricTrackOffset(key, value + delta);
   return (
-    <Row label={t("This track's offset")} hint={t("Added to the global offset and saved for this track")}>
+    <Row label={t("This track's offset")}>
       <div className="flex items-center gap-1">
         <OffsetButton label={t("Lyrics earlier")} onClick={() => nudge(-0.1)}>
           -0.1
@@ -353,7 +341,7 @@ function SavedTrackOffsets() {
   const offsets = settings.use().appearance.lyricsTrackOffsets;
   const count = Object.keys(offsets).length;
   return (
-    <Row label={t("Saved track offsets")} hint={count ? `${count} ${t("saved")}` : t("None yet")}>
+    <Row label={t("Saved track offsets")}>
       <Button onClick={clearLyricTrackOffsets} disabled={count === 0}>
         {t("Reset all")}
       </Button>

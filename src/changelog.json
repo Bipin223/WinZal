@@ -20,10 +20,6 @@
         "en": "LRCLIB word-level timings (lyricsfile lines[].words) drive karaoke words when present; line-only LRCs use the character-weighted estimate"
       },
       {
-        "de": "lrc.red als kostenloser Wort-/Zeilen-Sync-Fallback, wenn LRCLIB keine Wortzeiten hat; Credit in Einstellungen → Musik",
-        "en": "lrc.red as the free word/line-sync fallback when LRCLIB has no word timings; credited in Settings → Music"
-      },
-      {
         "de": "Nacht-Himmel-Glow entfernt (der schwerste); Herbstblätter und Bokeh-Lichtlecks bleiben in der Pille",
         "en": "Night sky glow removed (the heaviest one); autumn leaves and bokeh light leaks stay in the pill"
       },

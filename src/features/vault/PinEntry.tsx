@@ -16,7 +16,6 @@ export type PinResult = null | string | { lockedFor: number };
 
 export function PinEntry(props: {
   title: string;
-  hint?: string;
   setup?: boolean;
   lockedFor?: number;
   onSubmit: (pin: string) => Promise<PinResult>;
@@ -80,7 +79,6 @@ export function PinEntry(props: {
       )}
       <div>
         <div className="text-body font-medium text-label">{props.title}</div>
-        {props.hint && <div className="mt-0.5 max-w-72 text-caption text-label-3">{props.hint}</div>}
       </div>
 
       <div ref={dots} className="flex gap-3.5 py-1.5" aria-hidden>

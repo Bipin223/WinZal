@@ -18,7 +18,7 @@ import { t } from "../../i18n";
  * Closed notch while music plays: cover on the left, equalizer on the right,
  * the middle stays empty like a real notch.
  */
-export function LiveActivity({ np, visualsActive = true }: { np: NowPlaying; visualsActive?: boolean }) {
+export function LiveActivity({ np }: { np: NowPlaying }) {
   const appearance = settings.use().appearance;
   const { current, next, index, start, end, words, status } = useLyrics(np, appearance.lyricsInPill);
 
@@ -50,15 +50,9 @@ export function LiveActivity({ np, visualsActive = true }: { np: NowPlaying; vis
       exit={{ opacity: 0, filter: "blur(4px)", transition: content.exit }}
     >
       {appearance.lyricsInPill && current && appearance.lyricsVisualizer && (
-        <motion.div
-          className="pointer-events-none absolute inset-0 z-0"
-          initial={false}
-          animate={{ opacity: visualsActive ? 1 : 0 }}
-          transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-          aria-hidden
-        >
-          <LyricGlow style={appearance.lyricsGlowStyle} playing={np.isPlaying && visualsActive} />
-        </motion.div>
+        <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+          <LyricGlow style={appearance.lyricsGlowStyle} playing={np.isPlaying} />
+        </div>
       )}
       <LiveEdge side="left">
         <button

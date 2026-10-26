@@ -52,7 +52,7 @@ export function Notch() {
   const focus = focusMode.use();
   const silent = silentMode.use();
   const gamingLive = useGamingLive();
-  useFpsHelper(gamingLive);
+  useFpsHelper(gamingLive || silent);
   const measuredGamingWidth = gamingMeasured.use();
   const [measuredClockWidth, setMeasuredClockWidth] = useState(0);
   const clockRow = useRef<HTMLDivElement>(null);
@@ -355,7 +355,7 @@ export function Notch() {
           floating={floating}
         >
           <LiveRightInset.Provider value={rightInset}>
-            <LiveSlot id={status === "open" ? null : pillLive} visualsActive={status !== "closed"} recording={showRecording} extra={lyricsExtra} widthExtra={lyricsPill ? 0 : appearance.islandWidth} height={lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight} systemWidth={systemWidth} />
+            <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} widthExtra={lyricsPill ? 0 : appearance.islandWidth} height={lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight} systemWidth={systemWidth} />
           </LiveRightInset.Provider>
           {clockWeather && !idleLine && status !== "open" && !pillLive && <ClosedClock rowRef={clockRow} />}
           {!idleLine && <PrivacyDots hideScreen={showRecording} />}

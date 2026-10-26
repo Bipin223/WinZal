@@ -85,18 +85,21 @@ export function Switch({
 /** Row in settings lists: label on the left, control on the right. */
 export function Row({
   label,
-  hint,
+  status,
+  error,
   children,
 }: {
   label: ReactNode;
-  hint?: ReactNode;
+  status?: ReactNode;
+  error?: ReactNode;
   children?: ReactNode;
 }) {
   return (
     <div className="flex min-h-9 items-center justify-between gap-3 px-3 py-1.5">
       <div className="min-w-0">
         <div className="truncate text-body font-medium text-label">{label}</div>
-        {hint && <div className="text-caption text-label-3">{hint}</div>}
+        {error && <div className="text-caption text-[#ff9f0a]">{error}</div>}
+        {status && <div className="text-caption text-label-3">{status}</div>}
       </div>
       {children}
     </div>

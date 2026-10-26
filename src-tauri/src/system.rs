@@ -236,9 +236,7 @@ impl Temp {
 fn spawn_temp(temp: Arc<Temp>) {
     thread::spawn(move || {
         let mut lenovo = None;
-        let mut perf: Option<temps::ThermalPerf> = None;
         let mut last_open = Instant::now() - Duration::from_secs(60);
-        let mut last_perf_open = Instant::now() - Duration::from_secs(60);
         loop {
             if temp.wanted_at.lock().unwrap().elapsed() > TEMP_IDLE {
                 thread::sleep(Duration::from_millis(500));
@@ -256,17 +254,9 @@ fn spawn_temp(temp: Arc<Temp>) {
                 }
                 let (cpu, gpu) = lenovo.as_ref().map(|l| l.temps()).unwrap_or((None, None));
                 let gpu = gpu.or_else(temps::nvidia_smi);
-                // The performance-counter thermal zone works without admin and
-                // covers machines where Lenovo's GameZone provider is missing.
-                let cpu = if cpu.is_none() {
-                    if perf.is_none() && last_perf_open.elapsed() > Duration::from_secs(30) {
-                        perf = temps::ThermalPerf::open();
-                        last_perf_open = Instant::now();
-                    }
-                    perf.as_ref().and_then(|sensor| sensor.cpu())
-                } else {
-                    cpu
-                };
+                // Do not fall back to the ACPI/thermal-zone counter here: on many
+                // laptops it is a chassis/ambient zone (a permanent ~28 °C), not
+                // the CPU. The elevated helper owns the real CPU temperature.
                 temp.cpu.store(if helper_cpu.is_some() { 0 } else { cpu.unwrap_or(0) }, Ordering::Relaxed);
                 temp.gpu.store(if helper_gpu.is_some() { 0 } else { gpu.unwrap_or(0) }, Ordering::Relaxed);
             }

@@ -548,15 +548,16 @@ fn energy_status() -> Result<Energy, String> {
     let plugged = ac_connected();
     let mode = crate::fps::lenovo_mode();
     let cooling = crate::fps::lenovo_fan_cooling();
-    let mut scheme = if crate::fps::lenovo_custom_active() || mode == Some(255) || (mode == Some(3) && cooling == Some(1)) {
+    let custom = crate::fps::lenovo_custom_active()
+        || mode == Some(255)
+        || (mode == Some(3) && cooling == Some(1));
+    let mut scheme = if custom {
         "custom"
     } else {
-        match mode {
-            Some(1) => "saver",
-            Some(2) => "balanced",
-            Some(3) | Some(0xE0) => "max",
-            _ => overlay_name(&guid),
-        }
+        // The Windows overlay is what the user actually selected. Lenovo's
+        // thermal mode can lag behind after a restart (helper not started yet);
+        // using it here made Balanced show as Max until the helper came back.
+        overlay_name(&guid)
     };
     if !plugged && scheme == "custom" {
         scheme = "balanced";
@@ -608,26 +609,51 @@ pub async fn energy_set(mode: String, app: tauri::AppHandle) -> Result<Energy, S
     Ok(result)
 }
 
-/// Re-apply a previously chosen Custom mode after a restart (task-only helper,
-/// never a surprise UAC prompt at login).
+/// Re-apply the last chosen power mode after a restart. Custom needs the
+/// task-only helper (never a surprise UAC prompt at login); the Windows overlay
+/// modes can be restored without it.
 pub fn restore_power(app: tauri::AppHandle) {
     std::thread::spawn(move || {
         let Ok(dir) = app.path().app_data_dir() else { return };
         let stored = std::fs::read_to_string(dir.join("power-mode")).unwrap_or_default();
-        if stored.trim() != "custom" {
+        let mode = stored.trim();
+        if mode.is_empty() {
             return;
         }
-        let _ = crate::fps::start_helper_task_only();
-        let deadline = Instant::now() + Duration::from_secs(15);
-        while !crate::fps::helper_ready() && Instant::now() < deadline {
-            std::thread::sleep(Duration::from_millis(300));
-        }
-        if !crate::fps::helper_ready() {
+        // The power service can still be waking up right after logon or an
+        // update relaunch; retry instead of silently leaving the old mode.
+        std::thread::sleep(Duration::from_secs(2));
+        if mode == "custom" {
+            let _ = crate::fps::start_helper_task_only();
+            let deadline = Instant::now() + Duration::from_secs(15);
+            while !crate::fps::helper_ready() && Instant::now() < deadline {
+                std::thread::sleep(Duration::from_millis(300));
+            }
+            if !crate::fps::helper_ready() {
+                // No helper: leave the machine on Balanced instead of a stale mode.
+                let _ = activate_plan(&BALANCED_PLAN);
+                let _ = set_overlay(&BALANCED);
+                return;
+            }
+            let _ = activate_plan(&BALANCED_PLAN);
+            let _ = set_overlay(&BALANCED);
+            let _ = crate::fps::lenovo_set_mode(255);
             return;
+        }
+        // Saver/Balanced/Max only need the Windows overlay, so restore them even
+        // when the elevated helper is not running. Retry because the first call
+        // right after logon can race the power service.
+        for attempt in 0..3 {
+            let desired = if mode == "high" { "max" } else { mode };
+            if let Ok(energy) = apply_energy(mode) {
+                if energy.scheme == desired {
+                    return;
+                }
+            }
+            std::thread::sleep(Duration::from_secs(2 + attempt));
         }
         let _ = activate_plan(&BALANCED_PLAN);
         let _ = set_overlay(&BALANCED);
-        let _ = crate::fps::lenovo_set_mode(255);
     });
 }
 

@@ -18,6 +18,7 @@
 //!   is already in "Performance Log Users" (e.g. after the old unlock flow).
 
 use std::collections::HashMap;
+use std::io::Write;
 use std::os::windows::ffi::OsStrExt;
 use std::os::windows::process::CommandExt;
 use std::path::Path;
@@ -42,6 +43,7 @@ use windows::Win32::System::Memory::{
 };
 use windows::Win32::System::SystemInformation::GetTickCount64;
 use windows::Win32::System::Threading::{GetCurrentProcessId, OpenProcess, WaitForSingleObject, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE};
+use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON};
 use windows::Win32::UI::Shell::{ShellExecuteExW, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW};
 use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId, SW_HIDE};
 
@@ -51,6 +53,10 @@ const HELPER_TASK: &str = "WinZalFpsHelper";
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 /// Fixed session GUID.
 const SESSION_GUID: GUID = GUID::from_u128(0x6f3e2a41_8c5d_4b7e_9a12_4c4e6f746368);
+/// The helper must not reuse the direct session's GUID: StartTrace treats a
+/// second session with the same GUID as ERROR_ALREADY_EXISTS even if the name
+/// differs, which made the helper exit immediately when direct ETW was active.
+const HELPER_SESSION_GUID: GUID = GUID::from_u128(0x6f3e2a41_8c5d_4b7e_9a12_4c4e6f746369);
 const DXGI: GUID = GUID::from_u128(0xca11c036_0102_4a2d_a6ad_f03cfed5d3c9);
 const D3D9: GUID = GUID::from_u128(0x783aca0a_790e_4d7f_8451_aa850511c6b9);
 const DXGKRNL: GUID = GUID::from_u128(0x802ec45a_1e99_4b83_9920_87c98277ba9d);
@@ -199,6 +205,8 @@ struct FpsShared {
     power_req: AtomicU32,
     /// Helper answer: seq << 8 | (1 ok, 2 failed) (0 = idle).
     power_ack: AtomicU32,
+    /// Elevated helper saw three quick clicks; the notch consumes this to wake.
+    wake: AtomicU32,
     entries: [FpsEntry; SLOTS],
 }
 
@@ -252,6 +260,21 @@ unsafe fn open_mapping(helper: bool) -> Option<*mut FpsShared> {
     // the whole process lifetime (one-time ~37 KB section).
     let _ = handle;
     Some(shared)
+}
+
+fn helper_log(message: &str) {
+    if std::env::var_os("WINZAL_HELPER_LOG").is_none() {
+        return;
+    }
+    let path = std::env::temp_dir().join("winzal-helper.log");
+    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+        let _ = writeln!(file, "{message}");
+    }
+}
+
+/// Did the elevated helper see a triple-click? Consumed once by the notch.
+pub(crate) fn take_wake() -> bool {
+    shared().is_some_and(|shared| unsafe { (*shared).wake.swap(0, Ordering::Relaxed) != 0 })
 }
 
 fn helper_alive(shared: *mut FpsShared) -> bool {
@@ -489,7 +512,7 @@ fn start_helper_elevated() -> &'static str {
         (*shared).stop.store(0, Ordering::Relaxed);
     }
     // Stop a direct session from an earlier poll; both use the same session GUID.
-    stop_session(&wide(SESSION));
+    stop_session(&wide(SESSION), SESSION_GUID);
 
     let Ok(exe) = std::env::current_exe() else { return "failed" };
     let exe: Vec<u16> = exe.as_os_str().encode_wide().chain(Some(0)).collect();
@@ -518,7 +541,7 @@ fn start_helper_elevated() -> &'static str {
         unsafe {
             if (*shared).heartbeat.load(Ordering::Relaxed) != 0 {
                 // A direct session from an earlier poll would double the trace.
-                stop_session(&wide(SESSION));
+                stop_session(&wide(SESSION), SESSION_GUID);
                 return "ok";
             }
             match (*shared).error.load(Ordering::Relaxed) {
@@ -602,8 +625,13 @@ pub fn fps_release() {
 
 /// Runs in the elevated process (`--fps-helper <main-pid>`), before Tauri starts.
 pub fn run_helper(mut main_pid: u32) -> ! {
-    let Some(shared) = (unsafe { open_mapping(true) }) else { std::process::exit(2) };
+    helper_log(&format!("helper start main_pid={main_pid}"));
+    let Some(shared) = (unsafe { open_mapping(true) }) else {
+        helper_log("open_mapping failed");
+        std::process::exit(2);
+    };
     if helper_alive(shared) {
+        helper_log("helper already alive");
         // The logon task and a manual unlock can race; one helper is enough.
         std::process::exit(0);
     }
@@ -629,6 +657,7 @@ pub fn run_helper(mut main_pid: u32) -> ! {
         (*shared).custom_active.store(0, Ordering::Relaxed);
         (*shared).power_req.store(0, Ordering::Relaxed);
         (*shared).power_ack.store(0, Ordering::Relaxed);
+        (*shared).wake.store(0, Ordering::Relaxed);
         for entry in (*shared).entries.iter() {
             entry.pid.store(0, Ordering::Relaxed);
             entry.epoch.store(0, Ordering::Relaxed);
@@ -649,17 +678,23 @@ pub fn run_helper(mut main_pid: u32) -> ! {
                 break;
             }
             if Instant::now() >= deadline {
+                helper_log("main pid timeout");
                 unsafe { (*shared).heartbeat.store(0, Ordering::Relaxed) };
                 std::process::exit(2);
             }
             thread::sleep(Duration::from_millis(250));
         }
     }
+    helper_log(&format!("main_pid={main_pid}"));
 
     let name = wide(HELPER_SESSION);
     let (trace, logger) = match start_helper_trace(&name, shared) {
-        Some(pair) => pair,
+        Some(pair) => {
+            helper_log("etw trace started");
+            pair
+        }
         None => {
+            helper_log("etw trace failed");
             unsafe { (*shared).heartbeat.store(0, Ordering::Relaxed) };
             thread::sleep(Duration::from_secs(3));
             std::process::exit(2);
@@ -681,7 +716,7 @@ pub fn run_helper(mut main_pid: u32) -> ! {
         let stop = unsafe { (*shared).stop.load(Ordering::Relaxed) != 0 };
         let gone = main_raw.is_some_and(|raw| unsafe { WaitForSingleObject(HANDLE(raw as *mut _), 0).0 == 0 });
         if stop || gone {
-            stop_session(&watch_name);
+            stop_session(&watch_name, HELPER_SESSION_GUID);
             break;
         }
         unsafe { (*shared).heartbeat.store(GetTickCount64(), Ordering::Relaxed) };
@@ -690,13 +725,19 @@ pub fn run_helper(mut main_pid: u32) -> ! {
     // Temperatures need the same elevated token for Lenovo's WMI provider.
     let temp_addr = shared as usize;
     thread::spawn(move || temp_loop(temp_addr));
+    // The main notch is not elevated, so in an elevated game it cannot see
+    // clicks at all. Watch for the triple-click here and publish a wake flag.
+    let wake_addr = shared as usize;
+    thread::spawn(move || mouse_wake_loop(wake_addr));
 
     unsafe {
+        helper_log("helper running");
         (*shared).heartbeat.store(GetTickCount64(), Ordering::Relaxed);
         let _ = ProcessTrace(&[trace], None, None);
         let _ = CloseTrace(trace);
         (*shared).heartbeat.store(0, Ordering::Relaxed);
     }
+    helper_log("helper exiting");
     std::process::exit(0);
 }
 
@@ -704,21 +745,25 @@ pub fn run_helper(mut main_pid: u32) -> ! {
 /// logger-name buffer (must stay alive while ProcessTrace runs).
 fn start_helper_trace(name: &[u16], shared: *mut FpsShared) -> Option<(PROCESSTRACE_HANDLE, Vec<u16>)> {
     let mut handle = CONTROLTRACE_HANDLE::default();
-    let mut props = Props::new();
+    let mut props = Props::new(HELPER_SESSION_GUID);
     let mut status = unsafe { StartTraceW(&mut handle, PCWSTR(name.as_ptr()), props.ptr()) };
+    helper_log(&format!("StartTrace status={}", status.0));
     if status == ERROR_ALREADY_EXISTS {
-        stop_session(name);
-        props = Props::new();
+        stop_session(name, HELPER_SESSION_GUID);
+        props = Props::new(HELPER_SESSION_GUID);
         status = unsafe { StartTraceW(&mut handle, PCWSTR(name.as_ptr()), props.ptr()) };
+        helper_log(&format!("StartTrace retry status={}", status.0));
     }
     if status != ERROR_SUCCESS {
+        helper_log(&format!("StartTrace failed status={}", status.0));
         unsafe { (*shared).error.store(if status == ERROR_ACCESS_DENIED { ERR_NO_ADMIN } else { ERR_FAILED }, Ordering::Relaxed) };
         return None;
     }
     for (provider, keyword) in [(DXGI, 0), (D3D9, 0), (DXGKRNL, KMT_KEYWORD_PRESENT)] {
         let status = unsafe { EnableTraceEx2(handle, &provider, EVENT_CONTROL_CODE_ENABLE_PROVIDER.0, TRACE_LEVEL_INFORMATION, keyword, 0, 0, None) };
+        helper_log(&format!("EnableTrace status={}", status.0));
         if WIN32_ERROR(status.0) != ERROR_SUCCESS {
-            stop_session(name);
+            stop_session(name, HELPER_SESSION_GUID);
             unsafe { (*shared).error.store(if WIN32_ERROR(status.0) == ERROR_ACCESS_DENIED { ERR_NO_ADMIN } else { ERR_FAILED }, Ordering::Relaxed) };
             return None;
         }
@@ -729,8 +774,9 @@ fn start_helper_trace(name: &[u16], shared: *mut FpsShared) -> Option<(PROCESSTR
     logfile.Anonymous1.ProcessTraceMode = PROCESS_TRACE_MODE_REAL_TIME | PROCESS_TRACE_MODE_EVENT_RECORD;
     logfile.Anonymous2.EventRecordCallback = Some(helper_on_event);
     let trace = unsafe { OpenTraceW(&mut logfile) };
+    helper_log(&format!("OpenTrace value={}", trace.Value));
     if trace.Value == u64::MAX {
-        stop_session(name);
+        stop_session(name, HELPER_SESSION_GUID);
         unsafe { (*shared).error.store(ERR_FAILED, Ordering::Relaxed) };
         return None;
     }
@@ -772,6 +818,32 @@ fn event_kind(provider: GUID, id: u16) -> Option<usize> {
         }
     } else {
         None
+    }
+}
+
+/// Elevated thread: three quick left clicks anywhere wake the ghosted notch.
+/// Non-elevated processes cannot see input aimed at an elevated game.
+fn mouse_wake_loop(shared_addr: usize) {
+    let shared = shared_addr as *mut FpsShared;
+    let mut clicks = 0u32;
+    let mut last = Instant::now();
+    let mut was_down = false;
+    loop {
+        thread::sleep(Duration::from_millis(12));
+        if unsafe { (*shared).stop.load(Ordering::Relaxed) } != 0 {
+            break;
+        }
+        let down = unsafe { GetAsyncKeyState(VK_LBUTTON.0 as i32) } as u16 & 0x8000 != 0;
+        if down && !was_down {
+            let now = Instant::now();
+            clicks = if now.duration_since(last) <= Duration::from_millis(1500) { clicks + 1 } else { 1 };
+            last = now;
+            if clicks >= 3 {
+                clicks = 0;
+                unsafe { (*shared).wake.store(1, Ordering::Relaxed) };
+            }
+        }
+        was_down = down;
     }
 }
 
@@ -871,9 +943,9 @@ fn temp_loop(shared_addr: usize) {
                 gpu = crate::temps::nvidia_smi();
             }
             // Non-Lenovo machines often expose CPU temperature through the ACPI
-            // thermal zone once the helper is elevated. Retry the connection
-            // occasionally if the provider is not ready yet.
-            if cpu.is_none() {
+            // thermal zone once the helper is elevated. Only use it when the Lenovo
+            // provider is absent; on LOQ models its zone is a ~28 °C ambient sensor.
+            if cpu.is_none() && lenovo.is_none() {
                 if acpi.is_none() && last_acpi_open.elapsed() > Duration::from_secs(30) {
                     acpi = crate::temps::Acpi::open();
                     last_acpi_open = Instant::now();
@@ -898,8 +970,8 @@ fn temp_loop(shared_addr: usize) {
 
 // ── Direct ETW (fallback when already elevated / in Performance Log Users) ──
 
-fn stop_session(name: &[u16]) {
-    let mut props = Props::new();
+fn stop_session(name: &[u16], guid: GUID) {
+    let mut props = Props::new(guid);
     unsafe {
         let _ = ControlTraceW(CONTROLTRACE_HANDLE::default(), PCWSTR(name.as_ptr()), props.ptr(), EVENT_TRACE_CONTROL_STOP);
     }
@@ -915,11 +987,11 @@ fn fail(error: &'static str) {
 fn run() {
     let name = wide(SESSION);
     let mut handle = CONTROLTRACE_HANDLE::default();
-    let mut props = Props::new();
+    let mut props = Props::new(SESSION_GUID);
     let mut status = unsafe { StartTraceW(&mut handle, PCWSTR(name.as_ptr()), props.ptr()) };
     if status == ERROR_ALREADY_EXISTS {
-        stop_session(&name);
-        props = Props::new();
+        stop_session(&name, SESSION_GUID);
+        props = Props::new(SESSION_GUID);
         status = unsafe { StartTraceW(&mut handle, PCWSTR(name.as_ptr()), props.ptr()) };
     }
     if status != ERROR_SUCCESS {
@@ -930,7 +1002,7 @@ fn run() {
     for (provider, keyword) in [(DXGI, 0), (D3D9, 0), (DXGKRNL, KMT_KEYWORD_PRESENT)] {
         let status = unsafe { EnableTraceEx2(handle, &provider, EVENT_CONTROL_CODE_ENABLE_PROVIDER.0, TRACE_LEVEL_INFORMATION, keyword, 0, 0, None) };
         if WIN32_ERROR(status.0) != ERROR_SUCCESS {
-            stop_session(&name);
+            stop_session(&name, SESSION_GUID);
             return fail(if WIN32_ERROR(status.0) == ERROR_ACCESS_DENIED { "no-admin" } else { "failed" });
         }
     }
@@ -942,7 +1014,7 @@ fn run() {
     logfile.Anonymous2.EventRecordCallback = Some(on_event);
     let trace: PROCESSTRACE_HANDLE = unsafe { OpenTraceW(&mut logfile) };
     if trace.Value == u64::MAX {
-        stop_session(&name);
+        stop_session(&name, SESSION_GUID);
         return fail("failed");
     }
 
@@ -952,7 +1024,7 @@ fn run() {
         thread::sleep(Duration::from_secs(1));
         let idle = counter().lock().unwrap().wanted_at.is_none_or(|t| t.elapsed() > IDLE);
         if idle {
-            stop_session(&watch_name);
+            stop_session(&watch_name, SESSION_GUID);
             break;
         }
     });
@@ -994,7 +1066,7 @@ struct Props {
 }
 
 impl Props {
-    fn new() -> Self {
+    fn new(guid: GUID) -> Self {
         // Room for any session name (incl. the probe); ControlTrace writes it back.
         let name_len = 1024 * 2;
         let size = std::mem::size_of::<EVENT_TRACE_PROPERTIES>() + name_len;
@@ -1004,7 +1076,7 @@ impl Props {
             (*p).Wnode.BufferSize = size as u32;
             (*p).Wnode.Flags = WNODE_FLAG_TRACED_GUID;
             (*p).Wnode.ClientContext = 1; // QPC
-            (*p).Wnode.Guid = SESSION_GUID;
+            (*p).Wnode.Guid = guid;
             (*p).LogFileMode = EVENT_TRACE_REAL_TIME_MODE;
             (*p).LoggerNameOffset = std::mem::size_of::<EVENT_TRACE_PROPERTIES>() as u32;
         }

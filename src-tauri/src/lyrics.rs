@@ -2,8 +2,8 @@
 //!
 //! One request per track; the result (including "no lyrics") is cached in memory.
 //! The frontend only asks while the lyrics option is on, so the default app stays
-//! quiet. LRCLIB returns line-level LRC timestamps, which is enough for a calm
-//! one-line karaoke display without per-frame work.
+//! quiet. LRCLIB returns line-level LRC timestamps and, when the record has
+//! `hasWordSync`, a YAML lyricsfile with word-level timings.
 
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -196,149 +196,6 @@ fn score(track: &Track, title: &str, artist: &str, actual: f64) -> f64 {
     score
 }
 
-#[derive(Deserialize)]
-struct LrcSearch {
-    #[serde(default)]
-    hits: Vec<LrcHit>,
-}
-
-#[derive(Deserialize)]
-struct LrcHit {
-    #[serde(default)]
-    isrc: String,
-    #[serde(default)]
-    title: String,
-    #[serde(default)]
-    artist: String,
-    #[serde(default)]
-    duration: f64,
-}
-
-#[derive(Default, Deserialize)]
-struct LrcFiles {
-    #[serde(default)]
-    lrc: Option<String>,
-    #[serde(default)]
-    lyricsfile: Option<String>,
-}
-
-#[derive(Deserialize)]
-struct LrcTrack {
-    #[serde(default)]
-    sync: Option<String>,
-    #[serde(default)]
-    files: LrcFiles,
-}
-
-/// Prefer an exact title/artist and a close duration.
-fn lrc_score(hit: &LrcHit, title: &str, artist: &str, actual: f64) -> f64 {
-    if hit.isrc.is_empty() || hit.title.is_empty() {
-        return f64::NEG_INFINITY;
-    }
-    if actual > 1.0 && hit.duration > 1.0 && (hit.duration - actual).abs() > 6.0 {
-        return f64::NEG_INFINITY;
-    }
-    let t = norm(title);
-    let a = norm(artist);
-    let n = norm(&hit.title);
-    let ar = norm(&hit.artist);
-    let mut score = 0.0;
-    if n == t {
-        score += 300.0;
-    } else if n.contains(&t) || t.contains(&n) {
-        score += 100.0;
-    }
-    if !a.is_empty() && ar == a {
-        score += 150.0;
-    } else if !a.is_empty() && (ar.contains(&a) || a.contains(&ar)) {
-        score += 45.0;
-    } else if !a.is_empty() {
-        // Same-title covers are common; keep them below the real artist.
-        score -= 250.0;
-    }
-    if actual > 1.0 && hit.duration > 1.0 {
-        let delta = (hit.duration - actual).abs();
-        score -= delta * 20.0;
-        if delta <= 3.0 {
-            score += 400.0;
-        }
-    }
-    score
-}
-
-/// lrc.red is the free word/line-synced fallback. It is only queried when
-/// LRCLIB has no word timings; LRCLIB's good line sync is kept if lrc.red has
-/// nothing better.
-async fn lrc_red_lookup(http: &reqwest::Client, title: &str, artist: &str, duration: f64) -> Option<Lyrics> {
-    let mut search = reqwest::Url::parse("https://lrc.red/search.json").ok()?;
-    search.query_pairs_mut().append_pair("q", title);
-    let found: LrcSearch = http.get(search).send().await.ok()?.error_for_status().ok()?.json().await.ok()?;
-    let mut candidates: Vec<LrcHit> = found
-        .hits
-        .into_iter()
-        .filter(|hit| lrc_score(hit, title, artist, duration).is_finite())
-        .collect();
-    candidates.sort_by(|a, b| lrc_score(b, title, artist, duration).total_cmp(&lrc_score(a, title, artist, duration)));
-
-    // Search results don't expose sync quality, so try the top few rankings
-    // until one has a word-level lyricsfile. Keep the best line-sync as fallback.
-    let mut line_fallback: Option<Lyrics> = None;
-    for hit in candidates.into_iter().take(4) {
-        if lrc_score(&hit, title, artist, duration) <= 0.0 {
-            continue;
-        }
-        let Some(track_url) = reqwest::Url::parse(&format!("https://lrc.red/s/{}.json", hit.isrc)).ok() else {
-            continue;
-        };
-        let track: LrcTrack = match http.get(track_url).send().await {
-            Ok(response) => match response.error_for_status() {
-                Ok(response) => match response.json().await {
-                    Ok(track) => track,
-                    Err(_) => continue,
-                },
-                Err(_) => continue,
-            },
-            Err(_) => continue,
-        };
-
-        let mut word_lines = Vec::new();
-        if track.sync.as_deref() == Some("word") {
-            if let Some(file) = track.files.lyricsfile.as_deref() {
-                if let Ok(response) = http.get(file).send().await {
-                    if response.status().is_success() {
-                        if let Ok(raw) = response.text().await {
-                            word_lines = parse_lyricsfile(&raw);
-                        }
-                    }
-                }
-            }
-            if !word_lines.is_empty() {
-                return Some(Lyrics { synced: None, plain: None, instrumental: false, word_lines });
-            }
-        }
-
-        if line_fallback.is_none() {
-            if let Some(file) = track.files.lrc.as_deref() {
-                if let Ok(response) = http.get(file).send().await {
-                    if response.status().is_success() {
-                        if let Ok(raw) = response.text().await {
-                            if !raw.trim().is_empty() {
-                                line_fallback = Some(Lyrics {
-                                    synced: Some(raw),
-                                    plain: None,
-                                    instrumental: false,
-                                    word_lines: Vec::new(),
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    line_fallback
-}
-
 fn client() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
         .timeout(Duration::from_secs(6))
@@ -414,18 +271,6 @@ pub async fn lyrics_get(title: String, artist: String, duration: f64, state: Sta
                         }
                     }
                 }
-            }
-        }
-    }
-
-    // If LRCLIB has no word timings, lrc.red may have a word-synced version.
-    // Keep LRCLIB's line sync unless lrc.red is actually better.
-    if !lyrics.instrumental && lyrics.word_lines.is_empty() {
-        if let Some(alt) = lrc_red_lookup(&http, &title, &artist, duration).await {
-            let alt_has_words = !alt.word_lines.is_empty();
-            if alt_has_words || (lyrics.synced.is_none() && alt.synced.is_some()) {
-                lyrics = alt;
-                cacheable = true;
             }
         }
     }

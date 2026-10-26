@@ -130,6 +130,12 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
             if state.refresh.swap(false, Ordering::Relaxed) {
                 last_ignore = None;
             }
+            // The elevated helper can see clicks while an elevated game owns the
+            // mouse. It publishes a one-shot wake flag; consume it for a ghosted notch.
+            if state.silent.load(Ordering::Relaxed) && crate::fps::take_wake() {
+                state.silent.store(false, Ordering::Relaxed);
+                let _ = window.emit("notch://silent-exit", ());
+            }
             let (Ok(cursor), Ok(origin), Ok(inner)) = (
                 window.cursor_position(),
                 window.inner_position(),
@@ -173,17 +179,33 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
 
             let inside = if drag_active { rect.grown() } else { rect }.contains(x, y);
             let mut silent = state.silent.load(Ordering::Relaxed);
-            // Ghost mode is click-through by definition, so use a forgiving wake
-            // zone: near the edges of a wide gaming pill still counts.
-            if silent && rect.grown().contains(x, y) && pressed {
-                let now = Instant::now();
-                clicks = if now.duration_since(last_click) <= Duration::from_millis(1500) { clicks + 1 } else { 1 };
-                last_click = now;
-                if clicks >= 3 {
-                    clicks = 0;
-                    silent = false;
-                    state.silent.store(false, Ordering::Relaxed);
-                    let _ = window.emit("notch://silent-exit", ());
+            // Ghost mode is click-through by definition. Games capture the cursor,
+            // so a triple-click anywhere on the notch's monitor must also wake it;
+            // requiring the cursor over the pill fails in fullscreen games.
+            if silent && pressed {
+                let on_notch_screen = window
+                    .current_monitor()
+                    .ok()
+                    .flatten()
+                    .map(|monitor| {
+                        let p = monitor.position();
+                        let s = monitor.size();
+                        cursor.x >= p.x as f64
+                            && cursor.x <= (p.x as i64 + s.width as i64) as f64
+                            && cursor.y >= p.y as f64
+                            && cursor.y <= (p.y as i64 + s.height as i64) as f64
+                    })
+                    .unwrap_or(true);
+                if rect.grown().contains(x, y) || on_notch_screen {
+                    let now = Instant::now();
+                    clicks = if now.duration_since(last_click) <= Duration::from_millis(1500) { clicks + 1 } else { 1 };
+                    last_click = now;
+                    if clicks >= 3 {
+                        clicks = 0;
+                        silent = false;
+                        state.silent.store(false, Ordering::Relaxed);
+                        let _ = window.emit("notch://silent-exit", ());
+                    }
                 }
             } else if !silent {
                 clicks = 0;

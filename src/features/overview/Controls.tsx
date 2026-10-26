@@ -568,9 +568,6 @@ function BluetoothTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
             )}
           </div>
           {error && <div className="px-2.5 pt-1 pb-1 text-[9px] leading-[12px] text-[#ff9f0a]">{error}</div>}
-          <div className="border-t border-separator px-2.5 py-1.5 text-[9px] leading-[12px] text-label-4">
-            {t("Pair new devices from Windows settings (right-click).")}
-          </div>
         </div>
       )}
     </div>

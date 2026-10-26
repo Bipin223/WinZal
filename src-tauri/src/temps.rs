@@ -78,9 +78,10 @@ impl Lenovo {
         Some(Self { wmi, path })
     }
 
-    /// (CPU °C, GPU °C)
+    /// (CPU °C, GPU °C). `GetIRTemp` is an ambient/infrared sensor, not the CPU;
+    /// using it as a fallback showed a permanent ~28 °C on LOQ models.
     pub fn temps(&self) -> (Option<u32>, Option<u32>) {
-        (self.call("GetCPUTemp").or_else(|| self.call("GetIRTemp")), self.call("GetGPUTemp"))
+        (self.call("GetCPUTemp"), self.call("GetGPUTemp"))
     }
 
     /// Lenovo thermal mode: 1 quiet, 2 balanced, 3 performance, 4 custom.
@@ -247,63 +248,9 @@ pub fn nvidia_smi() -> Option<u32> {
         .filter(|t| *t > 0 && *t < 150)
 }
 
-/// ACPI thermal-zone fallback through the standard Windows performance
-/// counters. Unlike `MSAcpi_ThermalZoneTemperature`, this works without admin
-/// rights; the elevated helper also uses the direct WMI provider as a backup.
-pub struct ThermalPerf {
-    wmi: WMIConnection,
-}
-
-impl ThermalPerf {
-    pub fn open() -> Option<Self> {
-        match WMIConnection::with_namespace_path("ROOT\\CIMV2") {
-            Ok(wmi) => Some(Self { wmi }),
-            Err(error) => {
-                trace(&format!("thermal perf connect failed: {error:?}"));
-                None
-            }
-        }
-    }
-
-    /// Hottest ACPI thermal zone in °C.
-    pub fn cpu(&self) -> Option<u32> {
-        let rows: Vec<HashMap<String, Variant>> = match self.wmi.raw_query(
-            "SELECT Name, Temperature, HighPrecisionTemperature FROM Win32_PerfFormattedData_Counters_ThermalZoneInformation",
-        ) {
-            Ok(rows) => rows,
-            Err(error) => {
-                trace(&format!("thermal perf query failed: {error:?}"));
-                return None;
-            }
-        };
-        let mut best = None;
-        for row in rows {
-            let high = match row.get("HighPrecisionTemperature") {
-                Some(Variant::UI4(value)) => Some(*value as f64 / 10.0 - 273.15),
-                Some(Variant::UI2(value)) => Some(*value as f64 / 10.0 - 273.15),
-                _ => None,
-            };
-            let kelvin = match row.get("Temperature") {
-                Some(Variant::UI4(value)) => Some(*value as f64 - 273.15),
-                Some(Variant::UI2(value)) => Some(*value as f64 - 273.15),
-                _ => None,
-            };
-            let celsius = high.filter(|v| (1.0..150.0).contains(v)).or(kelvin.filter(|v| (1.0..150.0).contains(v)));
-            if let Some(value) = celsius {
-                let value = value.round() as u32;
-                best = Some(best.map_or(value, |current: u32| current.max(value)));
-            }
-        }
-        if best.is_some() {
-            trace(&format!("thermal perf cpu={best:?}"));
-        }
-        best
-    }
-}
-
 /// ACPI thermal-zone fallback for machines without Lenovo's GameZone provider.
 /// The WMI provider is normally restricted to elevated processes, so the FPS
-/// helper uses this; the unprivileged app uses `ThermalPerf` instead.
+/// helper uses this.
 pub struct Acpi {
     wmi: WMIConnection,
 }

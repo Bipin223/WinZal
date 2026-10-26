@@ -131,7 +131,7 @@ export function VaultSettings() {
           <Row label={t("PIN für 2FA-Codes")}>
             <Switch label={t("PIN für 2FA-Codes")} checked={status.pinTotp} onChange={(on) => void run(() => vault.options(status.pinPasswords, on))} />
           </Row>
-          <Row label={t("PIN ändern")} hint={notice ?? undefined}>
+          <Row label={t("PIN ändern")} status={notice ?? undefined}>
             <Button onClick={() => setFlow({ step: "unlock", then: async () => setFlow({ step: "new" }) })}>{t("Ändern")}</Button>
           </Row>
         </>
