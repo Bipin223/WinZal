@@ -393,8 +393,8 @@ body {
   bottom: -5px;
   height: 24px;
   background: radial-gradient(ellipse at 35% 100%, var(--accent), transparent 65%);
-  filter: blur(3px);
   opacity: .3;
+  will-change: transform, opacity;
   animation: lyr-aurora 6s ease-in-out infinite alternate;
 }
 .lyr-glow-aurora i:nth-child(2) {
