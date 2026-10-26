@@ -182,7 +182,7 @@ export function LyricSwap(props: LyricLineProps) {
   const ambient = props.animation === "ambient";
   const apple = props.animation === "apple";
   const exit = ambient
-    ? { opacity: 0, y: -4, scale: 0.985, transition: { duration: 0.18, ease: [0.4, 0, 1, 1] as const } }
+    ? { opacity: 0, y: -6, scale: 0.98, transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] as const } }
     : apple
       ? { opacity: 0, y: -8, scale: 0.97, transition: { duration: 0.16, ease: [0.4, 0, 1, 1] as const } }
       : { opacity: 0, y: -2, transition: { duration: 0.1, ease: [0.4, 0, 1, 1] as const } };
@@ -192,12 +192,12 @@ export function LyricSwap(props: LyricLineProps) {
         <motion.div
           key={`${props.index}-${props.animation}`}
           className="absolute inset-0 z-10 flex min-w-0 flex-col items-center justify-center"
-          initial={apple ? { opacity: 0, y: 10, scale: 0.94 } : ambient ? { opacity: 0, y: 2 } : { opacity: 0.92, y: 2 }}
+          initial={apple ? { opacity: 0, y: 10, scale: 0.94 } : ambient ? { opacity: 0, y: 3 } : { opacity: 0.92, y: 2 }}
           animate={
             apple
               ? { opacity: 1, y: 0, scale: 1, transition: springs.lyrics }
               : ambient
-                ? { opacity: 1, y: 0, transition: { duration: 0.26, ease: [0.23, 1, 0.32, 1] as const } }
+                ? { opacity: 1, y: 0, transition: { duration: 0.38, ease: [0.23, 1, 0.32, 1] as const } }
                 : { opacity: 1, y: 0, transition: { duration: 0.1, ease: [0.23, 1, 0.32, 1] as const } }
           }
           exit={exit}

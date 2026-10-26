@@ -386,7 +386,7 @@ body {
 }
 .lab-ambient-line {
   transform-origin: 50% 50%;
-  animation: lyr-breathe-line 5.8s ease-in-out infinite;
+  animation: lyr-breathe-line 6.4s ease-in-out infinite;
 }
 .lab-ambient-word {
   display: inline-block;
@@ -399,9 +399,9 @@ body {
   text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 @keyframes lyr-breathe-line {
-  0%, 100% { transform: translateY(-1px) scale(1); opacity: .96; }
-  35% { transform: translateY(1px) scale(1.02); opacity: 1; }
-  65% { transform: translateY(0) scale(1.01); opacity: .98; }
+  0%, 100% { transform: translateY(-2.5px) scale(1); opacity: .95; }
+  35% { transform: translateY(2.5px) scale(1.025); opacity: 1; }
+  65% { transform: translateY(0) scale(1.012); opacity: .98; }
 }
 .lyr-glow i { position: absolute; display: block; }
 /* Ocean wave: two filled layers below the surface, a bright crest, and a
