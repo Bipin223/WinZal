@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { AnimatePresence, animate, motion, useMotionValue, type Transition } from "motion/react";
-import { GearSix, Ghost, MoonStars, PushPin } from "@phosphor-icons/react";
+import { Drop, GearSix, Ghost, MoonStars, PushPin } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
 import { useNowPlaying } from "../platform/media";
 import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onSilentExit, onTrayOpen, setHitRect, setMemoryLow, setSilent, trimMemory } from "../platform/native";
@@ -22,7 +22,7 @@ import { lyricsTextWidth } from "../features/now-playing/lyricsWidth";
 import { DARK_SURFACE, LIGHT_SURFACE, isLightColor, useThemeLight } from "../features/appearance/theme";
 import { NotchShape } from "./NotchShape";
 import { drop } from "../platform/drop";
-import { settings } from "../settings/store";
+import { settings, updateSettings } from "../settings/store";
 import { useUnseen } from "../lib/changelog";
 import { nav, navigate } from "./nav";
 import { update } from "../lib/update";
@@ -472,6 +472,11 @@ function Header({ title, onDragStart, onSilent }: { title: string; onDragStart: 
   const isPinned = pinned.use();
   const focus = focusMode.use();
   const silent = silentMode.use();
+  const liquidGlass = settings.use().appearance.material === "glass";
+  const toggleLiquidGlass = () =>
+    updateSettings((cur) => ({
+      appearance: { ...cur.appearance, material: cur.appearance.material === "glass" ? "solid" : "glass" },
+    }));
   return (
     // Empty header space = drag handle.
     <div data-drag-handle onPointerDown={onDragStart} className="flex shrink-0 items-center justify-between gap-3 pr-3 pl-5" style={{ height: HEADER_HEIGHT + 4 }}>
@@ -497,6 +502,13 @@ function Header({ title, onDragStart, onSilent }: { title: string; onDragStart: 
           onClick={onSilent}
         >
           <Ghost size={14} weight={silent ? "fill" : "bold"} />
+        </HeaderButton>
+        <HeaderButton
+          label={liquidGlass ? t("Liquid Glass off") : t("Liquid Glass")}
+          active={liquidGlass}
+          onClick={toggleLiquidGlass}
+        >
+          <Drop size={14} weight={liquidGlass ? "fill" : "bold"} />
         </HeaderButton>
         <HeaderButton
           label={focus ? t("Nicht stören ausschalten") : t("Nicht stören")}
