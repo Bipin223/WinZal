@@ -54,17 +54,17 @@ export function LyricGlow({ style, playing }: { style: LyricGlowStyle; playing: 
         <svg className="lyr-wave lyr-wave-back" viewBox="0 0 900 30" preserveAspectRatio="none">
           <path
             className="lyr-wave-back-fill"
-            d="M0 15 Q30 9 60 15 T120 15 T180 15 T240 15 T300 15 T360 15 T420 15 T480 15 T540 15 T600 15 T660 15 T720 15 T780 15 T840 15 T900 15 V30 H0 Z"
+            d="M0 15 Q25 9 50 15 T100 15 T150 15 T200 15 T250 15 T300 15 T350 15 T400 15 T450 15 T500 15 T550 15 T600 15 T650 15 T700 15 T750 15 T800 15 T850 15 T900 15 V30 H0 Z"
           />
         </svg>
         <svg className="lyr-wave lyr-wave-front" viewBox="0 0 900 30" preserveAspectRatio="none">
           <path
             className="lyr-wave-front-fill"
-            d="M0 18 Q45 10 90 18 T180 18 T270 18 T360 18 T450 18 T540 18 T630 18 T720 18 T810 18 T900 18 V30 H0 Z"
+            d="M0 18 Q37.5 10 75 18 T150 18 T225 18 T300 18 T375 18 T450 18 T525 18 T600 18 T675 18 T750 18 T825 18 T900 18 V30 H0 Z"
           />
           <path
             className="lyr-wave-crest"
-            d="M0 18 Q45 10 90 18 T180 18 T270 18 T360 18 T450 18 T540 18 T630 18 T720 18 T810 18 T900 18"
+            d="M0 18 Q37.5 10 75 18 T150 18 T225 18 T300 18 T375 18 T450 18 T525 18 T600 18 T675 18 T750 18 T825 18 T900 18"
           />
         </svg>
       </div>

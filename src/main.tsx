@@ -9,7 +9,7 @@ import { isNative } from "./platform/native";
 import { startDropListener } from "./platform/drop";
 import { clipboard } from "./platform/clipboard";
 import { settings } from "./settings/store";
-import { setMotionScale } from "./design/motion";
+import { setMotionScale, setMotionStyle } from "./design/motion";
 import { applyTypography } from "./features/appearance/typography";
 import { applyDisplay } from "./notch/drag";
 import { startFocusMode } from "./notch/focus";
@@ -107,10 +107,12 @@ function Root() {
   const s = settings.use();
   const motion = s.appearance.motion;
   setMotionScale(motion / 100);
+  setMotionStyle(s.appearance.motionStyle);
   useLayoutEffect(() => applyTypography(s.typography), [s.typography]);
   useEffect(() => {
     document.documentElement.dataset.motion = motion === 0 ? "off" : motion < 50 ? "reduced" : "full";
-  }, [motion]);
+    document.documentElement.dataset.motionStyle = s.appearance.motionStyle;
+  }, [motion, s.appearance.motionStyle]);
   return (
     <MotionConfig reducedMotion={motion === 0 ? "always" : "user"}>
       {!isNative && <DesktopMock />}

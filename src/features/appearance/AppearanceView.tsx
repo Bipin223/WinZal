@@ -46,6 +46,7 @@ const DEFAULTS: Appearance = {
   lyricsInPill: false,
   lyricsLayout: "inline",
   motion: 100,
+  motionStyle: "default",
   lyricsTextSize: 12,
   lyricsOffset: 0,
   lyricsTrackOffsets: {},

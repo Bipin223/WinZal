@@ -13,56 +13,72 @@ const slow = Number(new URLSearchParams(location.search).get("slow")) || 1;
 
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+export type MotionStyle = "default" | "ios";
+
 // 0 = off, 1 = full. Set from Settings → Performance → Motion.
 let motionScale = 1;
 export function setMotionScale(value: number) {
   motionScale = Math.max(0, Math.min(1, value));
 }
 
-function spring(visualDuration: number, bounce: number): Transition {
+/*
+ * "default" preserves WinZal's existing feel. "ios" is one baked-in Apple
+ * profile for chrome only: the same per-surface durations, tuned damping.
+ * Lyric springs never take an iOS override, so the reading experience stays
+ * identical in both modes.
+ */
+let motionStyle: MotionStyle = "default";
+export function setMotionStyle(value: MotionStyle) {
+  motionStyle = value;
+}
+
+/**
+ * Chrome springs can take an iOS profile. Lyric springs omit it, so they are
+ * fixed in both modes.
+ */
+function spring(visualDuration: number, bounce: number, ios?: { duration: number; bounce: number }): Transition {
   const factor = 0.25 + 0.75 * motionScale;
   if (reduceMotion || motionScale === 0) return { type: "spring", visualDuration: 0.001, bounce: 0 };
-  return { type: "spring", visualDuration: visualDuration * factor * slow, bounce };
+  const config = motionStyle === "ios" && ios ? ios : { duration: visualDuration, bounce };
+  return { type: "spring", visualDuration: config.duration * factor * slow, bounce: config.bounce };
 }
 
 export const springs = {
   /** Notch opens: lively, a noticeable but short overshoot. */
   get open() {
-    return spring(0.42, 0.24);
+    return spring(0.42, 0.24, { duration: 0.40, bounce: 0.12 });
   },
   /** Notch closes: faster than opening, no bounce. */
   get close() {
-    return spring(0.32, 0.04);
+    return spring(0.32, 0.04, { duration: 0.30, bounce: 0 });
   },
   /** Hover nudge: small and playful, says "I see you". */
   get peek() {
-    return spring(0.26, 0.32);
+    return spring(0.26, 0.32, { duration: 0.26, bounce: 0.30 });
   },
   /** Shape change while open (tab switch, live activity). */
   get morph() {
-    return spring(0.36, 0.14);
+    return spring(0.36, 0.14, { duration: 0.36, bounce: 0.12 });
   },
   /** Small elements inside (tab pill, toggles). */
   get snappy() {
-    return spring(0.24, 0.12);
+    return spring(0.24, 0.12, { duration: 0.24, bounce: 0.10 });
   },
-  /** Apple Music lyric line: soft scale/slide, never overshoots. */
+  /** Apple Music lyric line: soft scale/slide, never overshoots. Fixed. */
   get lyrics() {
     return spring(0.46, 0);
   },
-  /** Word-by-word lyric: a fluid rise with a gentle, lively overshoot. */
+  /** Word-by-word lyric: a fluid rise with a gentle, lively overshoot. Fixed. */
   get lyricWord() {
     return spring(0.52, 0.22);
   },
   /**
-   * Closed notch growing/shrinking for a lyric line. A tween with an ease-in-out
-   * curve (rather than a spring) starts gently, accelerates through the middle
-   * and settles without a hard stop — the AE-style fade in/out of motion.
+   * Closed notch growing/shrinking for a lyric line. A real spring, so a line
+   * arriving mid-resize retargets instead of restarting a fixed tween. Fixed,
+   * so the reading experience does not change with the chrome personality.
    */
   get lyricWidth(): Transition {
-    const factor = 0.25 + 0.75 * motionScale;
-    if (reduceMotion || motionScale === 0) return { type: "tween", duration: 0.001, ease: "linear" };
-    return { type: "tween", duration: 0.46 * factor * slow, ease: [0.42, 0, 0.58, 1] };
+    return spring(0.40, 0.12);
   },
 };
 

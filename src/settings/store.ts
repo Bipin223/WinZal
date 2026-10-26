@@ -1,5 +1,6 @@
 ﻿import { createStore } from "../lib/store";
 import type { AlarmDuration, AlarmSound } from "../lib/sound";
+import type { MotionStyle } from "../design/motion";
 import { isClockStyle, type ClockStyle } from "../notch/clockStyles";
 
 export type AskProvider = "gemini" | "groq" | "custom";
@@ -146,6 +147,8 @@ export interface Settings {
     lyricsLayout: "inline" | "lines";
     /** Global motion intensity, 0 = off, 100 = full. */
     motion: number;
+    /** Global chrome spring feel: default (current) or iOS. */
+    motionStyle: MotionStyle;
     /** Continuous lyric font size in px; the pill and visualizer grow with it. */
     lyricsTextSize: number;
     /** Global seconds added to lyric timestamps (+ = lines appear later). */
@@ -282,6 +285,7 @@ const defaults: Settings = {
     lyricsInPill: false,
     lyricsLayout: "inline",
     motion: 100,
+    motionStyle: "default",
     lyricsTextSize: 12,
     lyricsOffset: 0,
     lyricsTrackOffsets: {},
@@ -455,6 +459,10 @@ settings.set((s) => {
       motion: (() => {
         const stored = (s.appearance as { motion?: number } | undefined)?.motion;
         return typeof stored === "number" ? Math.min(100, Math.max(0, stored)) : 100;
+      })(),
+      motionStyle: (() => {
+        const stored = (s.appearance as { motionStyle?: string } | undefined)?.motionStyle;
+        return stored === "ios" ? "ios" : "default";
       })(),
       // The experimental RGB accent was removed; fall back to auto.
       accent: s.appearance?.accent === "rgb" ? defaults.appearance.accent : s.appearance?.accent ?? defaults.appearance.accent,

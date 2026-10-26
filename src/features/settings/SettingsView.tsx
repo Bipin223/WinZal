@@ -524,6 +524,18 @@ function General() {
           ))}
         </span>
       </Row>
+      <Row label={t("Motion style")}>
+        <Segmented
+          id="motion-style"
+          size="sm"
+          value={s.appearance.motionStyle}
+          onChange={(motionStyle) => updateSettings((p) => ({ appearance: { ...p.appearance, motionStyle } }))}
+          options={[
+            { value: "default", label: t("Default") },
+            { value: "ios", label: t("iOS") },
+          ]}
+        />
+      </Row>
     </Group>
   );
 }

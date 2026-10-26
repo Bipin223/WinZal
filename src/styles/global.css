@@ -41,21 +41,33 @@ body {
 
 /*
  * Press feedback for everything clickable. Reacts instantly (scale on press),
- * hover only with a real mouse.
+ * hover only with a real mouse. The global motion style tunes the press spring.
  */
+:root {
+  --press-duration: 140ms;
+  --press-ease: var(--ease-out);
+  --press-scale: 0.94;
+  --press-wide-scale: 0.985;
+}
+:root[data-motion-style="ios"] {
+  --press-duration: 150ms;
+  --press-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --press-scale: 0.95;
+  --press-wide-scale: 0.99;
+}
 .pressable {
   transition:
-    transform 140ms var(--ease-out),
+    transform var(--press-duration) var(--press-ease),
     background-color 160ms ease,
     color 160ms ease,
     opacity 160ms ease;
 }
 .pressable:active {
-  transform: scale(0.94);
+  transform: scale(var(--press-scale));
 }
 /* Wide surfaces (cards): 6 % would be a jolt at 500 px, so only press in slightly. */
 .pressable.pressable-wide:active {
-  transform: scale(0.985);
+  transform: scale(var(--press-wide-scale));
 }
 @media (hover: hover) and (pointer: fine) {
   .pressable-fill:hover {
@@ -365,6 +377,9 @@ body {
   width: 300%;
   height: calc(100% + 1px);
   pointer-events: none;
+  /* 900-unit viewBox: -33.3333% of 300% = 300 units. Back path repeats
+     every 100 units (3 periods); front every 150 units (2 periods), so the
+     loop lands exactly on the same phase — no visible seam. */
 }
 .lyr-wave-back { animation: lyr-wave-back 12s linear infinite; }
 .lyr-wave-front { animation: lyr-wave-front 8s linear infinite; }
