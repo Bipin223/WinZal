@@ -14,12 +14,28 @@ use tauri::State;
 use unicode_normalization::UnicodeNormalization;
 
 #[derive(Clone, Default, Serialize)]
+pub struct WordTime {
+    text: String,
+    at: f64,
+}
+
+#[derive(Clone, Default, Serialize)]
+pub struct WordLine {
+    text: String,
+    at: f64,
+    end: f64,
+    words: Vec<WordTime>,
+}
+
+#[derive(Clone, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Lyrics {
     synced: Option<String>,
     plain: Option<String>,
     #[serde(default)]
     instrumental: bool,
+    #[serde(default)]
+    word_lines: Vec<WordLine>,
 }
 
 #[derive(Default)]
@@ -39,6 +55,10 @@ struct Track {
     track_name: Option<String>,
     #[serde(rename = "artistName", default)]
     artist_name: Option<String>,
+    #[serde(rename = "hasWordSync", default)]
+    has_word_sync: bool,
+    #[serde(default)]
+    lyricsfile: Option<String>,
 }
 
 impl Track {
@@ -50,12 +70,84 @@ impl Track {
         if self.instrumental {
             return Lyrics { instrumental: true, ..Default::default() };
         }
+        // Word timings live in the YAML lyricsfile; only parse it when LRCLIB
+        // says the record actually has them. Everything else stays line-level.
+        let word_lines = if self.has_word_sync {
+            self.lyricsfile.as_deref().map(parse_lyricsfile).unwrap_or_default()
+        } else {
+            Vec::new()
+        };
         Lyrics {
             synced: self.synced.filter(|text| !text.trim().is_empty()),
             plain: self.plain.filter(|text| !text.trim().is_empty()),
             instrumental: false,
+            word_lines,
         }
     }
+}
+
+#[derive(Deserialize)]
+struct FileDoc {
+    #[serde(default)]
+    lines: Vec<FileLine>,
+}
+
+#[derive(Deserialize)]
+struct FileLine {
+    #[serde(default)]
+    text: String,
+    #[serde(default)]
+    start_ms: f64,
+    #[serde(default)]
+    end_ms: Option<f64>,
+    #[serde(default)]
+    words: Vec<FileWord>,
+}
+
+#[derive(Deserialize)]
+struct FileWord {
+    #[serde(default)]
+    text: String,
+    #[serde(default)]
+    start_ms: f64,
+}
+
+fn parse_lyricsfile(raw: &str) -> Vec<WordLine> {
+    let doc: FileDoc = match serde_yaml::from_str(raw) {
+        Ok(doc) => doc,
+        Err(_) => return Vec::new(),
+    };
+    let mut out: Vec<WordLine> = doc
+        .lines
+        .into_iter()
+        .filter_map(|line| {
+            let text = line.text.trim().to_string();
+            if text.is_empty() {
+                return None;
+            }
+            let at = line.start_ms / 1000.0;
+            let end = line.end_ms.map(|ms| ms / 1000.0).filter(|end| *end > at).unwrap_or(0.0);
+            let words = line
+                .words
+                .into_iter()
+                .filter_map(|word| {
+                    let text = word.text.trim().to_string();
+                    if text.is_empty() {
+                        return None;
+                    }
+                    Some(WordTime { text, at: word.start_ms / 1000.0 })
+                })
+                .collect();
+            Some(WordLine { text, at, end, words })
+        })
+        .collect();
+    out.sort_by(|a, b| a.at.total_cmp(&b.at));
+    for i in 0..out.len() {
+        if out[i].end <= out[i].at {
+            out[i].end = out.get(i + 1).map(|next| next.at).unwrap_or(out[i].at + 4.0);
+        }
+    }
+    out
 }
 
 fn norm(s: &str) -> String {
@@ -188,4 +280,38 @@ pub async fn lyrics_get(title: String, artist: String, duration: f64, state: Sta
         cache.insert(key, lyrics.clone());
     }
     Ok(lyrics)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_lyricsfile;
+
+    #[test]
+    fn parses_word_level_lyricsfile() {
+        let raw = r#"
+version: "1.0"
+lines:
+  - text: Hello there
+    start_ms: 1000
+    end_ms: 2200
+    words:
+      - text: "Hello "
+        start_ms: 1000
+      - text: there
+        start_ms: 1600
+  - text: Second line
+    start_ms: 3000
+    words:
+      - text: Second
+        start_ms: 3000
+"#;
+        let lines = parse_lyricsfile(raw);
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0].words.len(), 2);
+        assert_eq!(lines[0].words[1].text, "there");
+        assert!((lines[0].words[1].at - 1.6).abs() < 1e-9);
+        assert!((lines[0].end - 2.2).abs() < 1e-9);
+        // Missing end_ms falls forward to the next line start.
+        assert!((lines[1].end - 7.0).abs() < 1e-9);
+    }
 }

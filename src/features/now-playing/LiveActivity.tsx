@@ -4,6 +4,7 @@ import { ArrowUpRight, MusicNoteSimple } from "@phosphor-icons/react";
 import { artwork as artworkSwap, content, springs } from "../../design/motion";
 import { useSmoothArtwork } from "./artwork";
 import { media, type NowPlaying } from "../../platform/media";
+import type { LyricWordTime } from "../../platform/services";
 import { Equalizer } from "./Equalizer";
 import { LyricEqualizer, LyricGlow } from "./LyricVisualizer";
 import { useLyrics } from "./lyrics";
@@ -19,7 +20,7 @@ import { t } from "../../i18n";
  */
 export function LiveActivity({ np }: { np: NowPlaying }) {
   const appearance = settings.use().appearance;
-  const { current, next, index, start, end, status } = useLyrics(np, appearance.lyricsInPill);
+  const { current, next, index, start, end, words, status } = useLyrics(np, appearance.lyricsInPill);
 
   // Measure the line at its real font size. The notch uses this to expand only
   // as far as the lyric needs, so readable text is not hidden behind the fade.
@@ -80,6 +81,7 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
             index={index}
             start={start}
             end={end}
+            wordTimes={words}
             np={np}
           />
         ) : (
@@ -170,6 +172,7 @@ type LyricLineProps = {
   index: number;
   start: number;
   end: number;
+  wordTimes?: LyricWordTime[] | null;
   np: NowPlaying;
 };
 
@@ -226,6 +229,7 @@ function LyricLine({
   index,
   start,
   end,
+  wordTimes = null,
   np,
 }: LyricLineProps) {
   const inline = layout === "inline";
@@ -234,11 +238,14 @@ function LyricLine({
   // before the new words become readable. The first word is already visible;
   // the rest of the chosen effect still animates from the exact timestamp.
   const words = current.split(/\s+/).filter(Boolean);
-  // Character-weighted delays keep Word by Word on the estimated sung cadence.
+  const timed = wordTimes && wordTimes.length === words.length ? wordTimes : null;
+  // Real LRCLIB word timings when present; character weights are the fallback.
   const total = words.reduce((n, word) => n + word.length + 1.7, 0) || 1;
   let acc = 0;
-  const wordDelays = words.map((word) => {
-    const at = (acc / total) * Math.max(0.1, end - start) * 0.82;
+  const wordDelays = words.map((word, i) => {
+    if (timed) return Math.max(0, timed[i].at - start);
+    // Match the 92% fallback used by fill/spotlight/spark/ambient.
+    const at = (acc / total) * Math.max(0.1, end - start) * 0.92;
     acc += word.length + 1.7;
     return at;
   });
@@ -274,7 +281,7 @@ function LyricLine({
             ) : apple ? (
               current
             ) : (
-              <LyricEffect animation={animation} text={current} index={index} start={start} end={end} np={np} />
+              <LyricEffect animation={animation} text={current} index={index} start={start} end={end} wordTimes={wordTimes} np={np} />
             )}
           </LyricText>
         </div>

@@ -51,7 +51,7 @@ const LEAF_SHADES = [
 ];
 
 /** The wave plus the lab's six soft behind-glows. */
-export function LyricGlow({ style, playing, expanded = false }: { style: LyricGlowStyle; playing: boolean; expanded?: boolean }) {
+export function LyricGlow({ style, playing }: { style: LyricGlowStyle; playing: boolean }) {
   if (style === "none") return null;
   const paused = playing ? "" : "lyr-paused";
   if (style === "wave") {
@@ -92,14 +92,14 @@ export function LyricGlow({ style, playing, expanded = false }: { style: LyricGl
     );
   }
   if (style === "bokeh") {
-    const count = expanded ? 10 : 6;
+    const count = 6;
     const colors = ["var(--accent)", "#fff", "color-mix(in srgb, var(--accent) 45%, #ffc46b)"];
     return (
       <div className={`lyr-glow lyr-glow-bokeh ${paused}`} aria-hidden>
         {Array.from({ length: count }, (_, i) => {
           const left = 7 + (i * 84) / Math.max(1, count - 1) + ((i * 7) % 5);
           const top = 12 + ((i * 61) % 68);
-          const size = (i % 4 === 0 ? 42 : i % 3 === 0 ? 24 : 14) * (expanded ? 1.5 : 1);
+          const size = i % 4 === 0 ? 42 : i % 3 === 0 ? 24 : 14;
           return (
             <i
               key={i}
@@ -125,15 +125,15 @@ export function LyricGlow({ style, playing, expanded = false }: { style: LyricGl
     );
   }
   if (style === "leaves") {
-    const count = expanded ? 20 : 10;
+    const count = 10;
     return (
       <div className={`lyr-glow lyr-glow-leaves ${paused}`} aria-hidden>
         {Array.from({ length: count }, (_, i) => {
           const left = -10 + (i * 80) / Math.max(1, count - 1) + ((i * 17) % 7);
           const dur = 8 + (i % 7) * 0.9;
           const delay = -(((i * 13) % 28) / 2);
-          const size = (8.5 + (i % 3) * 2.1) * (expanded ? 1.75 : 1);
-          const dx = (expanded ? 120 : 90) + ((i * 31) % (expanded ? 210 : 90));
+          const size = 8.5 + (i % 3) * 2.1;
+          const dx = 90 + ((i * 31) % 90);
           const dir = i % 2 ? 1 : -1;
           return (
             <i
@@ -161,31 +161,16 @@ export function LyricGlow({ style, playing, expanded = false }: { style: LyricGl
     );
   }
   // night sky
-  const starCount = expanded ? 40 : 18;
+  const starCount = 18;
   return (
     <div className={`lyr-glow lyr-glow-night ${paused}`} aria-hidden>
-      {expanded && (
-        <>
-          <span className="galaxy galaxy-a" />
-          <span className="galaxy galaxy-b" />
-          <span className="shooting" />
-          <span className="ufo" aria-hidden>
-            <span className="ufo-beam" />
-            <span className="ufo-dome" />
-            <span className="ufo-body">
-              <i /><i /><i />
-            </span>
-          </span>
-        </>
-      )}
       <span className="moonHalo" />
       <span className="moon" />
       {Array.from({ length: starCount }, (_, i) => {
         const left = 3 + hash(i + 1) * 94;
         const top = 5 + hash(i + 101) * 80;
         const roll = hash(i + 211);
-        const baseSize = roll > 0.88 ? 3.2 : roll > 0.62 ? 2.3 : roll > 0.3 ? 1.7 : 1.2;
-        const size = baseSize * (expanded ? 1.5 : 1);
+        const size = roll > 0.88 ? 3.2 : roll > 0.62 ? 2.3 : roll > 0.3 ? 1.7 : 1.2;
         return (
           <i
             key={i}

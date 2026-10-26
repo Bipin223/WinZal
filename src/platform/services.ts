@@ -328,10 +328,23 @@ export const display = {
 
 // ---------- Lyrics ----------
 
+export interface LyricWordTime {
+  at: number;
+  text: string;
+}
+
+export interface LyricWordLine {
+  at: number;
+  end: number;
+  text: string;
+  words: LyricWordTime[];
+}
+
 export interface Lyrics {
   synced: string | null;
   plain: string | null;
   instrumental?: boolean;
+  wordLines?: LyricWordLine[];
 }
 
 /** LRCLIB lookup through Rust (no CORS, in-memory cache). */

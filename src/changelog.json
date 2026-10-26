@@ -16,6 +16,10 @@
         "en": "Line changes with a 50 ms lead and a short crossfade; Spotlight keeps one active word, Orbit and Ambient follow the word clock"
       },
       {
+        "de": "Wortgenaue LRCLIB-Zeitangaben (lyricsfile lines[].words) steuern die Karaoke-Wörter, wenn vorhanden; reine Zeilen-LRCs nutzen die zeichengewichtete Schätzung",
+        "en": "LRCLIB word-level timings (lyricsfile lines[].words) drive karaoke words when present; line-only LRCs use the character-weighted estimate"
+      },
+      {
         "de": "Nacht-Himmel: Halbmond und Zufallssterne in der geschlossenen Pille; Herbstblätter und Bokeh-Lichtlecks bleiben ebenfalls in der Pille",
         "en": "Night sky: half moon and random stars in the closed pill; autumn leaves and bokeh light leaks stay in the pill too"
       },

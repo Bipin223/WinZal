@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAnimationFrame } from "motion/react";
 import type { LyricAnimation } from "../../settings/store";
 import { livePosition, type NowPlaying } from "../../platform/media";
+import type { LyricWordTime } from "../../platform/services";
 
 type LabAnimation = Exclude<LyricAnimation, "word" | "apple">;
 
@@ -16,11 +17,32 @@ function wordOffsets(words: string[]): number[] {
   });
 }
 
+/**
+ * Exact LRCLIB word starts when the record has them. The old character split
+ * stays as the fallback; `exact` also tells effects to use the full line end.
+ */
+function wordFractions(words: string[], start: number, end: number, times?: LyricWordTime[] | null) {
+  if (times && times.length === words.length) {
+    const duration = Math.max(0.35, end - start);
+    const froms = times.map((word) => Math.min(0.999, Math.max(0, (word.at - start) / duration)));
+    for (let i = 1; i < froms.length; i++) froms[i] = Math.max(froms[i - 1], froms[i]);
+    return { froms, exact: true };
+  }
+  return { froms: wordOffsets(words), exact: false };
+}
+
 /** Reveal words one by one on the real line clock, not on a fixed stagger. */
-function useWordReveal(words: string[], start: number, end: number, np: NowPlaying | null, preview: boolean) {
+function useWordReveal(
+  words: string[],
+  start: number,
+  end: number,
+  np: NowPlaying | null,
+  preview: boolean,
+  wordTimes?: LyricWordTime[] | null,
+) {
   const refs = useRef<(HTMLSpanElement | null)[]>([]);
   const last = useRef(-1);
-  const offsets = wordOffsets(words);
+  const { froms, exact } = wordFractions(words, start, end, wordTimes);
   useAnimationFrame(() => {
     const duration = preview ? 2.6 : Math.max(0.35, end - start);
     const elapsed = preview
@@ -28,9 +50,9 @@ function useWordReveal(words: string[], start: number, end: number, np: NowPlayi
       : np
         ? livePosition(np) - start
         : 0;
-    const progress = Math.min(1, Math.max(0, elapsed / (duration * 0.92)));
+    const progress = Math.min(1, Math.max(0, elapsed / (duration * (exact ? 1 : 0.92))));
     let active = -1;
-    offsets.forEach((from, i) => {
+    froms.forEach((from, i) => {
       if (progress >= from) active = i;
     });
     if (active === last.current) return;
@@ -52,6 +74,7 @@ export function LyricEffect({
   text,
   start = 0,
   end = 4,
+  wordTimes = null,
   np = null,
   preview = false,
 }: {
@@ -60,20 +83,22 @@ export function LyricEffect({
   index: number;
   start?: number;
   end?: number;
+  wordTimes?: LyricWordTime[] | null;
   np?: NowPlaying | null;
   preview?: boolean;
 }) {
   if (animation === "glitch") return <GlitchText text={text} />;
-  if (animation === "spot") return <SpotlightText text={text} start={start} end={end} np={np} preview={preview} />;
-  if (animation === "spark") return <SparkText text={text} start={start} end={end} np={np} preview={preview} />;
-  if (animation === "orbit") return <OrbitText text={text} start={start} end={end} np={np} preview={preview} />;
-  if (animation === "ambient") return <AmbientText text={text} start={start} end={end} np={np} preview={preview} />;
+  if (animation === "spot") return <SpotlightText text={text} start={start} end={end} wordTimes={wordTimes} np={np} preview={preview} />;
+  if (animation === "spark") return <SparkText text={text} start={start} end={end} wordTimes={wordTimes} np={np} preview={preview} />;
+  if (animation === "orbit") return <OrbitText text={text} start={start} end={end} wordTimes={wordTimes} np={np} preview={preview} />;
+  if (animation === "ambient") return <AmbientText text={text} start={start} end={end} wordTimes={wordTimes} np={np} preview={preview} />;
   return (
     <WordProgress
       animation={animation}
       text={text}
       start={start}
       end={end}
+      wordTimes={wordTimes}
       np={np}
       preview={preview}
     />
@@ -86,6 +111,7 @@ function WordProgress({
   text,
   start,
   end,
+  wordTimes,
   np,
   preview,
 }: {
@@ -93,6 +119,7 @@ function WordProgress({
   text: string;
   start: number;
   end: number;
+  wordTimes?: LyricWordTime[] | null;
   np: NowPlaying | null;
   preview: boolean;
 }) {
@@ -100,7 +127,6 @@ function WordProgress({
   const refs = useRef<(HTMLSpanElement | null)[]>([]);
   const timing = useRef({ start, end });
   timing.current = { start, end };
-  const total = words.reduce((n, word) => n + word.length + 1.7, 0);
 
   useAnimationFrame(() => {
     const duration = preview ? 2.2 : Math.max(0.35, timing.current.end - timing.current.start);
@@ -109,13 +135,8 @@ function WordProgress({
       : np
         ? livePosition(np) - timing.current.start
         : 0;
-    const progress = Math.min(1, Math.max(0, elapsed / (duration * 0.92)));
-    let acc = 0;
-    const froms = words.map((word) => {
-      const from = acc / total;
-      acc += word.length + 1.7;
-      return from;
-    });
+    const { froms, exact } = wordFractions(words, timing.current.start, timing.current.end, wordTimes);
+    const progress = Math.min(1, Math.max(0, elapsed / (duration * (exact ? 1 : 0.92))));
     let active = -1;
     froms.forEach((from, i) => {
       if (progress >= from) active = i;
@@ -159,12 +180,14 @@ function SpotlightText({
   text,
   start,
   end,
+  wordTimes,
   np,
   preview,
 }: {
   text: string;
   start: number;
   end: number;
+  wordTimes?: LyricWordTime[] | null;
   np: NowPlaying | null;
   preview: boolean;
 }) {
@@ -173,7 +196,6 @@ function SpotlightText({
   const spot = useRef<HTMLElement>(null);
   const timing = useRef({ start, end });
   timing.current = { start, end };
-  const total = words.reduce((n, word) => n + word.length + 1.7, 0);
 
   useAnimationFrame(() => {
     const duration = preview ? 2.2 : Math.max(0.35, timing.current.end - timing.current.start);
@@ -182,13 +204,8 @@ function SpotlightText({
       : np
         ? livePosition(np) - timing.current.start
         : 0;
-    const progress = Math.min(1, Math.max(0, elapsed / (duration * 0.92)));
-    let acc = 0;
-    const froms = words.map((word) => {
-      const from = acc / total;
-      acc += word.length + 1.7;
-      return from;
-    });
+    const { froms, exact } = wordFractions(words, timing.current.start, timing.current.end, wordTimes);
+    const progress = Math.min(1, Math.max(0, elapsed / (duration * (exact ? 1 : 0.92))));
     let active = -1;
     froms.forEach((from, i) => {
       if (progress >= from) active = i;
@@ -235,12 +252,14 @@ function SparkText({
   text,
   start,
   end,
+  wordTimes,
   np,
   preview,
 }: {
   text: string;
   start: number;
   end: number;
+  wordTimes?: LyricWordTime[] | null;
   np: NowPlaying | null;
   preview: boolean;
 }) {
@@ -250,7 +269,6 @@ function SparkText({
   const lastActive = useRef(-1);
   const timing = useRef({ start, end });
   timing.current = { start, end };
-  const total = words.reduce((n, word) => n + word.length + 1.7, 0);
 
   useAnimationFrame(() => {
     const duration = preview ? 2.2 : Math.max(0.35, timing.current.end - timing.current.start);
@@ -259,13 +277,8 @@ function SparkText({
       : np
         ? livePosition(np) - timing.current.start
         : 0;
-    const progress = Math.min(1, Math.max(0, elapsed / (duration * 0.92)));
-    let acc = 0;
-    const froms = words.map((word) => {
-      const from = acc / total;
-      acc += word.length + 1.7;
-      return from;
-    });
+    const { froms, exact } = wordFractions(words, timing.current.start, timing.current.end, wordTimes);
+    const progress = Math.min(1, Math.max(0, elapsed / (duration * (exact ? 1 : 0.92))));
     let active = -1;
     froms.forEach((from, i) => {
       if (progress >= from) active = i;
@@ -319,19 +332,21 @@ function AmbientText({
   text,
   start,
   end,
+  wordTimes,
   np,
   preview,
 }: {
   text: string;
   start: number;
   end: number;
+  wordTimes?: LyricWordTime[] | null;
   np: NowPlaying | null;
   preview: boolean;
 }) {
   const words = text.split(/\s+/).filter(Boolean);
   const refs = useRef<(HTMLSpanElement | null)[]>([]);
   const last = useRef(-1);
-  const offsets = wordOffsets(words);
+  const { froms, exact } = wordFractions(words, start, end, wordTimes);
   useAnimationFrame(() => {
     const duration = preview ? 2.6 : Math.max(0.35, end - start);
     const elapsed = preview
@@ -339,9 +354,9 @@ function AmbientText({
       : np
         ? livePosition(np) - start
         : 0;
-    const progress = Math.min(1, Math.max(0, elapsed / (duration * 0.92)));
+    const progress = Math.min(1, Math.max(0, elapsed / (duration * (exact ? 1 : 0.92))));
     let active = -1;
-    offsets.forEach((from, i) => {
+    froms.forEach((from, i) => {
       if (progress >= from) active = i;
     });
     if (active === last.current) return;
@@ -367,17 +382,19 @@ function OrbitText({
   text,
   start,
   end,
+  wordTimes,
   np,
   preview,
 }: {
   text: string;
   start: number;
   end: number;
+  wordTimes?: LyricWordTime[] | null;
   np: NowPlaying | null;
   preview: boolean;
 }) {
   const words = text.split(/\s+/).filter(Boolean);
-  const refs = useWordReveal(words, start, end, np, preview);
+  const refs = useWordReveal(words, start, end, np, preview, wordTimes);
   return (
     <span className={`lab-line lab-orbit-line${np && !np.isPlaying ? " lyr-paused" : ""}`}>
       {words.map((word, i) => (

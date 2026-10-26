@@ -27,6 +27,7 @@ cpal = "0.18"
 rustfft = "6"
 reqwest = { version = "0.13", default-features = false, features = ["native-tls", "json", "charset"] }
 unicode-normalization = "0.1"
+serde_yaml = "0.9"
 sysinfo = "0.39"
 wmi = "0.18"
 winreg = "0.55"

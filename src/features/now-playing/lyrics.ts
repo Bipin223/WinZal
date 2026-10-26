@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { livePosition, type NowPlaying } from "../../platform/media";
-import { fetchLyrics } from "../../platform/services";
+import { fetchLyrics, type Lyrics, type LyricWordTime } from "../../platform/services";
 import { settings } from "../../settings/store";
 
 interface Line {
   at: number;
   text: string;
+  /** Last sung second for this line, when LRCLIB published word timings. */
+  end?: number;
+  /** Word-level timings when the record has them; otherwise estimate. */
+  words?: LyricWordTime[];
 }
 
 export interface LyricsDisplay {
@@ -16,6 +20,8 @@ export interface LyricsDisplay {
   start: number;
   /** Start time of the next line, or the end of the track. */
   end: number;
+  /** Real word timings for the current line, when LRCLIB has them. */
+  words: LyricWordTime[] | null;
   /** loading (title shown) | lyrics | instrumental | music (no lyrics). */
   status: "loading" | "lyrics" | "instrumental" | "music";
 }
@@ -73,7 +79,7 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
       void fetchLyrics(np.title, np.artist, np.duration)
         .then((lyrics) => {
           if (!alive) return;
-          const next = parseLrc(lyrics.synced);
+          const next = parseLyrics(lyrics);
           // One delayed retry: a timeout or 429 must not become "no lyrics"
           // for the rest of the session. LRCLIB answers that really have no
           // synced text are cached by Rust, so the retry is cheap.
@@ -145,17 +151,26 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
     setIndex((prev) => (prev === next ? prev : next));
   }, [enabled, playing, lines, np?.position, offset]);
 
-  if (index < 0 || !lines[index]) return { current: null, next: null, index: -1, start: 0, end: 0, status };
+  if (index < 0 || !lines[index]) return { current: null, next: null, index: -1, start: 0, end: 0, words: null, status };
+  const line = lines[index];
   // Effects run on the line clock; include the user's offset so word progress
   // stays on the audible line, not the raw LRC timestamp.
-  const start = lines[index].at + offset;
-  const end = lines[index + 1] ? lines[index + 1].at + offset : np && np.duration > start ? np.duration : start + 4;
+  const start = line.at + offset;
+  const end =
+    line.end && line.end > line.at
+      ? line.end + offset
+      : lines[index + 1]
+        ? lines[index + 1].at + offset
+        : np && np.duration > start
+          ? np.duration
+          : start + 4;
   return {
-    current: lines[index].text,
+    current: line.text,
     next: lines[index + 1]?.text ?? null,
     index,
     start,
     end,
+    words: line.words?.length ? line.words.map((word) => ({ ...word, at: word.at + offset })) : null,
     status,
   };
 }
@@ -168,6 +183,22 @@ function indexAt(lines: Line[], position: number): number {
     else break;
   }
   return next;
+}
+
+/** Prefer LRCLIB's word-level lyricsfile timings, then fall back to plain LRC. */
+function parseLyrics(lyrics: Lyrics): Line[] {
+  if (lyrics.wordLines?.length) {
+    return lyrics.wordLines
+      .map((line) => ({
+        at: line.at,
+        text: line.text.trim(),
+        end: line.end,
+        words: line.words?.length ? line.words : undefined,
+      }))
+      .filter((line) => line.text)
+      .sort((a, b) => a.at - b.at);
+  }
+  return parseLrc(lyrics.synced);
 }
 
 /** "[00:12.34] text" (and multiple timestamps per line) → sorted lines. */
