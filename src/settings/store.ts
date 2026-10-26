@@ -138,6 +138,8 @@ export interface Settings {
     clockStyle: ClockStyle;
     /** Split face: divider height as a percentage of the digit height. */
     clockSplitHeight: number;
+    /** Keep the notch fully solid while ghosted/click-through. */
+    ghostSolid: boolean;
     /** Show the current synced lyric line in the closed music pill instead of the title. */
     lyricsInPill: boolean;
     /** One line (inline) or the current + next line. */
@@ -272,6 +274,7 @@ const defaults: Settings = {
     clockEmphasis: true,
     clockStyle: "classic",
     clockSplitHeight: 62,
+    ghostSolid: false,
     lyricsInPill: false,
     lyricsLayout: "inline",
     motion: 100,

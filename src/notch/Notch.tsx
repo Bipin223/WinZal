@@ -57,7 +57,7 @@ export function Notch() {
   const clockRow = useRef<HTMLDivElement>(null);
   const { tools: toolSettings, display: displaySettings, appearance, gaming } = settings.use();
   // Silent mode is the only ghost; game transparency reuses the Glass alpha (0.62).
-  const ghostOpacity = silent && status !== "open" ? 0.28 : 1;
+  const ghostOpacity = silent && status !== "open" ? (appearance.ghostSolid ? 1 : 0.28) : 1;
   const materialAlpha = appearance.material === "glass" ? 0.62 : appearance.material === "dark" ? 0.82 : 1;
   const notchAlpha = gaming.transparent && gamingLive ? 0.62 : materialAlpha;
   // Measured is the truth once the live row exists. The estimate is only for

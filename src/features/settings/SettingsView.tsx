@@ -608,6 +608,22 @@ function Display() {
       <Row label={t("Silent mode")}>
         <Switch label={t("Silent mode")} checked={silentMode.use()} onChange={setSilentMode} />
       </Row>
+      <Row label={t("Ghost style")}>
+        <Segmented
+          id="ghost-style"
+          size="sm"
+          value={s.appearance.ghostSolid ? "solid" : "faded"}
+          onChange={(ghostStyle) =>
+            updateSettings((cur) => ({
+              appearance: { ...cur.appearance, ghostSolid: ghostStyle === "solid" },
+            }))
+          }
+          options={[
+            { value: "faded", label: t("Faded") },
+            { value: "solid", label: t("Solid") },
+          ]}
+        />
+      </Row>
       <Row label={t("Nicht stören")}>
         <Switch label={t("Nicht stören")} checked={focus} onChange={setFocusMode} />
       </Row>

@@ -42,6 +42,7 @@ const DEFAULTS: Appearance = {
   clockEmphasis: true,
   clockStyle: "classic",
   clockSplitHeight: 62,
+  ghostSolid: false,
   lyricsInPill: false,
   lyricsLayout: "inline",
   motion: 100,
