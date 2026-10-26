@@ -48,6 +48,7 @@ const DEFAULTS: Appearance = {
   motion: 100,
   lyricsTextSize: 12,
   lyricsOffset: 0,
+  lyricsTrackOffsets: {},
   lyricsPillMinWidth: 284,
   lyricsPillLength: 640,
   lyricsPillAuto: true,
@@ -237,6 +238,17 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
             )}
           </Section>
 
+          <Section label={t("Style")}>
+            <div className="grid grid-cols-2 gap-1.5">
+              <StyleCard active={a.style === "dynamic"} label={t("Dynamic Island")} onClick={() => set({ style: "dynamic" })} />
+              <StyleCard active={a.style === "windows"} label={t("Windows Island")} floating onClick={() => set({ style: "windows" })} />
+            </div>
+          </Section>
+
+          <Section label={t("Equalization Accent")}>
+            <Swatches value={a.accent} colors={ACCENTS} onChange={(accent) => set({ accent })} />
+          </Section>
+
           <Section label={t("Clock faces")}>
             <div className="mb-2 flex h-20 items-center justify-center rounded-[10px] bg-fill-2 px-2">
               <div className="h-20 w-72 overflow-hidden rounded-[14px] bg-black">
@@ -305,15 +317,6 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
           <ColorPickerPanel value={a.themeColor} onChange={(themeColor) => set({ themeColor })} />
         </Section>
       )}
-      <Section label={t("Style")}>
-        <div className="grid grid-cols-2 gap-1.5">
-          <StyleCard active={a.style === "dynamic"} label={t("Dynamic Island")} onClick={() => set({ style: "dynamic" })} />
-          <StyleCard active={a.style === "windows"} label={t("Windows Island")} floating onClick={() => set({ style: "windows" })} />
-        </div>
-      </Section>
-      <Section label={t("Equalization Accent")}>
-        <Swatches value={a.accent} colors={ACCENTS} onChange={(accent) => set({ accent })} />
-      </Section>
       <div className="grid grid-cols-2 gap-1.5">
         <div className="rounded-[12px] bg-fill-1 p-2">
           <Choice

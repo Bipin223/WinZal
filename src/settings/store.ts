@@ -148,8 +148,10 @@ export interface Settings {
     motion: number;
     /** Continuous lyric font size in px; the pill and visualizer grow with it. */
     lyricsTextSize: number;
-    /** Seconds added to lyric timestamps (+ = lines appear later). */
+    /** Global seconds added to lyric timestamps (+ = lines appear later). */
     lyricsOffset: number;
+    /** Per-track corrections in seconds, keyed by lyricTrackKey(title, artist). */
+    lyricsTrackOffsets: Record<string, number>;
     /** Minimum width of the closed lyric pill. */
     lyricsPillMinWidth: number;
     /** Maximum width when auto width is on; fixed width when it is off. */
@@ -280,6 +282,7 @@ const defaults: Settings = {
     motion: 100,
     lyricsTextSize: 12,
     lyricsOffset: 0,
+    lyricsTrackOffsets: {},
     lyricsPillMinWidth: 284,
     lyricsPillLength: 640,
     lyricsPillAuto: true,
@@ -432,7 +435,18 @@ settings.set((s) => {
       })(),
       lyricsOffset: (() => {
         const stored = (s.appearance as { lyricsOffset?: number } | undefined)?.lyricsOffset;
-        return typeof stored === "number" ? Math.min(2, Math.max(-2, stored)) : 0;
+        return typeof stored === "number" ? Math.min(5, Math.max(-5, stored)) : 0;
+      })(),
+      lyricsTrackOffsets: (() => {
+        const stored = (s.appearance as { lyricsTrackOffsets?: unknown } | undefined)?.lyricsTrackOffsets;
+        if (!stored || typeof stored !== "object") return {};
+        const out: Record<string, number> = {};
+        for (const [key, value] of Object.entries(stored as Record<string, unknown>)) {
+          if (typeof value !== "number" || !Number.isFinite(value)) continue;
+          const offset = Math.round(Math.min(5, Math.max(-5, value)) * 100) / 100;
+          if (offset !== 0) out[key] = offset;
+        }
+        return out;
       })(),
       motion: (() => {
         const stored = (s.appearance as { motion?: number } | undefined)?.motion;
@@ -548,4 +562,32 @@ export function updateAsk(provider: AskProvider, patch: Partial<AskProviderConfi
 
 export function updateSettings(patch: Partial<Settings> | ((s: Settings) => Partial<Settings>)) {
   settings.set((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));
+}
+
+const OFFSET_KEY_SEP = "\u0001";
+const MAX_TRACK_OFFSETS = 120;
+
+/** Stable per-track key for a saved lyric correction (title + artist, case-insensitive). */
+export function lyricTrackKey(title: string, artist: string): string {
+  const norm = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
+  return `${norm(title)}${OFFSET_KEY_SEP}${norm(artist)}`;
+}
+
+/** Save (or clear at 0) one track's lyric correction in seconds; capped at ±5 s. */
+export function setLyricTrackOffset(key: string, seconds: number) {
+  const value = Math.round(Math.min(5, Math.max(-5, seconds)) * 100) / 100;
+  settings.set((s) => {
+    const offsets = { ...s.appearance.lyricsTrackOffsets };
+    if (value === 0) delete offsets[key];
+    else offsets[key] = value;
+    // Keep localStorage bounded; the oldest saved track falls out first.
+    while (Object.keys(offsets).length > MAX_TRACK_OFFSETS) {
+      delete offsets[Object.keys(offsets)[0]];
+    }
+    return { ...s, appearance: { ...s.appearance, lyricsTrackOffsets: offsets } };
+  });
+}
+
+export function clearLyricTrackOffsets() {
+  settings.set((s) => ({ ...s, appearance: { ...s.appearance, lyricsTrackOffsets: {} } }));
 }

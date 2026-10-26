@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { livePosition, type NowPlaying } from "../../platform/media";
 import { fetchLyrics, type Lyrics, type LyricWordTime } from "../../platform/services";
-import { settings } from "../../settings/store";
+import { lyricTrackKey, settings } from "../../settings/store";
 
 interface Line {
   at: number;
@@ -47,10 +47,14 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
   const [lines, setLines] = useState<Line[]>([]);
   const [index, setIndex] = useState(-1);
   const [status, setStatus] = useState<LyricsDisplay["status"]>("loading");
-  const offset = settings.use().appearance.lyricsOffset;
+  const appearance = settings.use().appearance;
   const npRef = useRef(np);
   npRef.current = np;
   const track = np ? `${np.title}\u0001${np.artist}\u0001${Math.round(np.duration)}` : "";
+  const offsetKey = np ? lyricTrackKey(np.title, np.artist) : "";
+  // Global correction plus the saved correction for this exact track. A track
+  // that runs late can be fixed without shifting everything else.
+  const offset = appearance.lyricsOffset + (offsetKey ? (appearance.lyricsTrackOffsets[offsetKey] ?? 0) : 0);
   const playing = np?.isPlaying ?? false;
 
   useEffect(() => {

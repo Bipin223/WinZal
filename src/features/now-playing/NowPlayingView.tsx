@@ -1,6 +1,6 @@
-﻿import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useAnimationFrame, useMotionValue, useTransform } from "motion/react";
-import { ArrowUpRight, CaretDown, MusicNoteSimple, Pause, Play, SkipBack, SkipForward } from "@phosphor-icons/react";
+import { ArrowUpRight, CaretDown, MusicNoteSimple, Pause, Play, SkipBack, SkipForward, Waveform } from "@phosphor-icons/react";
 import { artwork as artworkSwap, content, springs } from "../../design/motion";
 import { useSmoothArtwork } from "./artwork";
 import { livePosition, media, useNowPlaying, type MediaSession, type NowPlaying } from "../../platform/media";
@@ -10,9 +10,11 @@ import { findTab } from "../../notch/tabs";
 import { MIXER_MAX_ROWS, MIXER_ROW, MixerList, MixerToggle, useMixer } from "./Mixer";
 import { Equalizer } from "./Equalizer";
 import { LyricEqualizer } from "./LyricVisualizer";
-import { settings } from "../../settings/store";
+import { settings, lyricTrackKey, setLyricTrackOffset } from "../../settings/store";
 import { SelectedDot } from "../../ui/SelectedDot";
 import { t } from "../../i18n";
+
+const SYNC_ROW = 34;
 
 /*
  * Layout like the expanded Dynamic Island:
@@ -26,6 +28,7 @@ export function NowPlayingView() {
   const appearance = settings.use().appearance;
   const mix = useMixer();
   const [mixerOpen, setMixerOpen] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
   const [sessionsOpen, setSessionsOpen] = useState(false);
   const [sessions, setSessions] = useState<MediaSession[] | null>(null);
   const sessionsBox = useRef<HTMLDivElement>(null);
@@ -66,12 +69,14 @@ export function NowPlayingView() {
   };
 
   // The mixer grows the notch by its rows (at most MIXER_MAX_ROWS, then it scrolls).
+  // The lyric-sync row needs one compact row.
   const rows = Math.min(MIXER_MAX_ROWS, (mix.system ? 1 : 0) + Math.max(1, mix.apps.length));
   useEffect(() => {
-    if (!mixerOpen || !np) return requestSize("media", null);
+    if ((!mixerOpen && !syncOpen) || !np) return requestSize("media", null);
     const base = findTab("media")!.size;
-    requestSize("media", { w: base.w, h: base.h + rows * MIXER_ROW + 14 });
-  }, [mixerOpen, rows, !!np]);
+    const extra = mixerOpen ? rows * MIXER_ROW + 14 : SYNC_ROW + 14;
+    requestSize("media", { w: base.w, h: base.h + extra });
+  }, [mixerOpen, syncOpen, rows, !!np]);
   useEffect(() => () => requestSize("media", null), []);
 
   if (!np) return <Empty />;
@@ -112,6 +117,7 @@ export function NowPlayingView() {
             onClick={() => {
               setSessionsOpen((open) => !open);
               setMixerOpen(false);
+              setSyncOpen(false);
             }}
             aria-label={t("Audio sessions")}
             className="pressable flex size-6 shrink-0 items-center justify-center rounded-[7px] text-label-3 hover:text-label"
@@ -170,21 +176,102 @@ export function NowPlayingView() {
           <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
             <div />
             <Controls playing={np.isPlaying} />
-            <div className="flex min-w-0 justify-end">
+            <div className="flex min-w-0 items-center justify-end gap-1">
+              {appearance.lyricsInPill && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSyncOpen((open) => !open);
+                    setMixerOpen(false);
+                    setSessionsOpen(false);
+                  }}
+                  aria-expanded={syncOpen}
+                  aria-label={t("Lyric sync")}
+                  title={t("Lyric sync")}
+                  className={`pressable pressable-fill flex size-7 items-center justify-center rounded-full transition-colors duration-150 ${
+                    syncOpen ? "bg-fill-2 text-label" : "text-label-3 hover:text-label-2"
+                  }`}
+                >
+                  <Waveform size={13} weight="bold" />
+                </button>
+              )}
               <MixerToggle
                 open={mixerOpen}
                 onToggle={() => {
                   setMixerOpen((open) => !open);
                   setSessionsOpen(false);
+                  setSyncOpen(false);
                 }}
               />
             </div>
           </div>
-          <AnimatePresence>{mixerOpen && <MixerList key="mixer" data={mix} />}</AnimatePresence>
+          <AnimatePresence>
+            {syncOpen && <LyricSyncRow key="sync" np={np} />}
+            {mixerOpen && <MixerList key="mixer" data={mix} />}
+          </AnimatePresence>
         </>
       )}
       </div>
     </div>
+  );
+}
+
+/** One row under the controls: nudge the current track's lyric timing. */
+function LyricSyncRow({ np }: { np: NowPlaying }) {
+  const a = settings.use().appearance;
+  const key = lyricTrackKey(np.title, np.artist);
+  const value = a.lyricsTrackOffsets[key] ?? 0;
+  const nudge = (delta: number) => setLyricTrackOffset(key, value + delta);
+  return (
+    <motion.div
+      className="mt-2 flex items-center gap-2 rounded-[10px] bg-elevated px-2"
+      style={{ height: SYNC_ROW }}
+      initial={{ opacity: 0, transform: "translateY(4px)" }}
+      animate={{ opacity: 1, transform: "translateY(0px)" }}
+      exit={{ opacity: 0, transform: "translateY(4px)" }}
+      transition={{ duration: 0.16, ease: [0.23, 1, 0.32, 1] as const }}
+    >
+      <Waveform size={14} weight="bold" className="shrink-0 text-label-3" />
+      <div className="min-w-0">
+        <div className="truncate text-[10px] font-semibold text-label">{t("Lyric sync")}</div>
+        <div className="truncate text-[9px] text-label-3">
+          {a.lyricsOffset !== 0
+            ? `${t("Global")} ${a.lyricsOffset > 0 ? "+" : ""}${a.lyricsOffset.toFixed(2)} s`
+            : t("Saved for this track")}
+        </div>
+      </div>
+      <div className="ml-auto flex shrink-0 items-center gap-1">
+        <SyncButton label={t("Lyrics earlier")} onClick={() => nudge(-0.1)}>
+          -0.1
+        </SyncButton>
+        <button
+          type="button"
+          onClick={() => setLyricTrackOffset(key, 0)}
+          title={t("Reset this track")}
+          className="tabular w-11 shrink-0 text-center text-[10px] font-medium text-label"
+        >
+          {value > 0 ? "+" : ""}
+          {value.toFixed(2)} s
+        </button>
+        <SyncButton label={t("Lyrics later")} onClick={() => nudge(0.1)}>
+          +0.1
+        </SyncButton>
+      </div>
+    </motion.div>
+  );
+}
+
+function SyncButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className="pressable pressable-fill flex h-7 shrink-0 items-center rounded-full bg-fill-2 px-2 text-[10px] font-semibold text-label"
+    >
+      {children}
+    </button>
   );
 }
 

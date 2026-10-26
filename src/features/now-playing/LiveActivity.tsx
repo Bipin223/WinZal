@@ -110,18 +110,11 @@ export function LiveActivity({ np, visualsActive = true }: { np: NowPlaying; vis
       </FadeBox>
       {appearance.lyricsVisualizer && (
         <LiveEdge side="right">
-          <motion.div
-            className="flex items-center"
-            initial={false}
-            animate={{ opacity: visualsActive ? 1 : 0 }}
-            transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-          >
-            {appearance.lyricsVisualizerStyle === "bars" ? (
-              <Equalizer playing={np.isPlaying && visualsActive} fps={48} />
-            ) : (
-              <LyricEqualizer style={appearance.lyricsVisualizerStyle} playing={np.isPlaying && visualsActive} />
-            )}
-          </motion.div>
+          {appearance.lyricsVisualizerStyle === "bars" ? (
+            <Equalizer playing={np.isPlaying} fps={48} />
+          ) : (
+            <LyricEqualizer style={appearance.lyricsVisualizerStyle} playing={np.isPlaying} />
+          )}
         </LiveEdge>
       )}
     </motion.div>

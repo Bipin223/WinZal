@@ -1,12 +1,19 @@
-import { useLayoutEffect, useState } from "react";
-import { settings, updateSettings, type Settings } from "../../settings/store";
+import { useLayoutEffect, useState, type ReactNode } from "react";
+import {
+  clearLyricTrackOffsets,
+  lyricTrackKey,
+  setLyricTrackOffset,
+  settings,
+  updateSettings,
+  type Settings,
+} from "../../settings/store";
+import { useNowPlaying } from "../../platform/media";
 import { t } from "../../i18n";
 import { LyricAnimationPreview } from "../now-playing/LyricAnimationPreview";
 import { LyricEqualizer, LyricGlow } from "../now-playing/LyricVisualizer";
 import { Equalizer } from "../now-playing/Equalizer";
 import { SelectedDot } from "../../ui/SelectedDot";
-import { Group, Row, Segmented, Slider, Switch } from "../../ui/controls";
-import { ACCENTS, Swatches } from "../appearance/AppearanceView";
+import { Button, Group, Row, Segmented, Slider, Switch } from "../../ui/controls";
 
 /**
  * Music-specific settings in one place: what the closed pill shows and how
@@ -92,22 +99,27 @@ export function MusicSettings() {
                 <span className="tabular w-11 shrink-0 text-right text-caption text-label-3">{a.lyricsTextSize.toFixed(1)} px</span>
               </div>
             </Row>
-            <Row label={t("Lyrics offset")}>
+            <Row
+              label={t("Global lyric offset")}
+              hint={t("Shifts every track. Use Sync in Now Playing for one track.")}
+            >
               <div className="flex w-44 items-center gap-2">
                 <Slider
-                  label={t("Lyrics offset")}
+                  label={t("Global lyric offset")}
                   value={a.lyricsOffset}
-                  min={-1}
-                  max={1}
-                  step={0.1}
+                  min={-5}
+                  max={5}
+                  step={0.05}
                   onChange={(lyricsOffset) => set({ lyricsOffset })}
                 />
-                <span className="tabular w-11 shrink-0 text-right text-caption text-label-3">
+                <span className="tabular w-12 shrink-0 text-right text-caption text-label-3">
                   {a.lyricsOffset > 0 ? "+" : ""}
-                  {a.lyricsOffset.toFixed(1)} s
+                  {a.lyricsOffset.toFixed(2)} s
                 </span>
               </div>
             </Row>
+            <CurrentTrackOffset />
+            <SavedTrackOffsets />
             <Row label={t("Weight")}>
               <div className="flex w-44 items-center gap-2">
                 <Slider
@@ -223,10 +235,6 @@ export function MusicSettings() {
                     </button>
                   ))}
                 </div>
-                <div className="mt-2">
-                  <div className="mb-1.5 text-footnote font-medium text-label-2">{t("Equalization Accent")}</div>
-                  <Swatches value={a.accent} colors={ACCENTS} onChange={(accent) => set({ accent })} />
-                </div>
               </div>
             )}
             <div className="px-3 pb-3">
@@ -272,6 +280,69 @@ export function MusicSettings() {
         </a>
       </div>
     </>
+  );
+}
+
+/** Manual correction for the track that is playing right now. */
+function CurrentTrackOffset() {
+  const np = useNowPlaying();
+  const a = settings.use().appearance;
+  if (!np) {
+    return (
+      <Row label={t("This track's offset")}>
+        <span className="text-caption text-label-3">{t("Nothing playing")}</span>
+      </Row>
+    );
+  }
+  const key = lyricTrackKey(np.title, np.artist);
+  const value = a.lyricsTrackOffsets[key] ?? 0;
+  const nudge = (delta: number) => setLyricTrackOffset(key, value + delta);
+  return (
+    <Row label={t("This track's offset")} hint={t("Added to the global offset and saved for this track")}>
+      <div className="flex items-center gap-1">
+        <OffsetButton label={t("Lyrics earlier")} onClick={() => nudge(-0.1)}>
+          -0.1
+        </OffsetButton>
+        <button
+          type="button"
+          onClick={() => setLyricTrackOffset(key, 0)}
+          title={t("Reset this track")}
+          className="tabular w-12 shrink-0 text-center text-caption font-medium text-label"
+        >
+          {value > 0 ? "+" : ""}
+          {value.toFixed(2)} s
+        </button>
+        <OffsetButton label={t("Lyrics later")} onClick={() => nudge(0.1)}>
+          +0.1
+        </OffsetButton>
+      </div>
+    </Row>
+  );
+}
+
+function OffsetButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className="pressable pressable-fill flex h-7 shrink-0 items-center rounded-full bg-fill-2 px-2 text-[10px] font-semibold text-label"
+    >
+      {children}
+    </button>
+  );
+}
+
+function SavedTrackOffsets() {
+  const offsets = settings.use().appearance.lyricsTrackOffsets;
+  const count = Object.keys(offsets).length;
+  return (
+    <Row label={t("Saved track offsets")} hint={count ? `${count} ${t("saved")}` : t("None yet")}>
+      <Button onClick={clearLyricTrackOffsets} disabled={count === 0}>
+        {t("Reset all")}
+      </Button>
+    </Row>
   );
 }
 
