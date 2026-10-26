@@ -3,7 +3,7 @@ import { AnimatePresence, animate, motion, useMotionValue, type Transition } fro
 import { Drop, GearSix, Ghost, MoonStars, PushPin } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
 import { useNowPlaying } from "../platform/media";
-import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onSilentExit, onTrayOpen, setHitRect, setMemoryLow, setSilent, trimMemory } from "../platform/native";
+import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onSilentExit, onTrayOpen, setHitRect, setMemoryLow, setNotchHeight, setSilent, trimMemory } from "../platform/native";
 import { PrivacyDots } from "../features/privacy/PrivacyDots";
 import { FOCUS_CLICKS, focusMode, setFocusMode } from "./focus";
 import { silentMode, setSilentMode } from "./silent";
@@ -48,6 +48,9 @@ function fillWithAlpha(hex: string, alpha: number): string {
 const RESUME_MS = 60_000;
 /** Closed this long → lower WebView2's memory target. */
 const MEMORY_LOW_AFTER_MS = 20_000;
+/** Compact the transparent window while closed; the open panel needs the full height. */
+const CLOSED_WINDOW_HEIGHT = 120;
+const OPEN_WINDOW_HEIGHT = 560;
 
 export function Notch() {
   const { status, open, dismiss, toggle, onPointerEnter, onPointerLeave } = useNotchState();
@@ -268,6 +271,19 @@ export function Notch() {
   );
   useEffect(() => {
     if (status === "closed") keyboardFocus(false);
+  }, [status]);
+
+  // A 760×560 transparent always-on-top window is far more compositor work
+  // than the closed pill. Keep only the top 120 px while closed, and expand
+  // before the open panel animates in.
+  useEffect(() => {
+    if (!isNative) return;
+    if (status !== "closed") {
+      setNotchHeight(OPEN_WINDOW_HEIGHT);
+      return;
+    }
+    const id = window.setTimeout(() => setNotchHeight(CLOSED_WINDOW_HEIGHT), 450);
+    return () => window.clearTimeout(id);
   }, [status]);
 
   // Closed for a while → WebView2 may trim memory; back to normal on the first touch

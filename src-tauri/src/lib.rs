@@ -56,12 +56,12 @@ fn gpu_preference_path() -> Option<std::path::PathBuf> {
     Some(std::path::PathBuf::from(local).join("app.winzal").join("gpu-preference"))
 }
 
-/// auto | igpu | dgpu (default auto = Windows decides, the iGPU on hybrids).
+/// auto | igpu | dgpu (personal build defaults to the discrete GPU).
 fn gpu_preference() -> String {
     gpu_preference_path()
         .and_then(|p| std::fs::read_to_string(p).ok())
         .map(|s| s.trim().to_string())
-        .unwrap_or_else(|| "auto".into())
+        .unwrap_or_else(|| "dgpu".into())
 }
 
 /// CPU (software) is the default. GPU is opt-in through Performance; it uses
@@ -180,6 +180,7 @@ pub fn run() {
             clipboard::clipboard_preview,
             clipboard::clipboard_paste_files,
             keyboard_focus,
+            set_notch_height,
             notch_prompt_mode,
             set_webview_render_mode,
     set_gpu_preference,
@@ -315,6 +316,17 @@ pub fn run() {
 /// Window that was in the foreground before the shortcut opened the notch.
 #[derive(Default)]
 struct FocusState(Mutex<isize>);
+
+/// Compact the transparent notch window while it is closed. A 760×560
+/// always-on-top window over a game is much more compositor work than the
+/// visible pill; 120 px still fits the closed pill, lyrics and notification cards.
+#[tauri::command]
+fn set_notch_height(height: f64, window: WebviewWindow) -> Result<(), String> {
+    let height = height.clamp(120.0, 700.0);
+    window
+        .set_size(tauri::LogicalSize::new(760.0, height))
+        .map_err(|error| error.to_string())
+}
 
 /// Opened via shortcut → take focus (for Esc/typing).
 /// Closed → give focus back to the previous app, otherwise typing goes nowhere.

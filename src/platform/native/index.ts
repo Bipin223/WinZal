@@ -115,6 +115,11 @@ export function keyboardFocus(focus: boolean) {
   if (isNative) void invoke("keyboard_focus", { focus });
 }
 
+/** Compact the transparent window while closed; expand it for the open panel. */
+export function setNotchHeight(height: number) {
+  if (isNative) void invoke("set_notch_height", { height });
+}
+
 /** WebView2 memory target: low while the notch sits closed, normal otherwise. */
 export function setMemoryLow(low: boolean) {
   if (isNative) void invoke("memory_low", { low });

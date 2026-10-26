@@ -688,7 +688,7 @@ pub fn run_helper(mut main_pid: u32) -> ! {
     helper_log(&format!("main_pid={main_pid}"));
 
     let name = wide(HELPER_SESSION);
-    let (trace, logger) = match start_helper_trace(&name, shared) {
+    let (trace, control, logger) = match start_helper_trace(&name, shared) {
         Some(pair) => {
             helper_log("etw trace started");
             pair
@@ -701,6 +701,38 @@ pub fn run_helper(mut main_pid: u32) -> ! {
         }
     };
     let _keep_logger = logger;
+
+    // DirectX games only need DXGI/D3D9 present events. DxgKrnl is the chatty
+    // one, so enable it only when the foreground process produced no DXGI/D3D9
+    // frames after two seconds (Vulkan/OpenGL games).
+    let fallback_control = control;
+    let fallback_shared = shared as usize;
+    thread::spawn(move || {
+        thread::sleep(Duration::from_secs(2));
+        let shared = fallback_shared as *mut FpsShared;
+        let pid = foreground_pid();
+        let has_dx = pid != 0
+            && unsafe {
+                let entry = find_entry(&*shared, pid);
+                entry.pid.load(Ordering::Relaxed) == pid
+                    && entry.counts[0..3].iter().any(|count| count.load(Ordering::Relaxed) > 0)
+            };
+        if pid != 0 && !has_dx {
+            let status = unsafe {
+                EnableTraceEx2(
+                    fallback_control,
+                    &DXGKRNL,
+                    EVENT_CONTROL_CODE_ENABLE_PROVIDER.0,
+                    TRACE_LEVEL_INFORMATION,
+                    KMT_KEYWORD_PRESENT,
+                    0,
+                    0,
+                    None,
+                )
+            };
+            helper_log(&format!("DxgKrnl fallback status={}", status.0));
+        }
+    });
 
     let main = if main_pid != 0 {
         unsafe { OpenProcess(PROCESS_SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION, false, main_pid).ok() }
@@ -743,7 +775,7 @@ pub fn run_helper(mut main_pid: u32) -> ! {
 
 /// StartTrace + providers + OpenTrace for the helper. Returns the trace handle and the
 /// logger-name buffer (must stay alive while ProcessTrace runs).
-fn start_helper_trace(name: &[u16], shared: *mut FpsShared) -> Option<(PROCESSTRACE_HANDLE, Vec<u16>)> {
+fn start_helper_trace(name: &[u16], shared: *mut FpsShared) -> Option<(PROCESSTRACE_HANDLE, CONTROLTRACE_HANDLE, Vec<u16>)> {
     let mut handle = CONTROLTRACE_HANDLE::default();
     let mut props = Props::new(HELPER_SESSION_GUID);
     let mut status = unsafe { StartTraceW(&mut handle, PCWSTR(name.as_ptr()), props.ptr()) };
@@ -759,7 +791,7 @@ fn start_helper_trace(name: &[u16], shared: *mut FpsShared) -> Option<(PROCESSTR
         unsafe { (*shared).error.store(if status == ERROR_ACCESS_DENIED { ERR_NO_ADMIN } else { ERR_FAILED }, Ordering::Relaxed) };
         return None;
     }
-    for (provider, keyword) in [(DXGI, 0), (D3D9, 0), (DXGKRNL, KMT_KEYWORD_PRESENT)] {
+    for (provider, keyword) in [(DXGI, 0), (D3D9, 0)] {
         let status = unsafe { EnableTraceEx2(handle, &provider, EVENT_CONTROL_CODE_ENABLE_PROVIDER.0, TRACE_LEVEL_INFORMATION, keyword, 0, 0, None) };
         helper_log(&format!("EnableTrace status={}", status.0));
         if WIN32_ERROR(status.0) != ERROR_SUCCESS {
@@ -780,7 +812,7 @@ fn start_helper_trace(name: &[u16], shared: *mut FpsShared) -> Option<(PROCESSTR
         unsafe { (*shared).error.store(ERR_FAILED, Ordering::Relaxed) };
         return None;
     }
-    Some((trace, logger))
+    Some((trace, handle, logger))
 }
 
 unsafe extern "system" fn helper_on_event(record: *mut EVENT_RECORD) {
