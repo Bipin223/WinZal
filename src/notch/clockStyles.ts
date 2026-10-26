@@ -1,12 +1,12 @@
-/** The five clock faces. `classic` is the existing clock and the default. */
+/**
+ * Personal build: Classic and Split only. The other faces stay in the code as
+ * planned resources, but are not exposed in this build.
+ */
 export type ClockStyle = "stacked" | "split" | "scatter" | "classic" | "word";
 
 export const CLOCK_STYLES: { id: ClockStyle; label: string }[] = [
-  { id: "stacked", label: "Stacked" },
-  { id: "split", label: "Split" },
-  { id: "scatter", label: "Scatter" },
   { id: "classic", label: "Classic" },
-  { id: "word", label: "Word" },
+  { id: "split", label: "Split" },
 ];
 
 export function isClockStyle(value: unknown): value is ClockStyle {

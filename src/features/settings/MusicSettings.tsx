@@ -19,8 +19,6 @@ export function MusicSettings() {
   const [hoverAnim, setHoverAnim] = useState<string | null>(null);
   const equalizers: { value: Settings["appearance"]["lyricsVisualizerStyle"]; label: string }[] = [
     { value: "bars", label: "Bars" },
-    { value: "mirror", label: "Mirror" },
-    { value: "ticks", label: "Ticks" },
   ];
   const glows: { value: Settings["appearance"]["lyricsGlowStyle"]; label: string }[] = [
     { value: "none", label: t("None") },

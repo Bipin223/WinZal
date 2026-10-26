@@ -409,12 +409,7 @@ settings.set((s) => {
         const stored = (s.appearance as { clockSplitHeight?: number } | undefined)?.clockSplitHeight;
         return typeof stored === "number" ? Math.min(100, Math.max(20, Math.round(stored))) : defaults.appearance.clockSplitHeight;
       })(),
-      lyricsVisualizerStyle: (() => {
-        const stored = (s.appearance as { lyricsVisualizerStyle?: string } | undefined)?.lyricsVisualizerStyle;
-        const valid: LyricEqualizerStyle[] = ["bars", "mirror", "ticks"];
-        if (valid.includes(stored as LyricEqualizerStyle)) return stored as LyricEqualizerStyle;
-        return "bars";
-      })(),
+      lyricsVisualizerStyle: "bars",
       lyricsGlowStyle: (() => {
         const stored = (s.appearance as { lyricsGlowStyle?: string } | undefined)?.lyricsGlowStyle;
         const valid: LyricGlowStyle[] = ["none", "wave", "aurora", "bokeh", "leaves"];

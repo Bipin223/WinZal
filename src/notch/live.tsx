@@ -36,7 +36,7 @@ export function useLiveActivity(): { id: string | null } {
  * sides (LiveEdge) follow the shape's edges by transform as it opens, closes or peeks.
  * Pinned to the edges by layout instead, they crept in pixel steps (issue #3).
  */
-export function LiveSlot({ id, recording = false, extra = 0, widthExtra = 0, height, systemWidth }: { id: string | null; recording?: boolean; extra?: number; widthExtra?: number; height?: number; systemWidth?: number }) {
+export function LiveSlot({ id, visualsActive = true, recording = false, extra = 0, widthExtra = 0, height, systemWidth }: { id: string | null; visualsActive?: boolean; recording?: boolean; extra?: number; widthExtra?: number; height?: number; systemWidth?: number }) {
   const np = useNowPlaying();
   const call = useDiscordCall();
   // Keep the last size while an activity fades out (id is null when the notch opens).
@@ -70,7 +70,7 @@ export function LiveSlot({ id, recording = false, extra = 0, widthExtra = 0, hei
           {id === "discord" && call && (
             <LiveDiscord key="discord" call={call} />
           )}
-          {id === "media" && np && <LiveActivity key="media" np={np} />}
+          {id === "media" && np && <LiveActivity key="media" np={np} visualsActive={visualsActive} />}
         </AnimatePresence>
       </motion.div>
     </LiveSpread.Provider>
