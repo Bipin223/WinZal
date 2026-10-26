@@ -8,7 +8,6 @@ import { PrivacyDots } from "../features/privacy/PrivacyDots";
 import { FOCUS_CLICKS, focusMode, setFocusMode } from "./focus";
 import { silentMode, setSilentMode } from "./silent";
 import { useGamingLive } from "../features/system/gaming";
-import { useGameAutoPower } from "../features/system/autoPower";
 import { gamingMeasured, gamingWidth } from "../features/system/gamingOverlay";
 import { useDragToMove } from "./drag";
 import { LiveSlot, useLiveActivity } from "./live";
@@ -56,7 +55,6 @@ export function Notch() {
   const measuredGamingWidth = gamingMeasured.use();
   const [measuredClockWidth, setMeasuredClockWidth] = useState(0);
   const clockRow = useRef<HTMLDivElement>(null);
-  useGameAutoPower();
   const { tools: toolSettings, display: displaySettings, appearance, gaming } = settings.use();
   // Silent mode is the only ghost; game transparency reuses the Glass alpha (0.62).
   const ghostOpacity = silent && status !== "open" ? 0.28 : 1;

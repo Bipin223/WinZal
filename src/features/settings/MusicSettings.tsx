@@ -25,6 +25,7 @@ export function MusicSettings() {
   const glows: { value: Settings["appearance"]["lyricsGlowStyle"]; label: string }[] = [
     { value: "none", label: t("None") },
     { value: "wave", label: "Wave" },
+    { value: "aurora", label: "Aurora" },
     { value: "bloom", label: "Bloom" },
     { value: "bokeh", label: "Bokeh" },
     { value: "leaves", label: "Leaves" },
@@ -32,6 +33,7 @@ export function MusicSettings() {
   ];
   const animations: { value: Settings["appearance"]["lyricsAnimation"]; label: string }[] = [
     { value: "word", label: t("Word by Word") },
+    { value: "apple", label: t("Apple Music") },
     { value: "fill", label: "Word fill sweep" },
     { value: "glitch", label: "Glitch scramble" },
     { value: "liquid", label: "Liquid fill" },

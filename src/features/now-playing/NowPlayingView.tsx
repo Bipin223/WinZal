@@ -9,7 +9,7 @@ import { requestSize } from "../../notch/size";
 import { findTab } from "../../notch/tabs";
 import { MIXER_MAX_ROWS, MIXER_ROW, MixerList, MixerToggle, useMixer } from "./Mixer";
 import { Equalizer } from "./Equalizer";
-import { LyricEqualizer, LyricGlow } from "./LyricVisualizer";
+import { LyricEqualizer } from "./LyricVisualizer";
 import { settings } from "../../settings/store";
 import { SelectedDot } from "../../ui/SelectedDot";
 import { t } from "../../i18n";
@@ -78,19 +78,6 @@ export function NowPlayingView() {
 
   return (
     <div className="np-now relative h-full overflow-hidden">
-      {appearance.lyricsVisualizer && (
-        <motion.div
-          className={`np-glow np-glow-${appearance.lyricsGlowStyle} pointer-events-none absolute inset-0 origin-top`}
-          initial={{ opacity: 0.35, y: -4 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, transition: { duration: 0.18 } }}
-          transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
-          style={{ willChange: "opacity, transform" }}
-          aria-hidden
-        >
-          <LyricGlow style={appearance.lyricsGlowStyle} playing={np.isPlaying} expanded />
-        </motion.div>
-      )}
       <div className="relative z-10 flex h-full flex-col px-5 pt-1 pb-2">
       <div ref={sessionsBox} className={sessionsOpen ? "flex min-h-0 flex-1 flex-col" : "relative"}>
         <div className="flex items-center gap-3">

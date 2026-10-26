@@ -797,9 +797,6 @@ function GamingSettings() {
           onChange={(on) => setG({ mode: on ? "games" : "off" })}
         />
       </Row>
-      <Row label={t("Custom power in games")}>
-        <Switch label={t("Custom power in games")} checked={g.autoPower} onChange={(autoPower) => setG({ autoPower })} />
-      </Row>
     </Group>
     {g.mode === "games" && <GamingApps />}
     </>

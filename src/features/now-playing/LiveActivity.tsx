@@ -190,6 +190,7 @@ function LyricLine({
   np: NowPlaying;
 }) {
   const inline = layout === "inline";
+  const apple = animation === "apple";
   // Replace the line in one commit: no exit wait, no overlap, no 180 ms fade
   // before the new words become readable. The first word is already visible;
   // the rest of the chosen effect still animates from the exact timestamp.
@@ -200,8 +201,13 @@ function LyricLine({
       <motion.div
         key={index}
         className="relative z-10 flex min-w-0 max-w-full flex-col items-center justify-center"
-        initial={{ opacity: 0.92, y: 2 }}
-        animate={{ opacity: 1, y: 0, transition: { duration: 0.09, ease: [0.23, 1, 0.32, 1] } }}
+        initial={apple ? { opacity: 0, y: 10, scale: 0.94 } : { opacity: 0.92, y: 2 }}
+        animate={
+          apple
+            ? { opacity: 1, y: 0, scale: 1, transition: springs.lyrics }
+            : { opacity: 1, y: 0, transition: { duration: 0.09, ease: [0.23, 1, 0.32, 1] } }
+        }
+        style={apple ? { transformOrigin: "50% 90%" } : undefined}
       >
         <div className="w-full overflow-hidden py-[1px]">
           <LyricText
@@ -229,6 +235,8 @@ function LyricLine({
               ) : (
                 current
               )
+            ) : apple ? (
+              current
             ) : (
               <LyricEffect animation={animation} text={current} index={index} start={start} end={end} np={np} />
             )}

@@ -18,6 +18,7 @@ export type TypeAxis = { size: number; weight: number };
 /** Lyric entrance effects; `word` is the retained original. */
 export type LyricAnimation =
   | "word"
+  | "apple"
   | "fill"
   | "glitch"
   | "liquid"
@@ -27,7 +28,7 @@ export type LyricAnimation =
   | "orbit"
   | "ambient";
 export type LyricEqualizerStyle = "bars" | "mirror" | "ticks";
-export type LyricGlowStyle = "none" | "wave" | "bloom" | "bokeh" | "leaves" | "night";
+export type LyricGlowStyle = "none" | "wave" | "aurora" | "bloom" | "bokeh" | "leaves" | "night";
 
 export const DEFAULT_TYPOGRAPHY: Record<TypeRole, TypeAxis> = {
   caption: { size: 0, weight: 0 },
@@ -89,8 +90,6 @@ export interface Settings {
     style: "text" | "bars";
     /** Thin separator between the left (FPS/CPU) and right (GPU/RAM) groups. */
     divider: boolean;
-    /** Switch to Lenovo Custom while a game is in front, then restore. */
-    autoPower: boolean;
   };
   /** Dots like on iPhone: mic/camera (green) or screen recording (red) in use. */
   privacyDots: boolean;
@@ -247,7 +246,6 @@ const defaults: Settings = {
     showRam: true,
     style: "text",
     divider: false,
-    autoPower: false,
   },
   typography: { ...DEFAULT_TYPOGRAPHY },
   privacyDots: true,
@@ -371,7 +369,7 @@ settings.set((s) => {
       // supplies the new effects.
       lyricsAnimation: (() => {
         const stored = (s.appearance as { lyricsAnimation?: string } | undefined)?.lyricsAnimation;
-        const valid: LyricAnimation[] = ["word", "fill", "glitch", "liquid", "spot", "letters", "spark", "orbit", "ambient"];
+        const valid: LyricAnimation[] = ["word", "apple", "fill", "glitch", "liquid", "spot", "letters", "spark", "orbit", "ambient"];
         if (stored === "focus" || stored === "stripe" || stored === "warp") return "spot";
         if (stored === "dissolve" || stored === "dots" || stored === "cascade") return "letters";
         if (stored === "sway" || stored === "float") return "ambient";
@@ -421,11 +419,10 @@ settings.set((s) => {
       })(),
       lyricsGlowStyle: (() => {
         const stored = (s.appearance as { lyricsGlowStyle?: string } | undefined)?.lyricsGlowStyle;
-        const valid: LyricGlowStyle[] = ["none", "wave", "bloom", "bokeh", "leaves", "night"];
+        const valid: LyricGlowStyle[] = ["none", "wave", "aurora", "bloom", "bokeh", "leaves", "night"];
         if (valid.includes(stored as LyricGlowStyle)) return stored as LyricGlowStyle;
         // Existing picks map to the closest lab glow instead of resetting.
         switch (stored) {
-          case "aurora": return "bokeh";
           case "rings": return "bokeh";
           case "spectrum": return "night";
           case "embers": return "night";
@@ -434,7 +431,7 @@ settings.set((s) => {
           case "halo": return "night";
         }
         const oldViz = (s.appearance as { lyricsVisualizerStyle?: string } | undefined)?.lyricsVisualizerStyle;
-        if (oldViz === "aurora") return "bokeh";
+        if (oldViz === "aurora") return "aurora";
         if (oldViz === "ripple") return "bokeh";
         return "wave";
       })(),
@@ -514,7 +511,6 @@ function migrateGaming(old: unknown): Settings["gaming"] {
     showRam?: unknown;
     style?: unknown;
     divider?: unknown;
-    autoPower?: unknown;
   };
   const mode = legacy.mode === "off" ? "off" : "games";
   let apps = Array.isArray(legacy.apps) ? legacy.apps.filter((id): id is string => typeof id === "string" && id.length > 0) : [];
@@ -543,7 +539,6 @@ function migrateGaming(old: unknown): Settings["gaming"] {
     showRam: legacy.showRam !== false && !minimal,
     style: legacy.style === "bars" || legacy.style === "dots" || legacy.style === "graph" ? "bars" : "text",
     divider: legacy.divider === true,
-    autoPower: legacy.autoPower === true,
   };
 }
 

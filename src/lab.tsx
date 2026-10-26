@@ -22,6 +22,7 @@ const LINES = [
 
 const ANIMATIONS: { value: LyricAnimation; label: string }[] = [
   { value: "word", label: "Word by Word" },
+  { value: "apple", label: "Apple Music" },
   { value: "fill", label: "Word fill sweep" },
   { value: "glitch", label: "Glitch scramble" },
   { value: "liquid", label: "Liquid fill" },
@@ -34,6 +35,7 @@ const ANIMATIONS: { value: LyricAnimation; label: string }[] = [
 
 const GLOWS: { value: LyricGlowStyle; label: string }[] = [
   { value: "wave", label: "Wave" },
+  { value: "aurora", label: "Aurora" },
   { value: "bloom", label: "Bloom" },
   { value: "bokeh", label: "Bokeh" },
   { value: "leaves", label: "Leaves" },
@@ -133,6 +135,15 @@ function Lab() {
 
   const lineHost = animation === "word" ? (
     <WordLine text={text} index={line} />
+  ) : animation === "apple" ? (
+    <motion.span
+      key={line}
+      style={{ display: "inline-block", transformOrigin: "50% 90%" }}
+      initial={{ opacity: 0, y: 10, scale: 0.94 }}
+      animate={{ opacity: 1, y: 0, scale: 1, transition: springs.lyrics }}
+    >
+      {text}
+    </motion.span>
   ) : (
     <LyricEffect
       key={`${line}-${animation}`}

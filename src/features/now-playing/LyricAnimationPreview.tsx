@@ -22,6 +22,13 @@ export function LyricAnimationPreview({ animation }: { animation: Animation }) {
       </div>
     );
   }
+  if (animation === "apple") {
+    return (
+      <div className="flex h-full items-center justify-center overflow-hidden px-1 text-[9px] font-semibold whitespace-nowrap text-white">
+        <span className="anim-apple inline-block">light the candle</span>
+      </div>
+    );
+  }
   return (
     <div className="flex h-full items-center justify-center overflow-hidden px-1 text-[9px] font-semibold whitespace-nowrap text-white">
       <LyricEffect animation={animation} text="light the candle" index={0} preview />

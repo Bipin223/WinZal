@@ -76,6 +76,14 @@ export function LyricGlow({ style, playing, expanded = false }: { style: LyricGl
       </div>
     );
   }
+  if (style === "aurora") {
+    return (
+      <div className={`lyr-glow lyr-glow-aurora ${paused}`} aria-hidden>
+        <i />
+        <i />
+      </div>
+    );
+  }
   if (style === "bokeh") {
     const count = expanded ? 10 : 6;
     const colors = ["var(--accent)", "#fff", "color-mix(in srgb, var(--accent) 45%, #ffc46b)"];

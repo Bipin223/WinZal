@@ -3,7 +3,7 @@ import { useAnimationFrame } from "motion/react";
 import type { LyricAnimation } from "../../settings/store";
 import { livePosition, type NowPlaying } from "../../platform/media";
 
-type LabAnimation = Exclude<LyricAnimation, "word">;
+type LabAnimation = Exclude<LyricAnimation, "word" | "apple">;
 
 /**
  * The eight effects from final.html. Fill/focus/liquid/stripe follow the word

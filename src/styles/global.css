@@ -117,7 +117,8 @@ body {
 }
 
 /* Settings previews for the lyric transition picker. */
-.anim-word {
+.anim-word,
+.anim-apple {
   display: inline-block;
   animation-duration: 3.6s;
   animation-iteration-count: infinite;
@@ -126,8 +127,26 @@ body {
 .anim-word {
   animation-name: anim-word;
 }
-
-
+.anim-apple {
+  animation-name: anim-apple;
+}
+@keyframes anim-apple {
+  0%,
+  6% {
+    opacity: 0;
+    transform: translateY(10px) scale(.94);
+  }
+  18%,
+  76% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  88%,
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scale(.97);
+  }
+}
 @keyframes anim-word {
   0%,
   8% {
@@ -412,6 +431,26 @@ body {
   stroke-linecap: round;
   opacity: .6;
   vector-effect: non-scaling-stroke;
+}
+/* Aurora: two soft accent curtains drifting under the lyric line. */
+.lyr-glow-aurora i {
+  left: -15%;
+  right: -15%;
+  bottom: -5px;
+  height: 24px;
+  background: radial-gradient(ellipse at 35% 100%, var(--accent), transparent 65%);
+  filter: blur(3px);
+  opacity: .3;
+  animation: lyr-aurora 6s ease-in-out infinite alternate;
+}
+.lyr-glow-aurora i:nth-child(2) {
+  background: radial-gradient(ellipse at 70% 100%, var(--accent), transparent 60%);
+  animation-delay: -3s;
+  opacity: .2;
+}
+@keyframes lyr-aurora {
+  from { transform: translateX(-6%) scaleY(.8); opacity: .22; }
+  to { transform: translateX(6%) scaleY(1.1); opacity: .42; }
 }
 .lyr-glow-bloom i {
   inset: 8% 2%;
@@ -807,7 +846,8 @@ body {
   .lyr-glow i,
   .lyr-wave,
   .lyr-dots i,
-  .anim-word {
+  .anim-word,
+  .anim-apple {
     animation: none;
   }
 }
@@ -822,7 +862,8 @@ body {
 :root[data-motion="reduced"] .lyr-glow i,
 :root[data-motion="reduced"] .lyr-wave,
 :root[data-motion="reduced"] .lyr-dots i,
-:root[data-motion="reduced"] .anim-word {
+:root[data-motion="reduced"] .anim-word,
+:root[data-motion="reduced"] .anim-apple {
   animation-duration: 1.4s !important;
 }
 /* Calm water stays slow; reduced motion must not make it race. */
