@@ -152,6 +152,8 @@ export interface Settings {
     lyricsOffset: number;
     /** Per-track corrections in seconds, keyed by lyricTrackKey(title, artist). */
     lyricsTrackOffsets: Record<string, number>;
+    /** Use exact word timings when available, or only one timestamp per line. */
+    lyricsSyncMode: "word" | "line";
     /** Minimum width of the closed lyric pill. */
     lyricsPillMinWidth: number;
     /** Maximum width when auto width is on; fixed width when it is off. */
@@ -283,6 +285,7 @@ const defaults: Settings = {
     lyricsTextSize: 12,
     lyricsOffset: 0,
     lyricsTrackOffsets: {},
+    lyricsSyncMode: "word",
     lyricsPillMinWidth: 284,
     lyricsPillLength: 640,
     lyricsPillAuto: true,
@@ -448,6 +451,7 @@ settings.set((s) => {
         }
         return out;
       })(),
+      lyricsSyncMode: (s.appearance as { lyricsSyncMode?: string } | undefined)?.lyricsSyncMode === "line" ? "line" : "word",
       motion: (() => {
         const stored = (s.appearance as { motion?: number } | undefined)?.motion;
         return typeof stored === "number" ? Math.min(100, Math.max(0, stored)) : 100;

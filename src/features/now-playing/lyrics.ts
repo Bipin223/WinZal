@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { livePosition, type NowPlaying } from "../../platform/media";
 import { fetchLyrics, type Lyrics, type LyricWordTime } from "../../platform/services";
 import { lyricTrackKey, settings } from "../../settings/store";
@@ -56,6 +56,15 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
   // that runs late can be fixed without shifting everything else.
   const offset = appearance.lyricsOffset + (offsetKey ? (appearance.lyricsTrackOffsets[offsetKey] ?? 0) : 0);
   const playing = np?.isPlaying ?? false;
+  // Line mode drops word timings and keeps the line clock used by older
+  // versions. Word mode keeps exact timings when the source provides them.
+  const shownLines = useMemo<Line[]>(
+    () =>
+      appearance.lyricsSyncMode === "line"
+        ? lines.map(({ at, text, end }) => ({ at, text, end }))
+        : lines,
+    [lines, appearance.lyricsSyncMode],
+  );
 
   useEffect(() => {
     if (!enabled || !np || !np.title.trim()) {
@@ -125,7 +134,7 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
   // second so seeking still works). This removes the old 250 ms quantization
   // without adding a per-frame timer.
   useEffect(() => {
-    if (!enabled || lines.length === 0) return;
+    if (!enabled || shownLines.length === 0) return;
     let alive = true;
     let timer: number | undefined;
     const schedule = () => {
@@ -133,10 +142,10 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
       const now = npRef.current;
       if (!now) return;
       const position = livePosition(now) - offset + LYRIC_LEAD;
-      const next = indexAt(lines, position);
+      const next = indexAt(shownLines, position);
       setIndex((prev) => (prev === next ? prev : next));
       if (!now.isPlaying) return;
-      const upcoming = lines.find((line) => line.at > position);
+      const upcoming = shownLines.find((line) => line.at > position);
       // 12 ms early covers the timer + render; cap the idle recheck at 250 ms.
       const wait = upcoming ? Math.max(0, (upcoming.at - position) * 1000 - 12) : 250;
       timer = window.setTimeout(schedule, Math.min(250, wait));
@@ -146,31 +155,31 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
       alive = false;
       window.clearTimeout(timer);
     };
-  }, [enabled, lines, playing, offset]);
+  }, [enabled, shownLines, playing, offset]);
 
   // Paused: still follow a seek once, but do not keep a 250 ms timer alive.
   useEffect(() => {
-    if (!enabled || playing || !np || lines.length === 0) return;
-    const next = indexAt(lines, livePosition(np) - offset + LYRIC_LEAD);
+    if (!enabled || playing || !np || shownLines.length === 0) return;
+    const next = indexAt(shownLines, livePosition(np) - offset + LYRIC_LEAD);
     setIndex((prev) => (prev === next ? prev : next));
-  }, [enabled, playing, lines, np?.position, offset]);
+  }, [enabled, playing, shownLines, np?.position, offset]);
 
-  if (index < 0 || !lines[index]) return { current: null, next: null, index: -1, start: 0, end: 0, words: null, status };
-  const line = lines[index];
+  if (index < 0 || !shownLines[index]) return { current: null, next: null, index: -1, start: 0, end: 0, words: null, status };
+  const line = shownLines[index];
   // Effects run on the line clock; include the user's offset so word progress
   // stays on the audible line, not the raw LRC timestamp.
   const start = line.at + offset;
   const end =
     line.end && line.end > line.at
       ? line.end + offset
-      : lines[index + 1]
-        ? lines[index + 1].at + offset
+      : shownLines[index + 1]
+        ? shownLines[index + 1].at + offset
         : np && np.duration > start
           ? np.duration
           : start + 4;
   return {
     current: line.text,
-    next: lines[index + 1]?.text ?? null,
+    next: shownLines[index + 1]?.text ?? null,
     index,
     start,
     end,

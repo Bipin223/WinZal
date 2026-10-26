@@ -49,6 +49,7 @@ const DEFAULTS: Appearance = {
   lyricsTextSize: 12,
   lyricsOffset: 0,
   lyricsTrackOffsets: {},
+  lyricsSyncMode: "word",
   lyricsPillMinWidth: 284,
   lyricsPillLength: 640,
   lyricsPillAuto: true,

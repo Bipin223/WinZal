@@ -100,6 +100,21 @@ export function MusicSettings() {
               </div>
             </Row>
             <Row
+              label={t("Lyric timing")}
+              hint={t("Word uses exact word timings when available; Line uses one timestamp per line.")}
+            >
+              <Segmented
+                id="lyrics-sync-mode"
+                size="sm"
+                value={a.lyricsSyncMode}
+                onChange={(lyricsSyncMode) => set({ lyricsSyncMode })}
+                options={[
+                  { value: "word", label: t("Word") },
+                  { value: "line", label: t("Line") },
+                ]}
+              />
+            </Row>
+            <Row
               label={t("Global lyric offset")}
               hint={t("Shifts every track. Use Sync in Now Playing for one track.")}
             >
