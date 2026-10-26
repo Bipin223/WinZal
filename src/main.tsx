@@ -22,6 +22,7 @@ import { startDiscordPresence } from "./features/discord/presence";
 import { startUpdateWatch } from "./lib/update";
 import { update } from "./lib/update";
 import { notifyUpdateAvailable } from "./notifications/store";
+import { startSystemToastWatch } from "./notifications/system";
 import { showcase } from "./dev/showcase-data";
 import { startShowcase } from "./dev/showcase";
 import { startTheme } from "./features/appearance/theme";
@@ -38,6 +39,7 @@ startGamingWatch();
 startDiscord();
 startDiscordPresence();
 startUpdateWatch();
+startSystemToastWatch();
 
 // Show one island notification per newly discovered update.
 let lastUpdateNotice = "";

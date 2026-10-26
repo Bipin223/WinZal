@@ -353,6 +353,30 @@ export function fetchLyrics(title: string, artist: string, duration: number): Pr
   return Promise.resolve({ synced: null, plain: null, instrumental: false });
 }
 
+// ---------- Windows toast notifications ----------
+
+export type ToastAccess = "allowed" | "denied" | "unspecified" | "unavailable";
+
+export interface SystemToast {
+  id: number;
+  appId: string;
+  app: string;
+  title: string;
+  body: string;
+}
+
+export function toastAccess(): Promise<ToastAccess> {
+  return isNative ? invoke<ToastAccess>("toast_access") : Promise.resolve("unavailable");
+}
+
+export function requestToastAccess(): Promise<ToastAccess> {
+  return isNative ? invoke<ToastAccess>("toast_request") : Promise.resolve("unavailable");
+}
+
+export function listSystemToasts(): Promise<SystemToast[]> {
+  return isNative ? invoke<SystemToast[]>("toast_list") : Promise.resolve([]);
+}
+
 // ---------- Gaming mode ----------
 
 /** FPS of the foreground process (ETW). error: no-admin | failed. */

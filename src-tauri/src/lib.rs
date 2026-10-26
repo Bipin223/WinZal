@@ -20,6 +20,7 @@ mod privacy;
 pub mod secrets;
 mod system;
 mod temps;
+mod toasts;
 pub mod usage;
 mod vault;
 
@@ -210,6 +211,9 @@ pub fn run() {
             fps::fps_unlock,
             fps::fps_helper_ready,
             fps::fps_release,
+            toasts::toast_access,
+            toasts::toast_request,
+            toasts::toast_list,
             controls::volume_get,
             controls::volume_set,
             mixer::mixer_list,

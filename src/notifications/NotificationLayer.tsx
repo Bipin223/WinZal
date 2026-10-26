@@ -11,6 +11,7 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
+import { DiscordLogo } from "../ui/brands";
 import { dismissNotification, notifications, type AppNotification } from "./store";
 
 const ICONS: Record<AppNotification["kind"], Icon> = {
@@ -28,7 +29,7 @@ function hasProgress(item: AppNotification) {
 }
 
 function NotificationIcon({ item, size }: { item: AppNotification; size: number }) {
-  const Icon = ICONS[item.kind];
+  const Icon = item.brand === "discord" ? DiscordLogo : ICONS[item.kind];
   return (
     <span
       className="relative grid shrink-0 place-items-center overflow-hidden rounded-[13px] text-white"

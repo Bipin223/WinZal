@@ -26,7 +26,7 @@ import { alarmSounds, playAlarm, stopAlarm, type AlarmDuration } from "../../lib
 import { nav } from "../../notch/nav";
 import { requestSize } from "../../notch/size";
 import { tabs } from "../../notch/tabs";
-import { autostart, display, fetchFps, fetchUsage, fpsHelperReady, secrets, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName } from "../../platform/services";
+import { autostart, display, fetchFps, fetchUsage, fpsHelperReady, requestToastAccess, secrets, toastAccess, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName, type ToastAccess } from "../../platform/services";
 import { settings, updateAsk, updateSettings, type AskProvider, type Settings, type TypeRole, DEFAULT_TYPOGRAPHY } from "../../settings/store";
 import { TYPE_ROLES, typeValues } from "../appearance/typography";
 import { ChatBubbleIcon } from "../../ui/ChatBubbleIcon";
@@ -48,7 +48,7 @@ import { silentMode, setSilentMode } from "../../notch/silent";
 import { checkForUpdate, installUpdate, update } from "../../lib/update";
 import { between, changelog, itemText, markSeen, useUnseen } from "../../lib/changelog";
 import { privacy, togglePresentation, usePresenting } from "../privacy/store";
-import { previewIsland, previewTimer } from "../../notifications/store";
+import { previewDiscord, previewIsland, previewTimer } from "../../notifications/store";
 import { locale, t, tBackend } from "../../i18n";
 import { usageError } from "../usage/UsageView";
 
@@ -1262,9 +1262,53 @@ function NotificationsDemo() {
         <div className="flex items-center gap-1.5">
           <Button onClick={previewIsland}>{t("Island")}</Button>
           <Button onClick={previewTimer}>{t("Timer")}</Button>
+          <Button onClick={previewDiscord}>Discord</Button>
         </div>
       </Row>
+      <WindowsToastsRow />
     </Group>
+  );
+}
+
+function WindowsToastsRow() {
+  const [status, setStatus] = useState<ToastAccess | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    void toastAccess().then(setStatus).catch(() => setStatus("unavailable"));
+  }, []);
+  const label =
+    status === "allowed"
+      ? t("On")
+      : status === "denied"
+        ? t("Denied")
+        : status === "unavailable"
+          ? t("Unavailable")
+          : t("Off");
+  const enable = async () => {
+    setBusy(true);
+    try {
+      setStatus(await requestToastAccess());
+    } catch {
+      setStatus("unavailable");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Row label={t("Windows toasts")}>
+      <div className="flex items-center gap-1.5">
+        <span className={`text-caption ${status === "allowed" ? "text-green" : "text-label-3"}`}>{label}</span>
+        {status === "denied" ? (
+          <Button onClick={() => void invoke("open_uri", { uri: "ms-settings:privacy-notifications" })}>
+            {t("Open settings")}
+          </Button>
+        ) : status !== "allowed" && status !== "unavailable" ? (
+          <Button onClick={() => void enable()} disabled={busy}>
+            {t("Enable")}
+          </Button>
+        ) : null}
+      </div>
+    </Row>
   );
 }
 

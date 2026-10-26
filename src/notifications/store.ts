@@ -1,10 +1,12 @@
 import { createStore } from "../lib/store";
 
 export type NotificationKind = "message" | "music" | "download" | "timer" | "call" | "success" | "info";
+export type NotificationBrand = "discord";
 
 export interface AppNotification {
   id: number;
   kind: NotificationKind;
+  brand?: NotificationBrand;
   app: string;
   title: string;
   body: string;
@@ -66,6 +68,18 @@ export function previewTimer() {
     body: "25:00 · deep work",
     color: "#ff9f0a",
     duration: 6500,
+  });
+}
+
+export function previewDiscord() {
+  return notify({
+    kind: "message",
+    brand: "discord",
+    app: "Discord",
+    title: "Bipin",
+    body: "Hey, are you there?",
+    color: "#5865F2",
+    duration: 5600,
   });
 }
 
