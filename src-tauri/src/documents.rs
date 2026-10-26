@@ -33,23 +33,23 @@ pub fn read_text(path: &str) -> Result<String, String> {
         let text = rows.iter().map(|row| row.join("\t")).collect::<Vec<_>>().join("\n");
         return Ok(text.chars().take(120_000).collect());
     }
-    Err("Format kann nicht als Text gelesen werden".into())
+    Err("Format cannot be read as text".into())
 }
 
 // ── Reading ──────────────────────────────────────────────────────────────────
 
 fn read_document(input: &Path, ext: &str) -> Result<Source, String> {
     let text = || {
-        let bytes = std::fs::read(input).map_err(|e| format!("Datei nicht lesbar: {e}"))?;
+        let bytes = std::fs::read(input).map_err(|e| format!("Cannot read file: {e}"))?;
         Ok::<_, String>(String::from_utf8_lossy(bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes)).into_owned())
     };
     Ok(match ext {
         "txt" => Source::Plain(text()?),
         "md" | "markdown" => Source::Markdown(text()?),
         "html" | "htm" => Source::Markdown(html_to_markdown(&text()?)),
-        "pdf" => Source::Plain(tidy_pdf_text(&pdf_extract::extract_text(input).map_err(|_| "PDF-Text nicht lesbar (evtl. nur Bilder/Scan)".to_string())?)),
+        "pdf" => Source::Plain(tidy_pdf_text(&pdf_extract::extract_text(input).map_err(|_| "Cannot read PDF text (maybe images/scan only)".to_string())?)),
         "docx" => Source::Markdown(docx_to_markdown(input)?),
-        _ => return Err("Format wird nicht unterstützt".into()),
+        _ => return Err("Format not supported".into()),
     })
 }
 
@@ -75,11 +75,11 @@ fn tidy_pdf_text(s: &str) -> String {
 /// Paragraphs from word/document.xml; headings and lists become Markdown.
 fn docx_to_markdown(input: &Path) -> Result<String, String> {
     use quick_xml::events::Event as X;
-    let file = std::fs::File::open(input).map_err(|e| format!("Datei nicht lesbar: {e}"))?;
-    let mut zip = zip::ZipArchive::new(file).map_err(|_| "Keine gültige DOCX-Datei".to_string())?;
+    let file = std::fs::File::open(input).map_err(|e| format!("Cannot read file: {e}"))?;
+    let mut zip = zip::ZipArchive::new(file).map_err(|_| "Invalid DOCX file".to_string())?;
     let mut xml = String::new();
     zip.by_name("word/document.xml")
-        .map_err(|_| "Keine gültige DOCX-Datei".to_string())?
+        .map_err(|_| "Invalid DOCX file".to_string())?
         .read_to_string(&mut xml)
         .map_err(|e| e.to_string())?;
 
@@ -139,7 +139,7 @@ fn docx_to_markdown(input: &Path) -> Result<String, String> {
                 _ => {}
             },
             Ok(X::Eof) => break,
-            Err(_) => return Err("DOCX-Inhalt nicht lesbar".into()),
+            Err(_) => return Err("Cannot read DOCX content".into()),
             _ => {}
         }
     }
@@ -218,7 +218,7 @@ fn decode_entities(s: &str) -> String {
 fn read_table(input: &Path, ext: &str) -> Result<Vec<Vec<String>>, String> {
     use calamine::Reader;
     if ext == "csv" || ext == "tsv" {
-        let bytes = std::fs::read(input).map_err(|e| format!("Datei nicht lesbar: {e}"))?;
+        let bytes = std::fs::read(input).map_err(|e| format!("Cannot read file: {e}"))?;
         let text = String::from_utf8_lossy(bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes)).into_owned();
         // Guess the delimiter: the most common one in the first line (German Excel uses ";").
         let first = text.lines().next().unwrap_or("");
@@ -226,11 +226,11 @@ fn read_table(input: &Path, ext: &str) -> Result<Vec<Vec<String>>, String> {
         let mut reader = csv::ReaderBuilder::new().delimiter(delimiter).has_headers(false).flexible(true).from_reader(text.as_bytes());
         return reader
             .records()
-            .map(|r| r.map(|rec| rec.iter().map(str::to_string).collect()).map_err(|_| "CSV nicht lesbar".to_string()))
+            .map(|r| r.map(|rec| rec.iter().map(str::to_string).collect()).map_err(|_| "Cannot read CSV".to_string()))
             .collect();
     }
-    let mut book = calamine::open_workbook_auto(input).map_err(|_| "Tabelle nicht lesbar".to_string())?;
-    let range = book.worksheet_range_at(0).ok_or("Tabelle hat kein Blatt")?.map_err(|_| "Tabelle nicht lesbar".to_string())?;
+    let mut book = calamine::open_workbook_auto(input).map_err(|_| "Cannot read spreadsheet".to_string())?;
+    let range = book.worksheet_range_at(0).ok_or("Spreadsheet has no sheet")?.map_err(|_| "Cannot read spreadsheet".to_string())?;
     Ok(range.rows().map(|row| row.iter().map(cell_text).collect()).collect())
 }
 

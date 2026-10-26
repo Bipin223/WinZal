@@ -35,7 +35,7 @@ use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, SetForeground
 
 /// Opens/closes the notch from anywhere. Ctrl+Alt = AltGr on German keyboards;
 /// AltGr+Space types nothing, so there's no conflict.
-const SHORTCUT_LABEL: &str = "Strg+Alt+Leertaste";
+const SHORTCUT_LABEL: &str = "Ctrl+Alt+Space";
 
 /// For main.rs: elevated FPS helper (see fps::run_helper).
 pub fn fps_helper(main_pid: u32) -> ! {
@@ -375,30 +375,18 @@ struct Tray {
 #[derive(Default)]
 struct TrayItems(Mutex<Option<Tray>>);
 
-/// Open (shortcut right-aligned via tab, like Windows menus), settings, focus mode, silent, presentation, autostart, quit.
-fn tray_texts(lang: &str) -> [String; 7] {
-    if lang == "en" {
-        let keys = SHORTCUT_LABEL.replace("Strg", "Ctrl").replace("Leertaste", "Space");
-        [
-            format!("Open WinZal\t{keys}"),
-            "Settings…".into(),
-            "Do not disturb".into(),
-            "Silent mode".into(),
-            "Presentation mode".into(),
-            "Start with Windows".into(),
-            "Quit WinZal".into(),
-        ]
-    } else {
-        [
-            format!("WinZal öffnen\t{SHORTCUT_LABEL}"),
-            "Einstellungen…".into(),
-            "Nicht stören".into(),
-            "Stille".into(),
-            "Präsentationsmodus".into(),
-            "Mit Windows starten".into(),
-            "WinZal beenden".into(),
-        ]
-    }
+/// English-only tray menu. Open (shortcut right-aligned via tab, like Windows
+/// menus), settings, focus mode, silent, presentation, autostart, quit.
+fn tray_texts(_lang: &str) -> [String; 7] {
+    [
+        format!("Open WinZal\t{SHORTCUT_LABEL}"),
+        "Settings…".into(),
+        "Do not disturb".into(),
+        "Silent mode".into(),
+        "Presentation mode".into(),
+        "Start with Windows".into(),
+        "Quit WinZal".into(),
+    ]
 }
 
 #[tauri::command]

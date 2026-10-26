@@ -389,7 +389,7 @@ impl Session {
         match (cmd, evt) {
             ("DISPATCH", "READY") => self.login().await?,
             ("AUTHORIZE", _) => {
-                let code = data["code"].as_str().ok_or("Kein Code")?.to_string();
+                let code = data["code"].as_str().ok_or("No code")?.to_string();
                 let token = self.exchange(&[("grant_type", "authorization_code"), ("code", &code)]).await?;
                 self.command("AUTHENTICATE", json!({ "access_token": token }), None).await?;
             }
@@ -485,16 +485,16 @@ impl Session {
                 .body(body)
                 .send()
                 .await
-                .map_err(|_| "Keine Verbindung".to_string())?;
+                .map_err(|_| "No connection".to_string())?;
             let ok = res.status().is_success();
             let json: Value = res.json().await.unwrap_or_default();
             if ok {
                 if let Some(refresh) = json["refresh_token"].as_str() {
                     let _ = secrets::secret_set("discord.token".into(), refresh.into());
                 }
-                return json["access_token"].as_str().map(String::from).ok_or_else(|| "Kein Token".into());
+                return json["access_token"].as_str().map(String::from).ok_or_else(|| "No token".into());
             }
-            last = json["error_description"].as_str().or(json["error"].as_str()).unwrap_or("Token abgelehnt").to_string();
+            last = json["error_description"].as_str().or(json["error"].as_str()).unwrap_or("Token rejected").to_string();
         }
         Err(last)
     }

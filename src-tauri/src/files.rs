@@ -59,7 +59,7 @@ pub fn file_text(path: String) -> Result<String, String> {
 #[tauri::command]
 pub fn open_path(path: String) -> Result<(), String> {
     if !Path::new(&path).exists() {
-        return Err("Datei nicht mehr vorhanden".into());
+        return Err("File no longer exists".into());
     }
     // `explorer <file>` opens it with the associated app, without a console window.
     Command::new("explorer").arg(&path).spawn().map(|_| ()).map_err(|e| e.to_string())
@@ -70,7 +70,7 @@ pub fn open_path(path: String) -> Result<(), String> {
 pub fn copy_files(paths: Vec<String>) -> Result<(), String> {
     let files: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).filter(|p| p.exists()).collect();
     if files.is_empty() {
-        return Err("Dateien nicht mehr vorhanden".into());
+        return Err("Files no longer exist".into());
     }
     arboard::Clipboard::new().and_then(|mut c| c.set().file_list(&files)).map_err(|e| e.to_string())
 }

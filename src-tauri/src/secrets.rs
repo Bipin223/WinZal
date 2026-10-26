@@ -14,7 +14,7 @@ const ALLOWED: &[&str] = &["ai.gemini", "ai.groq", "ai.custom", "usage.custom", 
 
 fn target(name: &str) -> Result<HSTRING, String> {
     if !ALLOWED.contains(&name) {
-        return Err(format!("Unbekannter Schlüssel: {name}"));
+        return Err(format!("Unknown key: {name}"));
     }
     Ok(HSTRING::from(format!("Notch/{name}")))
 }

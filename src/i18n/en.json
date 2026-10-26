@@ -575,5 +575,17 @@
   "Games": "Games",
   "Clock faces": "Clock faces",
   "Output": "Output",
+  "Global": "Global",
+  "Global lyric offset": "Global lyric offset",
+  "Lyric sync": "Lyric sync",
+  "Lyric timing": "Lyric timing",
+  "Lyrics earlier": "Lyrics earlier",
+  "Lyrics later": "Lyrics later",
+  "Nothing playing": "Nothing playing",
+  "Reset all": "Reset all",
+  "Reset this track": "Reset this track",
+  "Saved for this track": "Saved for this track",
+  "Saved track offsets": "Saved track offsets",
+  "This track's offset": "This track's offset",
   "None": "None"
 }

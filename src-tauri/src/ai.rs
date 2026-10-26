@@ -19,8 +19,8 @@ use tauri::{AppHandle, Emitter, State};
 
 use crate::secrets;
 
-const SYSTEM_PROMPT: &str = "Du bist Ask, ein schneller Assistent in einer kleinen Notch am oberen Bildschirmrand. \
-Antworte knapp und direkt in der Sprache der Frage. Kein Markdown-Overhead: kurze Absätze, Listen nur wenn nötig.";
+const SYSTEM_PROMPT: &str = "You are Ask, a fast assistant in a small notch at the top of the screen. \
+Answer briefly and directly in the language of the question. No markdown overhead: short paragraphs, lists only when needed.";
 
 /// Claude models where the server falls back to a suitable model on refusal
 /// (`fallbacks: "default"`).
@@ -174,7 +174,7 @@ pub async fn stream_chat(
 ) -> Result<(), String> {
     let model = config.model.trim();
     if model.is_empty() {
-        return Err("Kein Modell eingetragen".into());
+        return Err("No model set".into());
     }
     let effort = config.effort.as_deref().filter(|e| !e.is_empty());
     let anthropic = config.provider == "anthropic";
@@ -186,11 +186,11 @@ pub async fn stream_chat(
         "custom" => {
             let base = config.base_url.as_deref().unwrap_or("").trim().trim_end_matches('/');
             if !(base.starts_with("https://") || base.starts_with("http://localhost") || base.starts_with("http://127.0.0.1")) {
-                return Err("Base-URL muss mit https:// beginnen".into());
+                return Err("Base URL must start with https://".into());
             }
             format!("{base}/chat/completions")
         }
-        other => return Err(format!("Unbekannter Anbieter: {other}")),
+        other => return Err(format!("Unknown provider: {other}")),
     };
 
     let client = reqwest::Client::builder()
@@ -238,7 +238,7 @@ pub async fn stream_chat(
         req.json(&body)
     };
 
-    let mut res = request.send().await.map_err(|e| format!("Keine Verbindung: {}", short(&e.to_string())))?;
+    let mut res = request.send().await.map_err(|e| format!("No connection: {}", short(&e.to_string())))?;
     if !res.status().is_success() {
         let status = res.status().as_u16();
         let text = res.text().await.unwrap_or_default();
@@ -247,7 +247,7 @@ pub async fn stream_chat(
 
     // Read SSE line by line; a chunk can end mid-line.
     let mut buffer = String::new();
-    while let Some(chunk) = res.chunk().await.map_err(|e| format!("Verbindung abgebrochen: {}", short(&e.to_string())))? {
+    while let Some(chunk) = res.chunk().await.map_err(|e| format!("Connection interrupted: {}", short(&e.to_string())))? {
         if cancelled() {
             return Ok(());
         }
@@ -261,7 +261,7 @@ pub async fn stream_chat(
             }
             let Ok(event) = serde_json::from_str::<Value>(data) else { continue };
             if let Some(err) = event.get("error") {
-                return Err(err["message"].as_str().unwrap_or("Fehler vom Anbieter").to_string());
+                return Err(err["message"].as_str().unwrap_or("Provider error").to_string());
             }
             let text = if anthropic {
                 (event["type"] == "content_block_delta" && event["delta"]["type"] == "text_delta")
@@ -284,10 +284,10 @@ fn http_error(status: u16, body: &str) -> String {
         .and_then(|v| v["error"]["message"].as_str().or(v["message"].as_str()).map(str::to_string))
         .unwrap_or_else(|| body.chars().take(140).collect());
     match status {
-        401 | 403 => format!("Schlüssel abgelehnt ({status}) – {}", short(&detail)),
-        404 => format!("Nicht gefunden (404) – Base-URL oder Modell prüfen. {}", short(&detail)),
-        429 => "Limit erreicht (429) – kurz warten".into(),
-        _ => format!("Fehler {status}: {}", short(&detail)),
+        401 | 403 => format!("Key rejected ({status}) – {}", short(&detail)),
+        404 => format!("Not found (404) – check the base URL or model. {}", short(&detail)),
+        429 => "Rate limit reached (429) – wait a moment".into(),
+        _ => format!("Error {status}: {}", short(&detail)),
     }
 }
 
