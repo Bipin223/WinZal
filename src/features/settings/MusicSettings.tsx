@@ -269,6 +269,12 @@ export function MusicSettings() {
           </>
         )}
       </Group>
+      <div className="px-1 pt-1 text-[10px] leading-relaxed text-label-4">
+        Lyrics: LRCLIB ·{" "}
+        <a href="https://lrc.red" target="_blank" rel="noreferrer" className="underline hover:text-label">
+          lrc.red
+        </a>
+      </div>
     </>
   );
 }

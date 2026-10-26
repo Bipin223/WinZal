@@ -20,6 +20,10 @@
         "en": "LRCLIB word-level timings (lyricsfile lines[].words) drive karaoke words when present; line-only LRCs use the character-weighted estimate"
       },
       {
+        "de": "lrc.red als kostenloser Wort-/Zeilen-Sync-Fallback, wenn LRCLIB keine Wortzeiten hat; Credit in Einstellungen → Musik",
+        "en": "lrc.red as the free word/line-sync fallback when LRCLIB has no word timings; credited in Settings → Music"
+      },
+      {
         "de": "Nacht-Himmel: Halbmond und Zufallssterne in der geschlossenen Pille; Herbstblätter und Bokeh-Lichtlecks bleiben ebenfalls in der Pille",
         "en": "Night sky: half moon and random stars in the closed pill; autumn leaves and bokeh light leaks stay in the pill too"
       },
