@@ -27,7 +27,7 @@ export type LyricAnimation =
   | "orbit"
   | "ambient";
 export type LyricEqualizerStyle = "bars" | "mirror" | "ticks";
-export type LyricGlowStyle = "none" | "wave" | "aurora" | "bloom" | "bokeh" | "leaves" | "night";
+export type LyricGlowStyle = "none" | "wave" | "aurora" | "bokeh" | "leaves";
 
 export const DEFAULT_TYPOGRAPHY: Record<TypeRole, TypeAxis> = {
   caption: { size: 0, weight: 0 },
@@ -284,7 +284,7 @@ const defaults: Settings = {
     lyricsTextWeight: 600,
     lyricsVisualizer: true,
     lyricsVisualizerStyle: "bars",
-    lyricsGlowStyle: "wave",
+    lyricsGlowStyle: "aurora",
     lyricsAnimation: "word",
     gpuAcceleration: false,
     gpuPreference: "auto",
@@ -417,21 +417,10 @@ settings.set((s) => {
       })(),
       lyricsGlowStyle: (() => {
         const stored = (s.appearance as { lyricsGlowStyle?: string } | undefined)?.lyricsGlowStyle;
-        const valid: LyricGlowStyle[] = ["none", "wave", "aurora", "bloom", "bokeh", "leaves", "night"];
+        const valid: LyricGlowStyle[] = ["none", "wave", "aurora", "bokeh", "leaves"];
         if (valid.includes(stored as LyricGlowStyle)) return stored as LyricGlowStyle;
-        // Existing picks map to the closest lab glow instead of resetting.
-        switch (stored) {
-          case "rings": return "bokeh";
-          case "spectrum": return "night";
-          case "embers": return "night";
-          case "silk": return "bloom";
-          case "liquid": return "bloom";
-          case "halo": return "night";
-        }
-        const oldViz = (s.appearance as { lyricsVisualizerStyle?: string } | undefined)?.lyricsVisualizerStyle;
-        if (oldViz === "aurora") return "aurora";
-        if (oldViz === "ripple") return "bokeh";
-        return "wave";
+        // Bloom and Night sky were removed; other old picks fall back to Aurora.
+        return "aurora";
       })(),
       lyricsPillLength: (() => {
         const a = s.appearance as { lyricsPillLength?: number; lyricsPillMinWidth?: number; lyricsPillAuto?: boolean } | undefined;

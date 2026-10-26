@@ -8,8 +8,8 @@
         "en": "Five selectable clock faces (Stacked, Split, Scatter, Classic, Word); the closed pill grows and shrinks with time, date, day and weather without clipping"
       },
       {
-        "de": "Songtext-Labor: Word by Word (Standard) und Apple Music, plus sieben Effekte (Fill, Glitch, Liquid, Spotlight, Spark, Orbit, Ambient); drei Equalizer (Bars, Mirror, Ticks); sechs Behind-Glows (Wave, Aurora, Bloom, Bokeh, Leaves, Night sky)",
-        "en": "Lyric lab: Word by Word (default) and Apple Music, plus seven effects (Fill, Glitch, Liquid, Spotlight, Spark, Orbit, Ambient); three equalizers (Bars, Mirror, Ticks); six behind-glows (Wave, Aurora, Bloom, Bokeh, Leaves, Night sky)"
+        "de": "Songtext-Labor: Word by Word (Standard) und Apple Music, plus sieben Effekte (Fill, Glitch, Liquid, Spotlight, Spark, Orbit, Ambient); drei Equalizer (Bars, Mirror, Ticks); vier Behind-Glows (Wave, Aurora, Bokeh, Leaves)",
+        "en": "Lyric lab: Word by Word (default) and Apple Music, plus seven effects (Fill, Glitch, Liquid, Spotlight, Spark, Orbit, Ambient); three equalizers (Bars, Mirror, Ticks); four behind-glows (Wave, Aurora, Bokeh, Leaves)"
       },
       {
         "de": "Zeilenwechsel mit 50 ms Vorlauf und kurzem Crossfade; Spotlight hält nur ein aktives Wort, Orbit und Ambient folgen dem Wort-Takt",
@@ -24,8 +24,8 @@
         "en": "lrc.red as the free word/line-sync fallback when LRCLIB has no word timings; credited in Settings → Music"
       },
       {
-        "de": "Nacht-Himmel: Halbmond und Zufallssterne in der geschlossenen Pille; Herbstblätter und Bokeh-Lichtlecks bleiben ebenfalls in der Pille",
-        "en": "Night sky: half moon and random stars in the closed pill; autumn leaves and bokeh light leaks stay in the pill too"
+        "de": "Nacht-Himmel-Glow entfernt (der schwerste); Herbstblätter und Bokeh-Lichtlecks bleiben in der Pille",
+        "en": "Night sky glow removed (the heaviest one); autumn leaves and bokeh light leaks stay in the pill"
       },
       {
         "de": "Visualisierung nur noch in der geschlossenen Pille; der erweiterte Player zeichnet keine Hintergrund-Ebene mehr und spart so RAM; volle Pillenbreite immer an",

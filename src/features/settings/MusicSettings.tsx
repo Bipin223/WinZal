@@ -26,10 +26,8 @@ export function MusicSettings() {
     { value: "none", label: t("None") },
     { value: "wave", label: "Wave" },
     { value: "aurora", label: "Aurora" },
-    { value: "bloom", label: "Bloom" },
     { value: "bokeh", label: "Bokeh" },
     { value: "leaves", label: "Leaves" },
-    { value: "night", label: "Night sky" },
   ];
   const animations: { value: Settings["appearance"]["lyricsAnimation"]; label: string }[] = [
     { value: "word", label: t("Word by Word") },

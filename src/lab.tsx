@@ -31,13 +31,11 @@ const ANIMATIONS: { value: LyricAnimation; label: string }[] = [
 ];
 
 const GLOWS: { value: LyricGlowStyle; label: string }[] = [
+  { value: "none", label: "None" },
   { value: "wave", label: "Wave" },
   { value: "aurora", label: "Aurora" },
-  { value: "bloom", label: "Bloom" },
   { value: "bokeh", label: "Bokeh" },
   { value: "leaves", label: "Leaves" },
-  { value: "night", label: "Night sky" },
-  { value: "none", label: "None" },
 ];
 
 const EQUALIZERS: { value: LyricEqualizerStyle; label: string }[] = [

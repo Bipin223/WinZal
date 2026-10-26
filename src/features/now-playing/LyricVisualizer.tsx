@@ -36,12 +36,6 @@ const LEAF_PATHS = [
   "M12 1.8 C14 4 15.6 4.8 17 4 C16.8 6.2 17.8 7.4 19.2 8 C18 9.6 18.4 11 19.4 12 C18 13 17.6 14.6 18.4 16.4 C16.2 16 14.8 17 14.2 18.6 C13.2 17.6 12.6 17.4 12 17.4 C11.4 17.4 10.8 17.6 9.8 18.6 C9.2 17 7.8 16 5.6 16.4 C6.4 14.6 6 13 4.6 12 C5.6 11 6 9.6 4.8 8 C6.2 7.4 7.2 6.2 7 4 C8.4 4.8 10 4 12 1.8 Z",
 ];
 
-/** Stable pseudo-random 0..1 so the star field looks scattered but never jumps. */
-function hash(n: number): number {
-  const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
-  return x - Math.floor(x);
-}
-
 const LEAF_SHADES = [
   "color-mix(in srgb, var(--accent) 16%, #c0392b)",
   "color-mix(in srgb, var(--accent) 16%, #e2601f)",
@@ -50,7 +44,7 @@ const LEAF_SHADES = [
   "color-mix(in srgb, var(--accent) 16%, #8a9a3b)",
 ];
 
-/** The wave plus the lab's six soft behind-glows. */
+/** Wave, Aurora, Bokeh and Leaves. Only the selected one is mounted. */
 export function LyricGlow({ style, playing }: { style: LyricGlowStyle; playing: boolean }) {
   if (style === "none") return null;
   const paused = playing ? "" : "lyr-paused";
@@ -80,13 +74,6 @@ export function LyricGlow({ style, playing }: { style: LyricGlowStyle; playing: 
     return (
       <div className={`lyr-glow lyr-glow-aurora ${paused}`} aria-hidden>
         <i />
-        <i />
-      </div>
-    );
-  }
-  if (style === "bloom") {
-    return (
-      <div className={`lyr-glow lyr-glow-bloom ${paused}`} aria-hidden>
         <i />
       </div>
     );
@@ -124,66 +111,35 @@ export function LyricGlow({ style, playing }: { style: LyricGlowStyle; playing: 
       </div>
     );
   }
-  if (style === "leaves") {
-    const count = 10;
-    return (
-      <div className={`lyr-glow lyr-glow-leaves ${paused}`} aria-hidden>
-        {Array.from({ length: count }, (_, i) => {
-          const left = -10 + (i * 80) / Math.max(1, count - 1) + ((i * 17) % 7);
-          const dur = 8 + (i % 7) * 0.9;
-          const delay = -(((i * 13) % 28) / 2);
-          const size = 8.5 + (i % 3) * 2.1;
-          const dx = 90 + ((i * 31) % 90);
-          const dir = i % 2 ? 1 : -1;
-          return (
-            <i
-              key={i}
-              style={{
-                left: `${left}%`,
-                width: `${size}px`,
-                height: `${size}px`,
-                color: LEAF_SHADES[i % LEAF_SHADES.length],
-                "--dur": `${dur}s`,
-                "--delay": `${delay}s`,
-                "--sway": `${6 + ((i * 5) % 12)}px`,
-                "--dx": `${dx}px`,
-                "--dir": dir,
-              } as CSSProperties}
-            >
-              <svg viewBox="0 0 24 24">
-                <path d={LEAF_PATHS[i % LEAF_PATHS.length]} />
-                <path className="vein" d="M12 22 L12 6 M12 12 L7 7 M12 12 L17 7 M12 16 L8 12 M12 16 L16 12" />
-              </svg>
-            </i>
-          );
-        })}
-      </div>
-    );
-  }
-  // night sky
-  const starCount = 18;
+  const count = 10;
   return (
-    <div className={`lyr-glow lyr-glow-night ${paused}`} aria-hidden>
-      <span className="moonHalo" />
-      <span className="moon" />
-      {Array.from({ length: starCount }, (_, i) => {
-        const left = 3 + hash(i + 1) * 94;
-        const top = 5 + hash(i + 101) * 80;
-        const roll = hash(i + 211);
-        const size = roll > 0.88 ? 3.2 : roll > 0.62 ? 2.3 : roll > 0.3 ? 1.7 : 1.2;
+    <div className={`lyr-glow lyr-glow-leaves ${paused}`} aria-hidden>
+      {Array.from({ length: count }, (_, i) => {
+        const left = -10 + (i * 80) / Math.max(1, count - 1) + ((i * 17) % 7);
+        const dur = 8 + (i % 7) * 0.9;
+        const delay = -(((i * 13) % 28) / 2);
+        const size = 8.5 + (i % 3) * 2.1;
+        const dx = 90 + ((i * 31) % 90);
         return (
           <i
             key={i}
-            className={`star${roll > 0.9 ? " bright" : ""}`}
             style={{
               left: `${left}%`,
-              top: `${top}%`,
               width: `${size}px`,
               height: `${size}px`,
-              "--dur": `${2.4 + hash(i + 301) * 4}s`,
-              "--delay": `${-hash(i + 401) * 6}s`,
+              color: LEAF_SHADES[i % LEAF_SHADES.length],
+              "--dur": `${dur}s`,
+              "--delay": `${delay}s`,
+              "--sway": `${6 + ((i * 5) % 12)}px`,
+              "--dx": `${dx}px`,
+              "--dir": i % 2 ? 1 : -1,
             } as CSSProperties}
-          />
+          >
+            <svg viewBox="0 0 24 24">
+              <path d={LEAF_PATHS[i % LEAF_PATHS.length]} />
+              <path className="vein" d="M12 22 L12 6 M12 12 L7 7 M12 12 L17 7 M12 16 L8 12 M12 16 L16 12" />
+            </svg>
+          </i>
         );
       })}
     </div>

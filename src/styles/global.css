@@ -217,17 +217,6 @@ body {
   border-radius: inherit;
   contain: paint;
 }
-/* Closed pill default: keep the glow in the text bay, feathered before the
-   cover and equalizer. The full-pill option keeps the old wash. */
-.lyr-glow-text {
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%);
-  opacity: .82;
-}
-.lyr-glow-text .lyr-wave-front-fill { opacity: .2; }
-.lyr-glow-text .lyr-wave-back-fill { opacity: .1; }
-.lyr-glow-text .lyr-wave-crest { opacity: .45; }
-
 /* ------------------------------------------------------------------ */
 /* final.html lyric effects — word-progress driven, no line overlap. */
 .lab-line {
@@ -379,6 +368,14 @@ body {
 }
 .lyr-wave-back { animation: lyr-wave-back 12s linear infinite; }
 .lyr-wave-front { animation: lyr-wave-front 8s linear infinite; }
+@keyframes lyr-wave-back {
+  from { transform: translateX(0); }
+  to { transform: translateX(-33.3333%); }
+}
+@keyframes lyr-wave-front {
+  from { transform: translateX(-33.3333%); }
+  to { transform: translateX(0); }
+}
 .lyr-wave-back-fill { fill: var(--accent); opacity: .14; }
 .lyr-wave-front-fill { fill: var(--accent); opacity: .26; }
 .lyr-wave-crest {
@@ -409,15 +406,7 @@ body {
   from { transform: translateX(-6%) scaleY(.8); opacity: .22; }
   to { transform: translateX(6%) scaleY(1.1); opacity: .42; }
 }
-.lyr-glow-bloom i {
-  inset: 8% 2%;
-  background:
-    radial-gradient(58% 120% at 28% 50%, color-mix(in srgb, var(--accent) 55%, transparent), transparent 70%),
-    radial-gradient(52% 110% at 74% 50%, rgba(255, 178, 96, .4), transparent 72%);
-  filter: blur(18px);
-  animation: lyr-glow-breathe 3.4s ease-in-out infinite;
-}
-/* Bokeh — drifting light motes. */
+/* Bokeh — drifting light motes plus three soft leaks. */
 .lyr-glow-bokeh i { border-radius: 50%; filter: blur(6px); opacity: .55; }
 .bokeh-mote {
   animation-name: lyr-bokeh-a;
@@ -440,7 +429,6 @@ body {
   0% { transform: translate(0, 0) rotate(0deg) scale(.9); }
   100% { transform: translate(var(--dx, 12px), var(--dy, -8px)) rotate(20deg) scale(1.08); }
 }
-/* Three independent blurred light leaks crossing the pill. */
 .bokeh-leak {
   position: absolute;
   height: 18px;
@@ -491,11 +479,6 @@ body {
   50% { translate: 10% -7%; opacity: .24; }
   100% { translate: 18% 2%; opacity: .12; }
 }
-@keyframes lyr-glow-breathe {
-  0%, 100% { opacity: .55; transform: scaleX(.95); }
-  50% { opacity: 1; transform: scaleX(1.05); }
-}
-
 /* Leaves: autumn silhouettes falling from upper-left to lower-right. */
 .lyr-glow-leaves i {
   position: absolute;
@@ -512,86 +495,14 @@ body {
   stroke-width: .8;
   stroke-linecap: round;
 }
-
-/* Night sky: moon, random stars, galaxies, shooting star and the little UFO. */
-.lyr-glow-night::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(90% 130% at 80% -10%, rgb(120 150 255 / .2), transparent 62%),
-    radial-gradient(70% 110% at 15% 110%, rgb(90 70 160 / .16), transparent 70%);
-  pointer-events: none;
-}
-.lyr-glow-night .moonHalo,
-.lyr-glow-night .moon { position: absolute; display: block; }
-.lyr-glow-night .moonHalo {
-  right: 3%;
-  top: -2%;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  z-index: 1;
-  background: radial-gradient(circle, rgb(232 241 255 / .3), rgb(232 241 255 / .09) 46%, transparent 68%);
-  filter: blur(6px);
-  animation: lyr-moon-halo 7s ease-in-out infinite;
-}
-.lyr-glow-night .moon {
-  right: 10%;
-  top: 12%;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  z-index: 2;
-  background: radial-gradient(circle at 34% 30%, #fff 0%, #f8faff 40%, #e8edf9 72%, #cfd7ea 100%);
-  box-shadow:
-    inset -2px -2px 4px rgb(110 125 160 / .3),
-    0 0 9px 2px rgb(240 246 255 / .7),
-    0 0 24px 8px rgb(220 232 255 / .22);
-  animation: lyr-moon-drift 18s ease-in-out infinite alternate;
-}
-/* Closed pill: a true half moon. */
-.lyr-glow-night .moon::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  border-radius: 50%;
-  background: var(--color-notch, #05060a);
-  clip-path: inset(0 50% 0 0);
-}
-.lyr-glow-night .moon::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 62% 32%, rgb(150 162 190 / .3) 0 1.7px, transparent 2.1px),
-    radial-gradient(circle at 38% 60%, rgb(150 162 190 / .22) 0 2.3px, transparent 2.8px),
-    radial-gradient(circle at 70% 66%, rgb(150 162 190 / .18) 0 1.4px, transparent 1.8px),
-    radial-gradient(circle at 30% 34%, rgb(255 255 255 / .55) 0 2.6px, transparent 3.2px);
-}
-.lyr-glow-night .star {
-  border-radius: 50%;
-  background: #fff;
-  opacity: 0;
-  animation: lyr-twinkle var(--dur, 4s) ease-in-out infinite;
-  animation-delay: var(--delay, 0s);
-}
-.lyr-glow-night .star.bright { box-shadow: 0 0 6px #fff, 0 0 14px rgb(200 220 255 / .8); }
 @keyframes lyr-leaf-fall {
   0% { transform:translate(0,-18px) rotate(0deg); opacity:0; }
   8% { opacity:.9; }
-  25% { transform:translate(calc(var(--dx,70px) * .26 * var(--dx-scale,1) + var(--sway,10px)), calc(var(--fall,64px) * .22)) rotate(calc(var(--dir,1) * 120deg)); }
-  50% { transform:translate(calc(var(--dx,70px) * .54 * var(--dx-scale,1) - var(--sway,10px)), calc(var(--fall,64px) * .47)) rotate(calc(var(--dir,1) * 240deg)); }
-  75% { transform:translate(calc(var(--dx,70px) * .79 * var(--dx-scale,1) + var(--sway,10px)), calc(var(--fall,64px) * .72)) rotate(calc(var(--dir,1) * 380deg)); }
-  100% { transform:translate(calc(var(--dx,70px) * var(--dx-scale,1)), var(--fall,64px)) rotate(calc(var(--dir,1) * 520deg)); opacity:0; }
+  25% { transform:translate(calc(var(--dx,70px) * .26 + var(--sway,10px)), calc(var(--fall,64px) * .22)) rotate(calc(var(--dir,1) * 120deg)); }
+  50% { transform:translate(calc(var(--dx,70px) * .54 - var(--sway,10px)), calc(var(--fall,64px) * .47)) rotate(calc(var(--dir,1) * 240deg)); }
+  75% { transform:translate(calc(var(--dx,70px) * .79 + var(--sway,10px)), calc(var(--fall,64px) * .72)) rotate(calc(var(--dir,1) * 380deg)); }
+  100% { transform:translate(var(--dx,70px), var(--fall,64px)) rotate(calc(var(--dir,1) * 520deg)); opacity:0; }
 }
-@keyframes lyr-moon-halo { 0%,100% { opacity:.75; transform:scale(.96); } 50% { opacity:1; transform:scale(1.06); } }
-@keyframes lyr-moon-drift { 0% { transform:translate(0,0); } 100% { transform:translate(-3px,2px); } }
-@keyframes lyr-twinkle { 0%,100% { opacity:.12; transform:scale(.65); } 50% { opacity:1; transform:scale(1.15); } }
-
 :root[data-motion="reduced"] .lyr-eq i,
 :root[data-motion="reduced"] .lyr-glow i,
 :root[data-motion="reduced"] .lyr-wave,
