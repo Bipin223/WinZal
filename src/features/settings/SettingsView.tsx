@@ -1273,19 +1273,20 @@ function NotificationsDemo() {
           <Button onClick={previewDiscord} disabled={!on}>Discord</Button>
         </div>
       </Row>
-      <WindowsToastsRow />
+      <WindowsToastsRow enabled={on} />
     </Group>
   );
 }
 
-function WindowsToastsRow() {
+function WindowsToastsRow({ enabled }: { enabled: boolean }) {
   const [status, setStatus] = useState<ToastAccess | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     void toastAccess().then(setStatus).catch(() => setStatus("unavailable"));
   }, []);
-  const label =
-    status === "allowed"
+  const label = !enabled
+    ? t("Off")
+    : status === "allowed"
       ? t("On")
       : status === "denied"
         ? t("Denied")
@@ -1305,12 +1306,12 @@ function WindowsToastsRow() {
   return (
     <Row label={t("Windows toasts")}>
       <div className="flex items-center gap-1.5">
-        <span className={`text-caption ${status === "allowed" ? "text-green" : "text-label-3"}`}>{label}</span>
-        {status === "denied" ? (
+        <span className={`text-caption ${enabled && status === "allowed" ? "text-green" : "text-label-3"}`}>{label}</span>
+        {enabled && status === "denied" ? (
           <Button onClick={() => void invoke("open_uri", { uri: "ms-settings:privacy-notifications" })}>
             {t("Open settings")}
           </Button>
-        ) : status !== "allowed" && status !== "unavailable" ? (
+        ) : enabled && status !== "allowed" && status !== "unavailable" ? (
           <Button onClick={() => void enable()} disabled={busy}>
             {t("Enable")}
           </Button>

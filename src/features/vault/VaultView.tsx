@@ -83,7 +83,9 @@ function VaultContent() {
   const [screen, setScreen] = useState<Screen>({ kind: "list" });
   /** Action that hit "locked"; runs again after the PIN. */
   const [prompt, setPrompt] = useState<null | (() => Promise<void>)>(null);
-  const [helloDismissed, setHelloDismissed] = useState(false);
+  // Show the locked vault screen first; only start the Windows Hello / passkey
+  // prompt after the user clicks Unlock.
+  const [helloDismissed, setHelloDismissed] = useState(true);
   const [helloSupported, setHelloSupported] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
