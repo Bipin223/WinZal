@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAnimationFrame } from "motion/react";
 import type { LyricAnimation } from "../../settings/store";
 import { livePosition, type NowPlaying } from "../../platform/media";
@@ -353,12 +353,7 @@ function AmbientText({
   return (
     <span className={`lab-line lab-ambient-line${np && !np.isPlaying ? " lyr-paused" : ""}`}>
       {words.map((word, i) => (
-        <span
-          key={i}
-          ref={(el) => { refs.current[i] = el; }}
-          className="lab-ambient-word"
-          style={{ "--i": i } as CSSProperties}
-        >
+        <span key={i} ref={(el) => { refs.current[i] = el; }} className="lab-ambient-word">
           {word}
           {i < words.length - 1 ? "\u00A0" : ""}
         </span>
