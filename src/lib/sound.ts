@@ -131,6 +131,48 @@ export function alarmRinging(): boolean {
   return stopCurrent !== null;
 }
 
+/**
+ * Short iPhone-like charging chime: two soft rising bell notes. Synthesised,
+ * so there is no extra audio file or memory cost. Volume follows the alarm
+ * volume; 0 stays silent.
+ */
+export function playChargeChime(volume = 0.5) {
+  const level = Math.max(0, Math.min(1, volume));
+  if (level <= 0) return;
+  try {
+    ctx ??= new AudioContext();
+    const c = ctx;
+    void c.resume();
+    const master = c.createGain();
+    master.gain.value = level * 0.55;
+    master.connect(c.destination);
+    const start = c.currentTime + 0.015;
+    const notes = [
+      { freq: 1318.51, at: 0, decay: 0.5, gain: 0.85 },
+      { freq: 1975.53, at: 0.105, decay: 0.62, gain: 0.6 },
+    ];
+    for (const note of notes) {
+      for (const [mult, rel] of [[1, 1], [2, 0.14], [3, 0.06]] as [number, number][]) {
+        const osc = c.createOscillator();
+        const g = c.createGain();
+        osc.type = "sine";
+        osc.frequency.value = note.freq * mult;
+        const t = start + note.at;
+        const peak = note.gain * rel * 0.3;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(peak, t + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + note.decay);
+        osc.connect(g).connect(master);
+        osc.start(t);
+        osc.stop(t + note.decay + 0.05);
+      }
+    }
+    window.setTimeout(() => master.disconnect(), 1400);
+  } catch {
+    // Audio unavailable: the visual charging animation still runs.
+  }
+}
+
 export function stopAlarm() {
   stopCurrent?.();
 }

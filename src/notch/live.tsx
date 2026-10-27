@@ -24,13 +24,13 @@ export function useLiveActivity(): { id: string | null } {
   const call = useDiscordCall();
   const np = useNowPlaying();
   const s = settings.use();
-  const view = callView.use();
   const musicInPill = s.appearance.musicInPill;
+  const view = callView.use();
+  const canSwap = !!call && !!np?.isPlaying && musicInPill;
   useEffect(() => {
-    if (!call) callView.set(null);
-  }, [call]);
-  const showMusicInCall =
-    !!np?.isPlaying && musicInPill && (view === "music" || (view === null && s.discord.musicDuringCall));
+    if (!canSwap) callView.set(null);
+  }, [canSwap]);
+  const showMusicInCall = canSwap && view === "music";
   if (gaming) return { id: "system" };
   if (call && !showMusicInCall) return { id: "discord" };
   if (np?.isPlaying && musicInPill) return { id: "media" };

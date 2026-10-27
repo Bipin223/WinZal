@@ -3,7 +3,7 @@ import { AnimatePresence, animate, motion, useMotionValue, type Transition } fro
 import { Drop, GearSix, Ghost, MoonStars, PushPin } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
 import { useNowPlaying } from "../platform/media";
-import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onSilentExit, onTrayOpen, setHitRect, setMemoryLow, setNotchHeight, setSilent, trimMemory } from "../platform/native";
+import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onSilentExit, onTrayOpen, setHitRect, setMemoryLow, setNotchHeight, setNotchWidth, setSilent, trimMemory } from "../platform/native";
 import { PrivacyDots } from "../features/privacy/PrivacyDots";
 import { FOCUS_CLICKS, focusMode, setFocusMode } from "./focus";
 import { silentMode, setSilentMode } from "./silent";
@@ -13,6 +13,13 @@ import { useDragToMove } from "./drag";
 import { LiveSlot, useLiveActivity } from "./live";
 import { GamingSatellite } from "./GamingSatellite";
 import { TimerSatellite } from "./TimerSatellite";
+import { ActivitySwitch } from "./ActivitySwitch";
+import { callView, useDiscordCall } from "../features/discord/store";
+import { FlyoutLayer } from "./FlyoutLayer";
+import { closeFlyout, flyout } from "./flyout";
+import { notchOpenRequest } from "./openRequest";
+import { chargingPulse, useChargingWatch } from "./useChargingWatch";
+import { BatteryMeter } from "../ui/BatteryMeter";
 import { NotificationLayer } from "../notifications/NotificationLayer";
 import { notifications } from "../notifications/store";
 import { DOCK_HEIGHT, HEADER_HEIGHT, geometry, openGeometry, type NotchGeometry } from "./geometry";
@@ -59,6 +66,7 @@ export function Notch() {
   const silent = silentMode.use();
   const gamingLive = useGamingLive();
   useFpsHelper(gamingLive || silent);
+  useChargingWatch();
   const measuredGamingWidth = gamingMeasured.use();
   const [measuredClockWidth, setMeasuredClockWidth] = useState(0);
   const clockRow = useRef<HTMLDivElement>(null);
@@ -97,6 +105,11 @@ export function Notch() {
   const tab = tabId === settingsTab.id ? settingsTab : (visible.find((t) => t.id === tabId) ?? visible[0] ?? tabs[0]);
   const np = useNowPlaying();
   const live = useLiveActivity();
+  const call = useDiscordCall();
+  const charge = chargingPulse.use();
+  const chargingView = charge.active && status !== "open" && !idleLine;
+  const flyoutState = flyout.use();
+  const flyoutOpen = flyoutState.kind !== null;
 
   // Like the Dynamic Island: opening jumps to the running activity's tool,
   // but only after a pause. Closed briefly (copying a key, grabbing a file) → you
@@ -122,14 +135,14 @@ export function Notch() {
   const override = sizeOverride.use();
   const size = override?.tabId === tab.id ? override : tab.size;
   // Live activity shown in the closed notch (the idle line only lets the timer alarm through).
-  const shownLive = idleLine ? (alert ? "timer" : null) : live.id;
+  const shownLive = chargingView ? null : idleLine ? (alert ? "timer" : null) : live.id;
   // The closed clock is optional; Windows island prefers it over the live media slot.
   const clockWeather = appearance.clockWeather;
   // Lyrics only make sense when the media pill is visible, so they win over the clock
   // in the floating island (otherwise the whole lyrics option would do nothing there).
   const lyricsPill = appearance.lyricsInPill && shownLive === "media";
   const pillLive = floating ? (clockWeather && !lyricsPill ? null : shownLive) : shownLive;
-  const clockPill = clockWeather && !pillLive;
+  const clockPill = !chargingView && clockWeather && !pillLive;
   // Measure the real clock row in the parent so date/day/weather toggles and
   // face changes resize the pill immediately, without a store subscription race.
   useLayoutEffect(() => {
@@ -233,6 +246,18 @@ export function Notch() {
   // A running timer gets its own circle on the right whenever another live
   // activity owns the main pill (gaming, call, music).
   const timerSatellite = timerLive && !idleLine && status !== "open" && pillLive !== "timer";
+  // Call + music: a circular switch shows the other activity. It sits first on
+  // the right; the timer moves one slot further right when both are present.
+  const canSwap = !!call && !!np?.isPlaying && appearance.musicInPill;
+  const switchKind: "music" | "call" | null = canSwap
+    ? pillLive === "discord"
+      ? "music"
+      : pillLive === "media"
+        ? "call"
+        : null
+    : null;
+  const switchSatellite = !!switchKind && !idleLine && status !== "open";
+  const timerShift = switchSatellite ? 40 : 0;
   const surface = appearance.theme === "custom" ? appearance.themeColor : light ? LIGHT_SURFACE : DARK_SURFACE;
   const surfaceLight = isLightColor(surface);
   const transition = useTransitionFor(status, displayShape, lyricTarget > 0);
@@ -241,7 +266,12 @@ export function Notch() {
   const hitRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
-      if (!hitRef.current?.contains(e.target as Node)) dismiss();
+      if (hitRef.current?.contains(e.target as Node)) return;
+      // The attached flyout lives outside the notch's own hit wrapper; its
+      // buttons must receive the click before anything closes.
+      if (e.target instanceof Element && e.target.closest("[data-flyout-hit]")) return;
+      if (flyout.get().kind !== null) closeFlyout();
+      dismiss();
     };
     window.addEventListener("pointerdown", onDown);
     const offBlur = onNativeBlur(dismiss);
@@ -250,6 +280,30 @@ export function Notch() {
       offBlur();
     };
   }, [dismiss]);
+
+  // Attached panels belong to the tool that opened them.
+  useEffect(() => {
+    closeFlyout();
+  }, [tab.id]);
+
+  // An attached panel only makes sense while the notch is open.
+  useEffect(() => {
+    if (status !== "open" && flyout.get().kind !== null) closeFlyout();
+  }, [status]);
+
+  // Widen the transparent window only while a panel is out, so the resting
+  // notch keeps its small compositor surface. The window is re-centered by Rust.
+  useEffect(() => {
+    if (!isNative) return;
+    if (flyoutOpen) {
+      setNotchWidth(1260);
+      return;
+    }
+    // Let the exit spring finish before clipping the transparent window back
+    // to the resting width.
+    const id = window.setTimeout(() => setNotchWidth(760), 340);
+    return () => window.clearTimeout(id);
+  }, [flyoutOpen]);
 
   useNativeBridge(hitRef, onPointerEnter, onPointerLeave);
   const drag = useDragToMove(status);
@@ -264,6 +318,8 @@ export function Notch() {
 
   // Shortcut: opening takes focus (Esc, typing), closing gives it back.
   useEffect(() => onShortcut(() => toggle() === "open" && keyboardFocus(true)), [toggle]);
+  // A downward drag on a notification asks the notch to open.
+  useEffect(() => notchOpenRequest.subscribe(() => open()), [open]);
   useEffect(
     () =>
       onTrayOpen((tab) => {
@@ -383,7 +439,10 @@ export function Notch() {
           <LiveRightInset.Provider value={rightInset}>
             <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} widthExtra={lyricsPill ? 0 : appearance.islandWidth} height={lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight} systemWidth={systemWidth} />
           </LiveRightInset.Provider>
-          {clockWeather && !idleLine && status !== "open" && !pillLive && <ClosedClock rowRef={clockRow} />}
+          {!chargingView && clockWeather && !idleLine && status !== "open" && !pillLive && <ClosedClock rowRef={clockRow} />}
+          <AnimatePresence>
+            {chargingView && <ChargingPulse key="charging" percent={charge.percent} />}
+          </AnimatePresence>
           {!idleLine && <PrivacyDots hideScreen={showRecording} />}
           <AnimatePresence>
             {showRecording && (
@@ -447,11 +506,51 @@ export function Notch() {
           </span>
         )}
         <GamingSatellite show={gamingSatellite} playing={!!np?.isPlaying} floating={floating} />
-        <TimerSatellite show={timerSatellite} floating={floating} />
+        <ActivitySwitch
+          show={switchSatellite}
+          kind={switchKind}
+          onSwitch={() => callView.set(switchKind === "music" ? "music" : "call")}
+          floating={floating}
+        />
+        <TimerSatellite
+          show={timerSatellite}
+          floating={floating}
+          shift={timerShift}
+          onOpen={() => {
+            navigate("timer");
+            open();
+            keyboardFocus(true);
+          }}
+        />
+        <FlyoutLayer />
         </motion.div>
       </div>
       <NotificationLayer />
     </div>
+  );
+}
+
+/** Windows-island style: the selected clock face in the floating closed pill. */
+function ChargingPulse({ percent }: { percent: number }) {
+  return (
+    <motion.div
+      className="absolute inset-0 flex items-center justify-center gap-2"
+      initial={{ opacity: 0, scale: 0.86, y: 3 }}
+      animate={{ opacity: 1, scale: 1, y: 0, transition: springs.open }}
+      exit={{ opacity: 0, scale: 0.92, y: -2, transition: springs.close }}
+      style={{ transformOrigin: "50% 50%", willChange: "transform, opacity" }}
+    >
+      <span className="relative flex items-center justify-center">
+        <motion.span
+          aria-hidden
+          className="absolute size-6 rounded-full bg-green/25"
+          animate={{ scale: [0.8, 1.7], opacity: [0.55, 0] }}
+          transition={{ duration: 1.25, repeat: 2, ease: "easeOut" }}
+        />
+        <BatteryMeter percent={percent} charging plugged size="md" />
+      </span>
+      <span className="text-caption font-semibold text-label">{t("Charging")}</span>
+    </motion.div>
   );
 }
 
@@ -482,7 +581,7 @@ function ClosedClock({ rowRef }: { rowRef: RefObject<HTMLDivElement | null> }) {
               height={appearance.islandHeight}
             />
           </span>
-          {period && (
+          {period && appearance.clockShowPeriod && (
             <span className="shrink-0 text-label-3 leading-none" style={{ fontSize: `${smallSize}px` }}>
               {period}
             </span>
@@ -776,7 +875,7 @@ function useNativeBridge(
     const ro = new ResizeObserver(schedule);
     ro.observe(el);
     const refreshCards = () => {
-      const next = new Set(document.querySelectorAll<HTMLElement>("[data-notification-hit]"));
+      const next = new Set(document.querySelectorAll<HTMLElement>("[data-notification-hit], [data-flyout-hit]"));
       for (const card of cards) if (!next.has(card)) ro.unobserve(card);
       for (const card of next) if (!cards.has(card)) ro.observe(card);
       cards.clear();
@@ -787,7 +886,7 @@ function useNativeBridge(
     // commit frame, and once the exit spring has removed a dismissed card.
     // This replaces the old body-wide MutationObserver, which ran on every
     // unrelated DOM update (lyrics, clock, visualizations).
-    const unsubscribe = notifications.subscribe(() => {
+    const refreshSoon = () => {
       refreshCards();
       window.cancelAnimationFrame(cardFrame);
       cardFrame = window.requestAnimationFrame(refreshCards);
@@ -795,7 +894,26 @@ function useNativeBridge(
       window.clearTimeout(cardTimerLate);
       cardTimer = window.setTimeout(refreshCards, 40);
       cardTimerLate = window.setTimeout(refreshCards, 450);
+    };
+    const unsubscribe = notifications.subscribe(refreshSoon);
+    const unsubscribeFlyout = flyout.subscribe(refreshSoon);
+    const unsubscribeTimer = timer.subscribe(refreshSoon);
+    // Overlays such as the timer satellite can appear because music/call
+    // priority changed, without any of the stores above changing. Watch only
+    // child-list additions/removals and refresh when a hit overlay is involved;
+    // this is much narrower than the old body-wide layout observer.
+    const overlayObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of [...mutation.addedNodes, ...mutation.removedNodes]) {
+          if (!(node instanceof Element)) continue;
+          if (node.matches("[data-flyout-hit], [data-notification-hit]") || node.querySelector("[data-flyout-hit], [data-notification-hit]")) {
+            refreshSoon();
+            return;
+          }
+        }
+      }
     });
+    overlayObserver.observe(document.body, { childList: true, subtree: true });
     refreshCards();
     report();
     // A display/DPI change can alter the CSS viewport without resizing the hit
@@ -820,6 +938,9 @@ function useNativeBridge(
       window.clearTimeout(cardTimer);
       window.clearTimeout(cardTimerLate);
       unsubscribe();
+      unsubscribeFlyout();
+      unsubscribeTimer();
+      overlayObserver.disconnect();
       ro.disconnect();
       window.removeEventListener("resize", schedule);
       offHover();

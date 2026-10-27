@@ -120,6 +120,11 @@ export function setNotchHeight(height: number) {
   if (isNative) void invoke("set_notch_height", { height });
 }
 
+/** Widen the transparent window for an attached flyout; Rust re-centers it. */
+export function setNotchWidth(width: number) {
+  if (isNative) void invoke("set_notch_width", { width });
+}
+
 /** WebView2 memory target: low while the notch sits closed, normal otherwise. */
 export function setMemoryLow(low: boolean) {
   if (isNative) void invoke("memory_low", { low });

@@ -34,6 +34,8 @@ const DEFAULTS: Appearance = {
   clockShowWeather: true,
   clockShowDate: true,
   clockShowDay: true,
+  clockShowPeriod: true,
+  clockAccentFirstDigit: true,
   musicInPill: true,
   clockAccent: "#ff453a",
   clockClosedSize: 15,
@@ -139,7 +141,7 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
                             height={a.islandHeight}
                           />
                         </span>
-                        {previewTime.period && (
+                        {a.clockShowPeriod && previewTime.period && (
                           <span className="shrink-0 text-white/55 leading-none" style={{ fontSize: Math.max(8, Math.round(a.clockClosedSize * 0.66)) }}>
                             {previewTime.period}
                           </span>
@@ -235,6 +237,12 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
                       <ToggleRow label={t("Day")} checked={a.clockShowDay} onChange={(clockShowDay) => set({ clockShowDay })} />
                     </>
                   )}
+                  <ToggleRow label={t("AM / PM")} checked={a.clockShowPeriod} onChange={(clockShowPeriod) => set({ clockShowPeriod })} />
+                  <ToggleRow
+                    label={t("Accent first digit")}
+                    checked={a.clockAccentFirstDigit}
+                    onChange={(clockAccentFirstDigit) => set({ clockAccentFirstDigit })}
+                  />
                 </div>
               </>
             )}
@@ -373,6 +381,8 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
               clockShowWeather: a.clockShowWeather,
               clockShowDate: a.clockShowDate,
               clockShowDay: a.clockShowDay,
+              clockShowPeriod: a.clockShowPeriod,
+              clockAccentFirstDigit: a.clockAccentFirstDigit,
               // Music lives in its own settings page; Appearance reset leaves it alone.
               musicInPill: a.musicInPill,
               lyricsInPill: a.lyricsInPill,

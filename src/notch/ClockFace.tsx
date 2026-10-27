@@ -59,7 +59,7 @@ export function ClockFace({
             </div>
           </div>
           <div className="flex flex-col items-end gap-[0.35em] pb-[0.2em] text-label-3" style={{ fontSize: "0.75em" }}>
-            {period && <span className="font-semibold">{period}</span>}
+            {a.clockShowPeriod && period && <span className="font-semibold">{period}</span>}
             {footer}
           </div>
         </div>
@@ -80,8 +80,8 @@ export function ClockFace({
           </div>
           {!compact && (
             <div className="flex h-full shrink-0 flex-col items-end justify-center gap-[0.9em]">
-              {period && (
-                <span style={{ color: accent, fontSize: "1.05em", fontWeight: 800, lineHeight: 1 }}>{period}</span>
+              {a.clockShowPeriod && period && (
+                <span style={{ color: a.clockAccentFirstDigit ? accent : "var(--color-label-3)", fontSize: "1.05em", fontWeight: 800, lineHeight: 1 }}>{period}</span>
               )}
               <span className="tabular text-label-3" style={{ fontSize: "0.95em", lineHeight: 1 }}>{ss}</span>
             </div>
@@ -104,7 +104,7 @@ export function ClockFace({
               strokeWidth="0.7"
               vectorEffect="non-scaling-stroke"
             />
-            <circle cx={compact ? 80 : 78} cy={compact ? 62 : 77} r="1.5" fill={accent} />
+            <circle cx={compact ? 80 : 78} cy={compact ? 62 : 77} r="1.5" fill={a.clockAccentFirstDigit ? accent : "currentColor"} />
           </svg>
           <span
             className="absolute"
@@ -128,7 +128,7 @@ export function ClockFace({
             className="absolute bottom-[8%] left-[9%] flex items-center gap-[0.5em] text-label-3"
             style={{ fontSize: "0.75em" }}
           >
-            {period && <span className="font-semibold">{period}</span>}
+            {a.clockShowPeriod && period && <span className="font-semibold">{period}</span>}
             {footer}
           </div>
         </div>
@@ -138,7 +138,7 @@ export function ClockFace({
         <div className="flex h-full flex-col items-center justify-center gap-[0.45em] px-[1em]">
           <div style={{ fontSize: compact ? "3.6em" : "4.8em", letterSpacing: "-0.035em", lineHeight: 1 }}>
             <ClockTime time={time} weight={a.clockOpenWeight} emphasizeHour={a.clockEmphasis} />
-            {period && (
+            {a.clockShowPeriod && period && (
               <span className="ml-[0.18em] align-top text-label-3" style={{ fontSize: "0.24em", letterSpacing: "0.02em" }}>
                 {period}
               </span>
@@ -155,8 +155,8 @@ export function ClockFace({
       {style === "word" && (
         <div className="flex h-full flex-col items-center justify-center gap-[0.5em] px-[1.2em] text-center">
           <div style={{ fontSize: compact ? "2.15em" : "2.55em", letterSpacing: "-0.04em", lineHeight: 1.05 }}>
-            <WordTime now={now} accent={accent} />
-            {period && (
+            <WordTime now={now} accent={a.clockAccentFirstDigit ? accent : undefined} />
+            {a.clockShowPeriod && period && (
               <span className="ml-[0.35em] align-top text-label-3" style={{ fontSize: "0.34em", letterSpacing: "0.02em" }}>
                 {period}
               </span>
@@ -271,7 +271,7 @@ export function CompactClock({
       <span className="relative flex items-center gap-[0.22em]" style={{ height, fontWeight: weight }}>
         <svg aria-hidden className="absolute inset-0 h-full w-full text-label-4" viewBox="0 0 100 100" preserveAspectRatio="none">
           <path d="M8 70 L92 32" fill="none" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-          <circle cx="92" cy="32" r="1.6" fill={a.clockAccent} />
+          <circle cx="92" cy="32" r="1.6" fill={a.clockAccentFirstDigit ? a.clockAccent : "currentColor"} />
         </svg>
         <span style={{ fontSize: fs }}>
           <ClockTime time={hh} weight={weight} emphasizeHour={a.clockEmphasis} />
@@ -298,7 +298,7 @@ export function CompactClock({
         className="block w-full min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap tracking-[-0.03em]"
         style={{ fontSize: fs, fontWeight: weight, lineHeight: 1 }}
       >
-        <WordTime now={now} accent={a.clockAccent} />
+        <WordTime now={now} accent={a.clockAccentFirstDigit ? a.clockAccent : undefined} />
       </span>
     );
   }
@@ -339,11 +339,11 @@ function wordsFor(now: Date): string {
   return hourWord + capitalize(underHundred(minute));
 }
 
-function WordTime({ now, accent }: { now: Date; accent: string }) {
+function WordTime({ now, accent }: { now: Date; accent?: string }) {
   const word = wordsFor(now);
   return (
     <>
-      <span style={{ color: accent }}>{word.charAt(0)}</span>
+      <span style={accent ? { color: accent } : undefined}>{word.charAt(0)}</span>
       {word.slice(1)}
     </>
   );

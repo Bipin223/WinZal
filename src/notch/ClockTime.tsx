@@ -22,7 +22,9 @@ export function ClockTime({
   /** Tint the first digit. Off for the minute half of a split clock. */
   tint?: boolean;
 }) {
-  const accentColor = settings.use().appearance.clockAccent;
+  const appearance = settings.use().appearance;
+  const accentColor = appearance.clockAccent;
+  const tintDigit = tint && appearance.clockAccentFirstDigit;
   const colon = time.indexOf(":");
   const hourEnd = colon > 0 ? colon : Math.min(2, time.length);
   const first = time.slice(0, 1);
@@ -47,7 +49,7 @@ export function ClockTime({
             : undefined
         }
       >
-        <span style={tint ? { color: accentColor } : undefined}>{first}</span>
+        <span style={tintDigit ? { color: accentColor } : undefined}>{first}</span>
         {restHour}
       </span>
       {rest}

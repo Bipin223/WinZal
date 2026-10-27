@@ -14,6 +14,7 @@ import { content, springs } from "../design/motion";
 import { setNotificationVisible } from "../platform/native";
 import { DiscordLogo } from "../ui/brands";
 import { dismissNotification, notifications, type AppNotification } from "./store";
+import { requestNotchOpen } from "../notch/openRequest";
 
 const ICONS: Record<AppNotification["kind"], Icon> = {
   message: ChatTeardropDots,
@@ -74,15 +75,34 @@ function IslandNotification({ item }: { item: AppNotification }) {
         animate={{ width: 352, height: 76, borderRadius: 26, opacity: 1 }}
         exit={{ width: 124, height: 24, borderRadius: 15, opacity: 0, transition: springs.close }}
         transition={springs.open}
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={0.16}
+        drag
+        dragConstraints={{ left: -170, right: 170, top: -130, bottom: 170 }}
+        dragElastic={0.14}
+        dragSnapToOrigin
         dragMomentum={false}
         onDragStart={() => {
           dragged.current = true;
         }}
         onDragEnd={(_, info) => {
-          if (info.offset.y > 64 || info.velocity.y > 520) dismissNotification(item.id);
+          const x = info.offset.x;
+          const y = info.offset.y;
+          const vx = info.velocity.x;
+          const vy = info.velocity.y;
+          const up = y < -64 || vy < -520;
+          const down = y > 64 || vy > 520;
+          const horizontal = Math.abs(x) > 64 || Math.abs(vx) > 520;
+          if (up) {
+            dismissNotification(item.id);
+          } else if (down && y >= Math.abs(x)) {
+            // Pulling down opens the notch; the card has done its job.
+            requestNotchOpen();
+            dismissNotification(item.id);
+          } else if (horizontal) {
+            dismissNotification(item.id);
+          } else if (down) {
+            requestNotchOpen();
+            dismissNotification(item.id);
+          }
           window.setTimeout(() => (dragged.current = false), 80);
         }}
         onClick={() => {

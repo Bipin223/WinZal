@@ -112,6 +112,10 @@ export interface Settings {
     clockShowWeather: boolean;
     clockShowDate: boolean;
     clockShowDay: boolean;
+    /** Show the AM/PM period next to the time. */
+    clockShowPeriod: boolean;
+    /** Tint the first clock digit with `clockAccent` (OnePlus style). */
+    clockAccentFirstDigit: boolean;
     /** Show the playing track in the closed pill at all (music only in the Now Playing tab when off). */
     musicInPill: boolean;
     /** Colour of the first clock digit (OnePlus-style accent); red by default. */
@@ -171,7 +175,7 @@ export interface Settings {
     gpuPreference: "auto" | "igpu" | "dgpu";
   };
   /** Discord call in the notch (local RPC, on = Discord tool enabled). The client secret is stored with the secrets. */
-  discord: { clientId: string; presence: boolean; appName: string; statusLine: "title" | "artist" | "app"; musicDuringCall: boolean };
+  discord: { clientId: string; presence: boolean; appName: string; statusLine: "title" | "artist" | "app" };
   alarm: { sound: AlarmSound; volume: number; duration: AlarmDuration };
   /** English is the only language in this build. */
   language: "en";
@@ -249,9 +253,11 @@ const defaults: Settings = {
     lineThickness: 5,
     dragAnimation: true,
     clockWeather: true,
-  clockShowWeather: true,
-  clockShowDate: true,
-  clockShowDay: true,
+    clockShowWeather: true,
+    clockShowDate: true,
+    clockShowDay: true,
+    clockShowPeriod: true,
+    clockAccentFirstDigit: true,
     musicInPill: true,
     clockAccent: "#ff453a",
     clockClosedSize: 15,
@@ -281,7 +287,7 @@ const defaults: Settings = {
     gpuAcceleration: false,
     gpuPreference: "dgpu",
   },
-  discord: { clientId: "", presence: true, appName: "Bipin Rizal's WinZal app", statusLine: "title", musicDuringCall: false },
+  discord: { clientId: "", presence: true, appName: "Bipin Rizal's WinZal app", statusLine: "title" },
   alarm: { sound: "chime", volume: 0.7, duration: 5 },
   language: "en",
   units: regionUnits(),
@@ -460,6 +466,8 @@ settings.set((s) => {
         const value = (s.appearance as { lineThickness?: number } | undefined)?.lineThickness;
         return typeof value === "number" ? Math.min(12, Math.max(2, Math.round(value))) : defaults.appearance.lineThickness;
       })(),
+      clockShowPeriod: s.appearance?.clockShowPeriod !== false,
+      clockAccentFirstDigit: s.appearance?.clockAccentFirstDigit !== false,
     },
     discord: { ...defaults.discord, ...s.discord },
     alarm: { ...defaults.alarm, ...s.alarm },

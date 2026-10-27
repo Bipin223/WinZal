@@ -3,15 +3,15 @@ import { AnimatePresence, motion, useAnimationFrame, useMotionValue, useTransfor
 import { ArrowUpRight, CaretDown, MusicNoteSimple, Pause, Play, SkipBack, SkipForward, Waveform } from "@phosphor-icons/react";
 import { artwork as artworkSwap, content, springs } from "../../design/motion";
 import { useSmoothArtwork } from "./artwork";
-import { livePosition, media, useNowPlaying, type MediaSession, type NowPlaying } from "../../platform/media";
+import { livePosition, media, useNowPlaying, type NowPlaying } from "../../platform/media";
 import { holdOpen } from "../../notch/useNotchState";
+import { flyout, toggleFlyout } from "../../notch/flyout";
 import { requestSize } from "../../notch/size";
 import { findTab } from "../../notch/tabs";
 import { MIXER_MAX_ROWS, MIXER_ROW, MixerList, MixerToggle, useMixer } from "./Mixer";
 import { Equalizer } from "./Equalizer";
 import { LyricEqualizer } from "./LyricVisualizer";
 import { settings, lyricTrackKey, setLyricTrackOffset } from "../../settings/store";
-import { SelectedDot } from "../../ui/SelectedDot";
 import { t } from "../../i18n";
 
 const SYNC_ROW = 34;
@@ -29,44 +29,8 @@ export function NowPlayingView() {
   const mix = useMixer();
   const [mixerOpen, setMixerOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
-  const [sessionsOpen, setSessionsOpen] = useState(false);
-  const [sessions, setSessions] = useState<MediaSession[] | null>(null);
-  const sessionsBox = useRef<HTMLDivElement>(null);
+  const sessionsOpen = flyout.use().kind === "sessions";
   const source = mix.source?.name;
-
-  const loadSessions = async () => {
-    try {
-      setSessions(await media.sessions());
-    } catch {
-      setSessions([]);
-    }
-  };
-
-  useEffect(() => {
-    if (sessionsOpen) void loadSessions();
-  }, [sessionsOpen]);
-
-  useEffect(() => {
-    if (!sessionsOpen) return;
-    const outside = (e: PointerEvent) => {
-      if (!sessionsBox.current?.contains(e.target as Node)) setSessionsOpen(false);
-    };
-    window.addEventListener("pointerdown", outside);
-    return () => window.removeEventListener("pointerdown", outside);
-  }, [sessionsOpen]);
-
-  const chooseSession = (appId: string) => {
-    media.select(appId);
-    setSessionsOpen(false);
-  };
-
-  const toggleSession = (session: MediaSession) => {
-    setSessions((list) =>
-      list?.map((item) => (item.appId === session.appId ? { ...item, isPlaying: !item.isPlaying } : item)) ?? null,
-    );
-    media.toggleSession(session.appId);
-    window.setTimeout(() => void loadSessions(), 700);
-  };
 
   // The mixer grows the notch by its rows (at most MIXER_MAX_ROWS, then it scrolls).
   // The lyric-sync row needs one compact row.
@@ -84,7 +48,7 @@ export function NowPlayingView() {
   return (
     <div className="np-now relative h-full overflow-hidden">
       <div className="relative z-10 flex h-full flex-col px-5 pt-1 pb-2">
-      <div ref={sessionsBox} className={sessionsOpen ? "flex min-h-0 flex-1 flex-col" : "relative"}>
+      <div className="relative">
         <div className="flex items-center gap-3">
           <button
             onClick={() => void media.openSource()}
@@ -115,63 +79,24 @@ export function NowPlayingView() {
           <button
             type="button"
             onClick={() => {
-              setSessionsOpen((open) => !open);
               setMixerOpen(false);
               setSyncOpen(false);
+              toggleFlyout("sessions");
             }}
             aria-label={t("Audio sessions")}
             className="pressable flex size-6 shrink-0 items-center justify-center rounded-[7px] text-label-3 hover:text-label"
           >
-            <CaretDown
-              size={11}
-              weight="bold"
-              className="transition-transform duration-150"
-              style={{ transform: sessionsOpen ? "rotate(180deg)" : undefined }}
-            />
+            <motion.span
+              className="flex"
+              animate={{ transform: sessionsOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+              transition={springs.snappy}
+            >
+              <CaretDown size={11} weight="bold" />
+            </motion.span>
           </button>
         </div>
-        {sessionsOpen && (
-          <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[12px] bg-elevated p-1">
-            <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {sessions?.length ? (
-                sessions.map((session) => (
-                  <div key={session.appId} className="flex items-center gap-0.5 rounded-[8px] hover:bg-fill-2">
-                    <button
-                      type="button"
-                      onClick={() => chooseSession(session.appId)}
-                      className="flex min-w-0 flex-1 items-center gap-2 rounded-[6px] px-2 py-1 text-left"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-[11px] leading-[13px] font-semibold text-label">
-                          {session.title || session.artist || "—"}
-                        </div>
-                        {session.title && session.artist && (
-                          <div className="truncate text-[9px] leading-[11px] text-label-3">{session.artist}</div>
-                        )}
-                      </div>
-                      {np.appId === session.appId && <SelectedDot />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleSession(session)}
-                      aria-label={session.isPlaying ? t("Pause") : t("Abspielen")}
-                      className="pressable mr-1 flex size-6 shrink-0 items-center justify-center rounded-[6px] text-label-2 hover:text-label"
-                    >
-                      {session.isPlaying ? <Pause size={12} weight="fill" /> : <Play size={12} weight="fill" />}
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <div className="px-2 py-3 text-caption text-label-3">
-                  {sessions ? t("No audio sessions") : t("Loading...")}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
-      {!sessionsOpen && (
-        <>
+      <>
           <Progress np={np} />
           <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
             <div />
@@ -183,7 +108,6 @@ export function NowPlayingView() {
                   onClick={() => {
                     setSyncOpen((open) => !open);
                     setMixerOpen(false);
-                    setSessionsOpen(false);
                   }}
                   aria-expanded={syncOpen}
                   aria-label={t("Lyric sync")}
@@ -199,7 +123,6 @@ export function NowPlayingView() {
                 open={mixerOpen}
                 onToggle={() => {
                   setMixerOpen((open) => !open);
-                  setSessionsOpen(false);
                   setSyncOpen(false);
                 }}
               />
@@ -210,7 +133,6 @@ export function NowPlayingView() {
             {mixerOpen && <MixerList key="mixer" data={mix} />}
           </AnimatePresence>
         </>
-      )}
       </div>
     </div>
   );

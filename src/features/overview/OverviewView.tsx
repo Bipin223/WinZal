@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Eye, EyeSlash, Lightning, MusicNoteSimple, Timer } from "@phosphor-icons/react";
+import { Eye, EyeSlash, MusicNoteSimple, Timer } from "@phosphor-icons/react";
 import { DiscordLogo } from "../../ui/brands";
 import { content, springs } from "../../design/motion";
 import { HeaderActions, HeaderButton } from "../../notch/header";
@@ -19,7 +19,7 @@ import { CompactClock } from "../../notch/ClockFace";
 import { useMinute } from "../../lib/useMinute";
 import { useSecond } from "../../lib/useSecond";
 import { PowerActions, QuickControls, SystemRow } from "./Controls";
-import { BatterySolidIcon } from "../../ui/glyphs";
+import { BatteryMeter } from "../../ui/BatteryMeter";
 import { batteryStatus, systemControls, type BatteryStatus } from "../../platform/services";
 
 /*
@@ -71,7 +71,6 @@ function BatteryIndicator() {
   }, []);
   if (!battery?.present) return null;
   const percent = Math.min(100, Math.max(0, battery.percent));
-  const onPower = battery.charging || battery.plugged;
   return (
     <motion.button
       type="button"
@@ -80,19 +79,9 @@ function BatteryIndicator() {
       onClick={() => void systemControls.openUri("ms-settings:powersleep")}
       initial={{ opacity: 0, scale: 0.86 }}
       animate={{ opacity: 1, scale: 1, transition: springs.snappy }}
-      className="pressable pressable-fill flex h-7 items-center gap-1 rounded-full bg-fill-1 px-2"
+      className="pressable flex h-7 items-center rounded-full px-0.5 transition-colors duration-150 hover:bg-fill-1"
     >
-      {onPower && (
-        <motion.span
-          className="flex text-green"
-          animate={{ scale: [1, 1.14, 1], opacity: [0.72, 1, 0.72] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <Lightning size={13} weight="fill" />
-        </motion.span>
-      )}
-      <span className="tabular text-[11px] font-bold text-label-2">{percent}%</span>
-      <BatterySolidIcon size={20} level={percent / 100} className={onPower ? "text-green" : "text-label-2"} />
+      <BatteryMeter percent={percent} charging={battery.charging} plugged={battery.plugged} size="md" />
     </motion.button>
   );
 }
@@ -122,7 +111,7 @@ function Header() {
             seconds={liveSeconds}
             showSeconds={withSeconds}
           />
-          {period && <span className="text-title tracking-normal text-label-3">{period}</span>}
+          {period && appearance.clockShowPeriod && <span className="text-title tracking-normal text-label-3">{period}</span>}
         </div>
         <div className="mt-1 text-footnote text-label-3">{date}</div>
       </div>

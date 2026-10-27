@@ -206,6 +206,7 @@ pub fn run() {
             clipboard::clipboard_paste_files,
             keyboard_focus,
             set_notch_height,
+            set_notch_width,
             notch_prompt_mode,
             set_webview_render_mode,
             set_gpu_preference,
@@ -356,6 +357,32 @@ fn set_notch_height(height: f64, window: WebviewWindow) -> Result<(), String> {
     window
         .set_size(tauri::LogicalSize::new(760.0, height))
         .map_err(|error| error.to_string())
+}
+
+/// Widen the transparent window for an attached flyout. The notch is centered
+/// inside the window, so the window is re-centered on the monitor after the
+/// resize; otherwise the notch would jump sideways.
+#[tauri::command]
+fn set_notch_width(width: f64, window: WebviewWindow, state: State<'_, display::DisplayState>) -> Result<(), String> {
+    // Never make the transparent window wider than the monitor: the notch is
+    // centered inside it, so an oversized window would push the pill sideways.
+    let max_width = window
+        .current_monitor()
+        .ok()
+        .flatten()
+        .map(|monitor| monitor.size().width as f64 / monitor.scale_factor())
+        .unwrap_or(1400.0)
+        .max(760.0);
+    let width = width.clamp(760.0, max_width.min(1400.0));
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let height = window
+        .outer_size()
+        .map(|size| size.height as f64 / scale)
+        .unwrap_or(560.0);
+    window
+        .set_size(tauri::LogicalSize::new(width, height))
+        .map_err(|error| error.to_string())?;
+    display::place(&window, &state).map_err(|error| error.to_string())
 }
 
 /// Opened via shortcut → take focus (for Esc/typing).

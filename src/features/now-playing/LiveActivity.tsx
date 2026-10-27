@@ -13,8 +13,6 @@ import { lyricsTextWidth } from "./lyricsWidth";
 import { LiveEdge } from "../../notch/liveEdges";
 import { settings, type LyricAnimation } from "../../settings/store";
 import { t } from "../../i18n";
-import { DiscordLogo } from "../../ui/brands";
-import { callView, useDiscordCall } from "../discord/store";
 
 /**
  * Closed notch while music plays: cover on the left, equalizer on the right,
@@ -22,7 +20,6 @@ import { callView, useDiscordCall } from "../discord/store";
  */
 export function LiveActivity({ np }: { np: NowPlaying }) {
   const appearance = settings.use().appearance;
-  const call = useDiscordCall();
   const { current, next, index, start, end, words, status } = useLyrics(np, appearance.lyricsInPill);
 
   // Measure the line at its real font size. The notch uses this to expand only
@@ -105,20 +102,6 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
           </AnimatePresence>
         )}
       </FadeBox>
-      {call && (
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            callView.set("call");
-          }}
-          aria-label={t("Show Discord call")}
-          title={t("Show Discord call")}
-          className="pressable flex size-5 shrink-0 items-center justify-center rounded-full text-label-3 hover:text-label-2"
-        >
-          <DiscordLogo size={13} />
-        </button>
-      )}
       {appearance.lyricsVisualizer && (
         <LiveEdge side="right">
           {appearance.lyricsVisualizerStyle === "bars" ? (

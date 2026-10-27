@@ -19,23 +19,20 @@ import {
   type IconWeight,
 } from "@phosphor-icons/react";
 import { springs } from "../../design/motion";
-import { setPromptMode } from "../../platform/native";
 import {
   fpsHelperReady,
   systemControls,
-  type BluetoothPeer,
-  type BluetoothState,
   type BrightnessState,
   type EnergyState,
   type GlimState,
-  type NetworkState,
   type PowerMode,
   type VolumeState,
-  type WifiNetwork,
 } from "../../platform/services";
 import { BatteryIcon, BluetoothOffIcon, BluetoothOnIcon, WifiOffIcon, WifiOnIcon } from "../../ui/glyphs";
 import { SelectedDot } from "../../ui/SelectedDot";
 import { focusMode, refreshFocusMode, setFocusMode } from "../../notch/focus";
+import { openFlyout, toggleFlyout, flyout } from "../../notch/flyout";
+import { useBluetoothAmbient, useWifiAmbient, toggleBluetooth, toggleWifi } from "./ambient";
 import { t } from "../../i18n";
 
 type TileIcon = React.ComponentType<{ size?: number; weight?: IconWeight; className?: string }>;
@@ -57,11 +54,15 @@ function ToggleTile(props: {
   glyphKey?: string;
   iconClassName?: string;
   onClick: () => void;
+  /** Long-press (~420 ms) opens the attached flyout; tap still toggles. */
+  onHold?: () => void;
   onContextMenu?: (e: React.MouseEvent) => void;
   onWheel?: (e: React.WheelEvent) => void;
   /** Separate dropdown affordance, e.g. choose a Wi-Fi network. */
   onMenu?: () => void;
   menuLabel?: string;
+  /** Rotate the dropdown arrow while its attached panel is open. */
+  menuOpen?: boolean;
   chevron?: boolean;
   /** Active-state dot (Wi-Fi / Bluetooth). */
   dot?: string;
@@ -79,6 +80,55 @@ function ToggleTile(props: {
   const Off = props.offIcon;
   const size = props.iconSize ?? 17;
   const swap = props.straight ? 0 : props.active ? -30 : 30;
+  const [holdProgress, setHoldProgress] = useState(0);
+  const holdTimer = useRef<number | undefined>(undefined);
+  const holdFrame = useRef<number | undefined>(undefined);
+  const holdFired = useRef(false);
+  const holdOrigin = useRef({ x: 0, y: 0 });
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(holdTimer.current);
+      cancelAnimationFrame(holdFrame.current ?? 0);
+    },
+    [],
+  );
+
+  const stopHold = () => {
+    window.clearTimeout(holdTimer.current);
+    cancelAnimationFrame(holdFrame.current ?? 0);
+    setHoldProgress(0);
+  };
+
+  const startHold = (e: React.PointerEvent) => {
+    if (!props.onHold || e.button !== 0) return;
+    stopHold();
+    holdFired.current = false;
+    holdOrigin.current = { x: e.screenX, y: e.screenY };
+    const began = performance.now();
+    const tick = () => {
+      const progress = Math.min(1, (performance.now() - began) / 420);
+      setHoldProgress(progress);
+      if (progress < 1) holdFrame.current = requestAnimationFrame(tick);
+    };
+    holdFrame.current = requestAnimationFrame(tick);
+    holdTimer.current = window.setTimeout(() => {
+      holdFired.current = true;
+      setHoldProgress(1);
+      props.onHold?.();
+      window.setTimeout(() => setHoldProgress(0), 160);
+      // If the pointer leaves before the release click, do not swallow the next
+      // real tap on this tile later.
+      window.setTimeout(() => {
+        holdFired.current = false;
+      }, 900);
+    }, 420);
+  };
+
+  const moveHold = (e: React.PointerEvent) => {
+    if (!props.onHold || holdProgress === 0) return;
+    if (Math.hypot(e.screenX - holdOrigin.current.x, e.screenY - holdOrigin.current.y) > 8) stopHold();
+  };
 
   return (
     <motion.div
@@ -94,16 +144,43 @@ function ToggleTile(props: {
     >
       <motion.button
         type="button"
-        onClick={props.onClick}
+        onClick={() => {
+          if (holdFired.current) {
+            holdFired.current = false;
+            return;
+          }
+          props.onClick();
+        }}
+        onPointerDown={startHold}
+        onPointerMove={moveHold}
+        onPointerUp={stopHold}
+        onPointerCancel={stopHold}
+        onPointerLeave={stopHold}
         className="flex h-full min-w-0 flex-1 items-center gap-1 overflow-hidden rounded-[12px] px-1.5 text-left"
       >
         <motion.span
           className={`relative flex size-6 shrink-0 items-center justify-center rounded-full ${
             props.bareIcon ? "" : props.active ? props.activeIconBgClass ?? "bg-on-label/10" : "bg-fill-2"
           }`}
-          animate={{ rotate: props.straight ? 0 : props.active ? 0 : -18, scale: props.active ? 1.06 : 1 }}
+          animate={{ rotate: props.straight ? 0 : props.active ? 0 : -18, scale: holdProgress > 0 ? 1.14 : props.active ? 1.06 : 1 }}
           transition={springs.peek}
         >
+          {holdProgress > 0 && (
+            <svg aria-hidden viewBox="0 0 30 30" className="pointer-events-none absolute -inset-[3px] size-[30px] -rotate-90">
+              <circle cx="15" cy="15" r="13" fill="none" stroke="currentColor" strokeWidth="1.6" opacity="0.22" />
+              <circle
+                cx="15"
+                cy="15"
+                r="13"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeDasharray={2 * Math.PI * 13}
+                strokeDashoffset={2 * Math.PI * 13 * (1 - holdProgress)}
+              />
+            </svg>
+          )}
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.span
               key={props.glyphKey ?? (props.active ? "on" : "off")}
@@ -155,7 +232,13 @@ function ToggleTile(props: {
             props.active ? "text-on-label/45 hover:text-on-label/70" : "text-label-4 hover:text-label-2"
           }`}
         >
-          <CaretDown size={9} weight="bold" />
+          <motion.span
+            className="flex"
+            animate={{ transform: props.menuOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+            transition={springs.snappy}
+          >
+            <CaretDown size={9} weight="bold" />
+          </motion.span>
         </button>
       )}
 
@@ -212,303 +295,54 @@ function FocusTile() {
 
 /* ── Wi-Fi ──────────────────────────────────────────────────────────────────── */
 
-type AmbientMenuProps = {
-  menuOpen: boolean;
-  onMenu: () => void;
-  onClose: () => void;
-};
+/* â”€â”€ Wi-Fi â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-function WifiTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
-  const [net, setNet] = useState<NetworkState | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [networks, setNetworks] = useState<WifiNetwork[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [connecting, setConnecting] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const box = useRef<HTMLDivElement>(null);
-  const busyRef = useRef(false);
-  const settle = useRef(0);
-
-  useEffect(() => {
-    // Don't let a slow 15 s poll race an optimistic toggle and flip the tile back.
-    const load = () => {
-      if (busyRef.current || Date.now() < settle.current) return;
-      void systemControls.network().then(setNet).catch(() => setNet(null));
-    };
-    load();
-    const id = setInterval(load, 15_000);
-    return () => clearInterval(id);
-  }, []);
-
-  const loadNetworks = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setNetworks(await systemControls.wifiNetworks());
-    } catch (e) {
-      setError(String(e));
-      setNetworks([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (menuOpen) void loadNetworks();
-  }, [menuOpen]);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const outside = (e: PointerEvent) => {
-      if (!box.current?.contains(e.target as Node)) onClose();
-    };
-    window.addEventListener("pointerdown", outside);
-    return () => window.removeEventListener("pointerdown", outside);
-  }, [menuOpen, onClose]);
-
+function WifiTile({ onOpen }: { onOpen: () => void }) {
+  const { net, busy, error } = useWifiAmbient();
+  const menuOpen = flyout.use().kind === "wifi";
   const enabled = !!(net?.enabled ?? net?.connected);
-  const active = enabled;
-  const state = enabled ? (net?.connected ? net.name || t("Verbunden") : t("An")) : t("Aus");
-
-  const toggle = () => {
-    onClose();
-    if (busy) return;
-    if (!net) {
-      // Unknown state: read it first instead of guessing and switching the radio.
-      setBusy(true);
-      busyRef.current = true;
-      void systemControls.network().then(setNet).catch(() => setNet(null)).finally(() => {
-        busyRef.current = false;
-        setBusy(false);
-      });
-      return;
-    }
-    const next = !enabled;
-    setBusy(true);
-    busyRef.current = true;
-    settle.current = Date.now() + 3000;
-    setNet((current) =>
-      current
-        ? { ...current, enabled: next, connected: next ? current.connected : false, name: next ? current.name : "" }
-        : { connected: false, wifi: false, name: "", enabled: next },
-    );
-    void systemControls
-      .setWifi(next)
-      .then(setNet)
-      .catch(() => systemControls.network().then(setNet).catch(() => setNet(null)))
-      .finally(() => {
-        busyRef.current = false;
-        settle.current = Date.now() + 3000;
-        setBusy(false);
-      });
-  };
-
-  const connect = async (network: WifiNetwork) => {
-    if (connecting) return;
-    setConnecting(network.ssid);
-    setError(null);
-    busyRef.current = true;
-    settle.current = Date.now() + 4000;
-    try {
-      setNet(await systemControls.wifiConnect(network.ssid));
-      onClose();
-    } catch (e) {
-      const message = String(e);
-      if (message.includes("not saved")) {
-        // A new network needs Windows' password UI. Drop the notch below it so
-        // the Quick Settings network panel is actually usable, then restore.
-        onClose();
-        void setPromptMode(true);
-        void systemControls.openUri("ms-availablenetworks:");
-        window.setTimeout(() => void setPromptMode(false), 15_000);
-      } else {
-        setError(message);
-        void loadNetworks();
-      }
-    } finally {
-      busyRef.current = false;
-      settle.current = Date.now() + 3000;
-      setConnecting(null);
-    }
-  };
+  const state = busy ? "." : enabled ? (net?.connected ? net.name || t("Verbunden") : t("An")) : t("Aus");
 
   return (
-    <div ref={box} className="relative min-w-0">
+    <div className="relative min-w-0">
       <ToggleTile
         label={t("WLAN")}
-        state={busy ? "…" : state}
-        active={active}
+        state={state}
+        active={enabled}
         onIcon={WifiOnIcon}
         offIcon={WifiOffIcon}
         straight
         bareIcon
         iconSize={22}
         dot="#30d158"
-        onClick={toggle}
-        onMenu={onMenu}
+        onClick={toggleWifi}
+        onHold={onOpen}
+        onMenu={() => toggleFlyout("wifi")}
+        menuOpen={menuOpen}
         menuLabel={t("Choose Wi-Fi network")}
         onContextMenu={(e) => {
           e.preventDefault();
           void systemControls.openUri("ms-settings:network-wifi");
         }}
-        title=""
+        title={error ?? ""}
       />
-      {menuOpen && (
-        <div className="absolute bottom-full left-0 z-50 mb-2 w-[290px] overflow-hidden rounded-[12px] bg-elevated p-1.5 shadow-2xl">
-          <div className="flex items-center justify-between px-2 py-1">
-            <span className="text-[10px] font-medium tracking-wide text-label-3 uppercase">
-              {t("Wi-Fi networks")}
-            </span>
-            <button
-              type="button"
-              onClick={() => void loadNetworks()}
-              disabled={loading}
-              className="pressable flex size-5 items-center justify-center rounded-[6px] text-label-3 hover:text-label disabled:opacity-40"
-              aria-label={t("Scan again")}
-            >
-              <ArrowClockwise size={11} weight="bold" className={loading ? "animate-spin" : undefined} />
-            </button>
-          </div>
-          <div className="max-h-[96px] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {loading && !networks ? (
-              <div className="px-2.5 py-3 text-caption text-label-3">{t("Scanning...")}</div>
-            ) : networks?.length ? (
-              networks.map((network) => (
-                <button
-                  key={network.ssid}
-                  type="button"
-                  onClick={() => void connect(network)}
-                  disabled={!!connecting}
-                  className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-left hover:bg-fill-2 disabled:opacity-50"
-                >
-                  <span className="min-w-0 flex-1 truncate text-caption text-label">{network.ssid}</span>
-                  {network.connected && <SelectedDot />}
-                  {network.secured && <Lock size={9} weight="bold" className="shrink-0 text-label-4" />}
-                  <span className="w-7 shrink-0 text-right text-[9px] tabular text-label-4">{network.signal}%</span>
-                  {connecting === network.ssid && (
-                    <span className="size-2 shrink-0 animate-pulse rounded-full bg-green" />
-                  )}
-                </button>
-              ))
-            ) : (
-              <div className="px-2.5 py-3 text-caption text-label-3">{t("No Wi-Fi networks found")}</div>
-            )}
-          </div>
-          {error && <div className="px-2.5 pt-1 pb-1 text-[9px] leading-[12px] text-[#ff9f0a]">{error}</div>}
-        </div>
-      )}
     </div>
   );
 }
 
-/* ── Bluetooth ──────────────────────────────────────────────────────────────── */
+/* â”€â”€ Bluetooth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-function BluetoothTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
-  const [bt, setBt] = useState<BluetoothState | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [devices, setDevices] = useState<BluetoothPeer[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [connecting, setConnecting] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const box = useRef<HTMLDivElement>(null);
-  const busyRef = useRef(false);
-  const settle = useRef(0);
-
-  useEffect(() => {
-    const load = () => {
-      if (busyRef.current || Date.now() < settle.current) return;
-      void systemControls.bluetooth().then(setBt).catch(() => setBt(null));
-    };
-    load();
-    const id = setInterval(load, 20_000);
-    return () => clearInterval(id);
-  }, []);
-
-  const loadDevices = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setDevices(await systemControls.bluetoothDevices());
-    } catch (e) {
-      setError(String(e));
-      setDevices([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (menuOpen) void loadDevices();
-  }, [menuOpen]);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const outside = (e: PointerEvent) => {
-      if (!box.current?.contains(e.target as Node)) onClose();
-    };
-    window.addEventListener("pointerdown", outside);
-    return () => window.removeEventListener("pointerdown", outside);
-  }, [menuOpen, onClose]);
-
+function BluetoothTile({ onOpen }: { onOpen: () => void }) {
+  const { bt, busy, error } = useBluetoothAmbient();
+  const menuOpen = flyout.use().kind === "bluetooth";
   const active = !!bt?.on;
-  const state = bt?.available ? (active ? t("An") : t("Aus")) : t("Einstellungen");
-
-  const toggle = () => {
-    onClose();
-    if (busy) return;
-    if (!bt?.available) {
-      // No radio found: the Settings page is the only useful destination.
-      void systemControls.openUri("ms-settings:bluetooth");
-      return;
-    }
-    const next = !active;
-    setBusy(true);
-    busyRef.current = true;
-    settle.current = Date.now() + 4000;
-    setBt((current) => (current ? { ...current, on: next } : current));
-    void systemControls
-      .setBluetooth(next)
-      .then(setBt)
-      .catch(() => systemControls.bluetooth().then(setBt).catch(() => setBt(null)))
-      .finally(() => {
-        busyRef.current = false;
-        settle.current = Date.now() + 4000;
-        setBusy(false);
-      });
-  };
-
-  const connect = async (device: BluetoothPeer) => {
-    if (connecting !== null || device.connected) return;
-    if (!active) {
-      setError(t("Turn Bluetooth on first"));
-      return;
-    }
-    setConnecting(device.address);
-    setError(null);
-    busyRef.current = true;
-    settle.current = Date.now() + 12_000;
-    try {
-      if (await systemControls.bluetoothConnect(device.address)) {
-        await systemControls.bluetooth().then(setBt).catch(() => {});
-        await loadDevices();
-        onClose();
-      } else {
-        setError(t("Could not connect. Right-click for Windows settings."));
-      }
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      busyRef.current = false;
-      settle.current = Date.now() + 8000;
-      setConnecting(null);
-    }
-  };
+  const state = busy ? "." : bt?.available ? (active ? t("An") : t("Aus")) : t("Einstellungen");
 
   return (
-    <div ref={box} className="relative min-w-0">
+    <div className="relative min-w-0">
       <ToggleTile
         label="Bluetooth"
-        state={busy ? "…" : state}
+        state={state}
         active={active}
         onIcon={BluetoothOnIcon}
         offIcon={BluetoothOffIcon}
@@ -516,61 +350,17 @@ function BluetoothTile({ menuOpen, onMenu, onClose }: AmbientMenuProps) {
         bareIcon
         iconSize={22}
         dot="#30d158"
-        onClick={toggle}
-        onMenu={onMenu}
+        onClick={toggleBluetooth}
+        onHold={onOpen}
+        onMenu={() => toggleFlyout("bluetooth")}
+        menuOpen={menuOpen}
         menuLabel={t("Choose Bluetooth device")}
         onContextMenu={(e) => {
           e.preventDefault();
           void systemControls.openUri("ms-settings:bluetooth");
         }}
-        title=""
+        title={error ?? ""}
       />
-      {menuOpen && (
-        <div className="absolute bottom-full left-0 z-50 mb-2 w-[290px] overflow-hidden rounded-[12px] bg-elevated p-1.5 shadow-2xl">
-          <div className="flex items-center justify-between px-2 py-1">
-            <span className="text-[10px] font-medium tracking-wide text-label-3 uppercase">
-              {t("Bluetooth devices")}
-            </span>
-            <button
-              type="button"
-              onClick={() => void loadDevices()}
-              disabled={loading}
-              className="pressable flex size-5 items-center justify-center rounded-[6px] text-label-3 hover:text-label disabled:opacity-40"
-              aria-label={t("Scan again")}
-            >
-              <ArrowClockwise size={11} weight="bold" className={loading ? "animate-spin" : undefined} />
-            </button>
-          </div>
-          <div className="max-h-[96px] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {loading && !devices ? (
-              <div className="px-2.5 py-3 text-caption text-label-3">{t("Scanning...")}</div>
-            ) : devices?.length ? (
-              devices.map((device) => (
-                <button
-                  key={device.address}
-                  type="button"
-                  onClick={() => void connect(device)}
-                  disabled={connecting !== null || device.connected}
-                  className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-left hover:bg-fill-2 disabled:opacity-60"
-                >
-                  <span className="min-w-0 flex-1 truncate text-caption text-label">{device.name}</span>
-                  {device.connected ? (
-                    <SelectedDot />
-                  ) : (
-                    <span className="shrink-0 text-[9px] text-label-4">{t("Paired")}</span>
-                  )}
-                  {connecting === device.address && (
-                    <span className="size-2 shrink-0 animate-pulse rounded-full bg-green" />
-                  )}
-                </button>
-              ))
-            ) : (
-              <div className="px-2.5 py-3 text-caption text-label-3">{t("No paired devices")}</div>
-            )}
-          </div>
-          {error && <div className="px-2.5 pt-1 pb-1 text-[9px] leading-[12px] text-[#ff9f0a]">{error}</div>}
-        </div>
-      )}
     </div>
   );
 }
@@ -965,16 +755,10 @@ export function QuickControls() {
 }
 
 export function SystemRow() {
-  const [menu, setMenu] = useState<"wifi" | "bluetooth" | null>(null);
-  const close = () => setMenu(null);
   return (
     <div className="grid grid-cols-4 gap-2">
-      <WifiTile menuOpen={menu === "wifi"} onMenu={() => setMenu(menu === "wifi" ? null : "wifi")} onClose={close} />
-      <BluetoothTile
-        menuOpen={menu === "bluetooth"}
-        onMenu={() => setMenu(menu === "bluetooth" ? null : "bluetooth")}
-        onClose={close}
-      />
+      <WifiTile onOpen={() => openFlyout("wifi")} />
+      <BluetoothTile onOpen={() => openFlyout("bluetooth")} />
       <PowerTile />
       <GlimTile />
     </div>

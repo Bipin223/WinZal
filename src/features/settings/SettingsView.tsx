@@ -6,6 +6,7 @@ import {
   DotsSixVertical,
   Keyboard,
   Lightning,
+  Lightbulb,
   Monitor,
   MusicNotesSimple,
   Palette,
@@ -41,6 +42,7 @@ import { PlaceSearch } from "../weather/WeatherView";
 import { AppearanceView } from "../appearance/AppearanceView";
 import { MusicSettings } from "./MusicSettings";
 import { AboutView } from "./AboutView";
+import { TipsView } from "./TipsView";
 import { VaultSettings } from "../vault/VaultSettings";
 import { detectPlace } from "../weather/store";
 import { focusMode, refreshFocusMode, setFocusMode } from "../../notch/focus";
@@ -51,7 +53,7 @@ import { privacy, togglePresentation, usePresenting } from "../privacy/store";
 import { previewDiscord, previewIsland, previewTimer } from "../../notifications/store";
 import { locale, t, tBackend } from "../../i18n";
 
-type PageId = "general" | "notch" | "appearance" | "display" | "performance" | "music" | "tools" | "timer" | "ai" | "discord" | "about";
+type PageId = "general" | "notch" | "appearance" | "display" | "performance" | "music" | "tools" | "timer" | "ai" | "discord" | "tips" | "about";
 
 const pages: { id: PageId; label: string; icon: Icon }[] = [
   { id: "general", label: "Allgemein", icon: SlidersHorizontal },
@@ -64,6 +66,7 @@ const pages: { id: PageId; label: string; icon: Icon }[] = [
   { id: "timer", label: "Timer", icon: Timer },
   { id: "ai", label: "AI", icon: ChatBubbleIcon as unknown as Icon },
   { id: "discord", label: "Discord", icon: DiscordLogo },
+  { id: "tips", label: "Tips", icon: Lightbulb },
   { id: "about", label: "About", icon: UserCircle },
 ];
 
@@ -102,6 +105,7 @@ const PAGE_HEIGHT: Record<PageId, number> = {
   timer: 460,
   ai: 460,
   discord: 460,
+  tips: 460,
   about: 410,
 };
 
@@ -203,6 +207,7 @@ export function SettingsView() {
               </>
             )}
             {page === "discord" && <Discord />}
+            {page === "tips" && <TipsView />}
             {page === "about" && <AboutView />}
           </motion.div>
         </AnimatePresence>
@@ -1054,18 +1059,6 @@ function Discord() {
             </Row>
           </>
         )}
-      </Group>
-      <Group title={t("Discord calls")} id="settings-discord-calls">
-        <Row
-          label={t("Music during calls")}
-          status={t("Show the playing track in the notch instead of the call; Discord itself is unchanged.")}
-        >
-          <Switch
-            label={t("Music during calls")}
-            checked={s.discord.musicDuringCall}
-            onChange={(musicDuringCall) => updateSettings((cur) => ({ discord: { ...cur.discord, musicDuringCall } }))}
-          />
-        </Row>
       </Group>
       <Group title={t("Verbindung")} id="settings-discord-connection">
         <Row label={t("Status")} error={state.error ? tBackend(state.error) : undefined}>
