@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { AnimatePresence, animate, motion, useMotionValue, type Transition } from "motion/react";
 import { Drop, GearSix, Ghost, MoonStars, PushPin } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
@@ -64,6 +64,15 @@ export function Notch() {
   const { status, open, dismiss, toggle, onPointerEnter, onPointerLeave } = useNotchState();
   const focus = focusMode.use();
   const silent = silentMode.use();
+  // A notification card replaces the closed pill for its lifetime; the pill
+  // fades back as soon as the card is cleared.
+  const noteVisible = notifications.use().length > 0;
+  const hideForNote = noteVisible && status !== "open";
+  const noteVisibleRef = useRef(false);
+  noteVisibleRef.current = noteVisible;
+  const handleEnter = useCallback(() => {
+    if (!noteVisibleRef.current) onPointerEnter();
+  }, [onPointerEnter]);
   const gamingLive = useGamingLive();
   useFpsHelper(gamingLive || silent);
   useChargingWatch();
@@ -305,7 +314,7 @@ export function Notch() {
     return () => window.clearTimeout(id);
   }, [flyoutOpen]);
 
-  useNativeBridge(hitRef, onPointerEnter, onPointerLeave);
+  useNativeBridge(hitRef, handleEnter, onPointerLeave, hideForNote);
   const drag = useDragToMove(status);
 
 
@@ -407,12 +416,12 @@ export function Notch() {
         data-notch-hit
         // The line is meant to stay out of the way: only a hair of extra hit zone, so
         // the cursor has to be on it (the normal notch gets the generous Fitts margin).
-        className={`pointer-events-auto ${tightHit ? "px-1 pb-1" : "px-4 pb-3"}`}
+        className={`${hideForNote ? "pointer-events-none" : "pointer-events-auto"} ${tightHit ? "px-1 pb-1" : "px-4 pb-3"}`}
         style={{ minHeight: sticky.minHeight, paddingTop: topPad, cursor: drag.dragging ? "grabbing" : undefined }}
         onPointerMove={sticky.onPointerMove}
         onPointerDown={drag.onPointerDown}
         // In Tauri, hover comes from the Rust poll (useNativeBridge), not the DOM.
-        onPointerEnter={isNative ? undefined : onPointerEnter}
+        onPointerEnter={isNative ? undefined : handleEnter}
         onPointerLeave={isNative ? undefined : onPointerLeave}
         onClick={onClick}
       >
@@ -426,7 +435,8 @@ export function Notch() {
           transition={springs.peek}
           style={{
             transformOrigin: "50% 0%",
-            opacity: ghostOpacity,
+            opacity: hideForNote ? 0 : ghostOpacity,
+            pointerEvents: hideForNote ? "none" : undefined,
             transition: "opacity 220ms ease",
           }}
         >
@@ -829,6 +839,7 @@ function useNativeBridge(
   hitRef: RefObject<HTMLDivElement | null>,
   onEnter: () => void,
   onLeave: () => void,
+  collapse = false,
 ) {
   useEffect(() => {
     const el = hitRef.current;
@@ -847,6 +858,14 @@ function useNativeBridge(
       let top = r.top;
       let right = r.right;
       let bottom = r.bottom;
+      if (collapse) {
+        // Notification replaces the pill: only the card stays clickable, so the
+        // hidden notch does not swallow desktop clicks around it.
+        left = Infinity;
+        top = Infinity;
+        right = -Infinity;
+        bottom = -Infinity;
+      }
       cards.forEach((card) => {
         const c = card.getBoundingClientRect();
         if (c.width <= 0 || c.height <= 0) return;
@@ -855,6 +874,12 @@ function useNativeBridge(
         right = Math.max(right, c.right);
         bottom = Math.max(bottom, c.bottom);
       });
+      if (!Number.isFinite(left) || !Number.isFinite(top)) {
+        left = r.left;
+        top = r.top;
+        right = r.right;
+        bottom = r.bottom;
+      }
       setHitRect({
         x: left,
         y: top,
@@ -875,7 +900,11 @@ function useNativeBridge(
     const ro = new ResizeObserver(schedule);
     ro.observe(el);
     const refreshCards = () => {
-      const next = new Set(document.querySelectorAll<HTMLElement>("[data-notification-hit], [data-flyout-hit]"));
+      const next = new Set(
+        document.querySelectorAll<HTMLElement>(
+          collapse ? "[data-notification-hit]" : "[data-notification-hit], [data-flyout-hit]",
+        ),
+      );
       for (const card of cards) if (!next.has(card)) ro.unobserve(card);
       for (const card of next) if (!cards.has(card)) ro.observe(card);
       cards.clear();
@@ -948,7 +977,7 @@ function useNativeBridge(
       el.removeEventListener("focusout", onFocusOut);
       if (typing) holdOpen(false);
     };
-  }, [hitRef, onEnter, onLeave]);
+  }, [hitRef, onEnter, onLeave, collapse]);
 }
 
 function isInteractive(el: EventTarget | null): boolean {
