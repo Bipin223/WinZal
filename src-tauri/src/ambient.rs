@@ -670,7 +670,8 @@ fn apply_energy(mode: &str) -> Result<Energy, String> {
         }
         // Custom is Lenovo's own thermal mode. Keep Windows on its stable
         // Balanced plan; the old custom power plan was reset by Windows.
-        activate_plan(&BALANCED_PLAN)?;
+        // A locked/unavailable OEM plan must not block the overlay/thermal mode.
+        let _ = activate_plan(&BALANCED_PLAN);
         set_overlay(&BALANCED)?;
         crate::fps::lenovo_set_mode(255).map_err(|_| "lenovo".to_string())?;
         return energy_status();
@@ -682,7 +683,10 @@ fn apply_energy(mode: &str) -> Result<Energy, String> {
         "max" => PERFORMANCE,
         other => return Err(format!("Unknown power mode: {other}")),
     };
-    activate_plan(&BALANCED_PLAN)?;
+    // Some Lenovo/OEM states lock the active plan while a game is running.
+    // The overlay switch alone still changes the Windows power mode, so do not
+    // abort the whole operation just because the plan activation was refused.
+    let _ = activate_plan(&BALANCED_PLAN);
     set_overlay(&overlay)?;
 
     let thermal = match mode {

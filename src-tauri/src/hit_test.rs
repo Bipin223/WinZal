@@ -179,45 +179,22 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
 
             let inside = if drag_active { rect.grown() } else { rect }.contains(x, y);
             let mut silent = state.silent.load(Ordering::Relaxed);
-            // Ghost is click-through outside the pill, but a single click on the
-            // pill wakes it. Triple-click anywhere on the monitor remains for
-            // fullscreen/elevated games where the cursor is captured.
-            if silent && pressed {
-                if inside {
-                    silent = false;
+            // Ghost mode is click-through by definition, so use a forgiving wake
+            // zone: near the edges of a wide gaming pill still counts.
+            if silent && rect.grown().contains(x, y) && pressed {
+                let now = Instant::now();
+                clicks = if now.duration_since(last_click) <= Duration::from_millis(1500) { clicks + 1 } else { 1 };
+                last_click = now;
+                if clicks >= 3 {
                     clicks = 0;
+                    silent = false;
                     state.silent.store(false, Ordering::Relaxed);
                     let _ = window.emit("notch://silent-exit", ());
-                } else {
-                    let on_notch_screen = window
-                        .current_monitor()
-                        .ok()
-                        .flatten()
-                        .map(|monitor| {
-                            let p = monitor.position();
-                            let s = monitor.size();
-                            cursor.x >= p.x as f64
-                                && cursor.x <= (p.x as i64 + s.width as i64) as f64
-                                && cursor.y >= p.y as f64
-                                && cursor.y <= (p.y as i64 + s.height as i64) as f64
-                        })
-                        .unwrap_or(true);
-                    if on_notch_screen {
-                        let now = Instant::now();
-                        clicks = if now.duration_since(last_click) <= Duration::from_millis(1500) { clicks + 1 } else { 1 };
-                        last_click = now;
-                        if clicks >= 3 {
-                            clicks = 0;
-                            silent = false;
-                            state.silent.store(false, Ordering::Relaxed);
-                            let _ = window.emit("notch://silent-exit", ());
-                        }
-                    }
                 }
             } else if !silent {
                 clicks = 0;
             }
-            let ignore = !inside && !*state.pinned.lock().unwrap();
+            let ignore = silent || (!inside && !*state.pinned.lock().unwrap());
 
             // Only call on change: every call goes through the event loop.
             if last_ignore != Some(ignore) {
