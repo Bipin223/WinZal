@@ -601,6 +601,8 @@ export interface EnergyState {
   scheme: PowerMode;
   /** AC adapter connected: Max and Custom are hidden on battery. */
   plugged: boolean;
+  /** Windows Battery Saver is on: Max and Custom cannot be applied. */
+  batterySaver: boolean;
   /** The fourth, purple Custom mode is available. */
   custom: boolean;
 }
@@ -624,7 +626,7 @@ const mockBluetoothPeers: BluetoothPeer[] = [
   { name: "WH-1000XM5", address: 1, connected: false },
   { name: "Phone", address: 2, connected: false },
 ];
-const mockEnergy: EnergyState = { saver: false, scheme: "balanced", plugged: true, custom: false };
+const mockEnergy: EnergyState = { saver: false, scheme: "balanced", plugged: true, batterySaver: false, custom: false };
 const mockGlim: GlimState = { supported: true, on: false };
 
 /** One program in the volume mixer (all its audio sessions together). */

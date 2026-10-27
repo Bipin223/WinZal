@@ -185,7 +185,7 @@ export interface Settings {
     gpuPreference: "auto" | "igpu" | "dgpu";
   };
   /** Discord call in the notch (local RPC, on = Discord tool enabled). The client secret is stored with the secrets. */
-  discord: { clientId: string; presence: boolean; appName: string; statusLine: "title" | "artist" | "app" };
+  discord: { clientId: string; presence: boolean; appName: string; statusLine: "title" | "artist" | "app"; musicDuringCall: boolean };
   alarm: { sound: AlarmSound; volume: number; duration: AlarmDuration };
   /** English is the only language in this build. */
   language: "en";
@@ -309,7 +309,7 @@ const defaults: Settings = {
     gpuAcceleration: false,
     gpuPreference: "dgpu",
   },
-  discord: { clientId: "", presence: true, appName: "Bipin Rizal’s WinZal app", statusLine: "title" },
+  discord: { clientId: "", presence: true, appName: "Bipin Rizal's WinZal app", statusLine: "title", musicDuringCall: false },
   alarm: { sound: "chime", volume: 0.7, duration: 5 },
   language: "en",
   units: regionUnits(),

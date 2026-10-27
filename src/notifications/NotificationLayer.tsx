@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   CheckCircle,
@@ -11,6 +11,7 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
+import { setNotificationVisible } from "../platform/native";
 import { DiscordLogo } from "../ui/brands";
 import { dismissNotification, notifications, type AppNotification } from "./store";
 
@@ -50,6 +51,11 @@ function NotificationIcon({ item, size }: { item: AppNotification; size: number 
 export function NotificationLayer() {
   const items = notifications.use();
   const island = items[0] ?? null;
+  const active = !!island;
+  useEffect(() => {
+    setNotificationVisible(active);
+    return () => setNotificationVisible(false);
+  }, [active]);
 
   return (
     <AnimatePresence>{island && <IslandNotification key={island.id} item={island} />}</AnimatePresence>

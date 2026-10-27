@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowsOutSimple, ClipboardText, Copy, File, FileAudio, FileText, FileVideo, FolderOpen, ImageSquare, Table, Trash, Tray, X, type Icon } from "@phosphor-icons/react";
+import { ArrowsOutSimple, ArrowsLeftRight, ClipboardText, Copy, File, FileAudio, FileText, FileVideo, FolderOpen, ImageSquare, Table, Trash, Tray, X, type Icon } from "@phosphor-icons/react";
 import { fade, springs } from "../../design/motion";
 import { createStore } from "../../lib/store";
 import { formatBytes } from "../../lib/format";
@@ -8,6 +8,8 @@ import { drop, pasteFiles, takeDropped, usePasteFiles } from "../../platform/dro
 import { HeaderActions, HeaderButton } from "../../notch/header";
 import { MAX_SIZE, requestSize } from "../../notch/size";
 import { findTab } from "../../notch/tabs";
+import { navigate } from "../../notch/nav";
+import { convertRequest } from "../convert/request";
 import { copyFiles, filePreview, filePreviewLarge, fileText, openFile, probeFiles, revealFile, type DroppedFile, type FileKind } from "../../platform/services";
 import { askAI } from "../ask/handoff";
 import { AskAIPill, CardButton, CopyCheck } from "../../ui/CardActions";
@@ -61,6 +63,12 @@ export function ShelfView() {
     setTimeout(() => setCopied((c) => (c === key ? null : c)), 1200);
   };
 
+  const convertItems = (paths: string[]) => {
+    if (paths.length === 0) return;
+    convertRequest.set(paths);
+    navigate("convert");
+  };
+
   // The preview grows the closed tab downward; leaving Shelf always resets it.
   useEffect(() => () => requestSize("shelf", null), []);
 
@@ -102,6 +110,14 @@ export function ShelfView() {
         <span className="tabular mr-1 text-caption text-label-3">
           {items.length} {items.length === 1 ? t("Datei") : t("Dateien")}
         </span>
+        {items.some((i) => i.kind !== "other") && (
+          <HeaderButton
+            label={t("Umwandeln")}
+            onClick={() => convertItems(items.filter((i) => i.kind !== "other").map((i) => i.path))}
+          >
+            <ArrowsLeftRight size={14} weight="bold" />
+          </HeaderButton>
+        )}
         <HeaderButton label={copied === "all" ? t("Kopiert") : t("Alle kopieren")} onClick={() => void copyAll(items.map((i) => i.path), "all")}>
           {copied === "all" ? <CopyCheck size={14} /> : <Copy size={14} weight="bold" />}
         </HeaderButton>
@@ -136,6 +152,7 @@ export function ShelfView() {
                   if (preview?.path === item.path) closePreview();
                   shelf.set((l) => l.filter((x) => x.path !== item.path));
                 }}
+                onConvert={() => convertItems([item.path])}
               />
             </motion.div>
           ))}
@@ -168,7 +185,7 @@ export function ShelfView() {
   );
 }
 
-function Card({ item, copied, onCopy, onPreview, onRemove }: { item: ShelfItem; copied: boolean; onCopy: () => void; onPreview: () => void; onRemove: () => void }) {
+function Card({ item, copied, onCopy, onPreview, onRemove, onConvert }: { item: ShelfItem; copied: boolean; onCopy: () => void; onPreview: () => void; onRemove: () => void; onConvert: () => void }) {
   const [preview, setPreview] = useState<string | null>(null);
   const I = kindIcon[item.kind];
   useEffect(() => {
@@ -233,6 +250,7 @@ function Card({ item, copied, onCopy, onPreview, onRemove }: { item: ShelfItem; 
         />
       )}
       <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+        {item.kind !== "other" && <CardButton label={t("Umwandeln")} icon={ArrowsLeftRight} onClick={onConvert} />}
         <CardButton label={t("Im Explorer zeigen")} icon={FolderOpen} onClick={() => revealFile(item.path)} />
         <CardButton label={t("Entfernen")} icon={X} onClick={onRemove} />
       </div>

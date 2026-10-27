@@ -609,7 +609,9 @@ function PowerTile() {
 
   const mode: PowerMode = energy?.scheme ?? "balanced";
   const plugged = energy?.plugged ?? true;
+  const batterySaver = energy?.batterySaver ?? false;
   const customSupported = energy?.custom ?? false;
+  const highAvailable = plugged && !batterySaver;
   const look = (m: PowerMode) => {
     switch (m) {
       case "saver":
@@ -623,7 +625,7 @@ function PowerTile() {
     }
   };
   const current = look(mode);
-  const modes: PowerMode[] = ["saver", "balanced", ...(plugged ? (["max"] as PowerMode[]) : []), ...(plugged && customSupported ? (["custom"] as PowerMode[]) : [])];
+  const modes: PowerMode[] = ["saver", "balanced", ...(highAvailable ? (["max"] as PowerMode[]) : []), ...(highAvailable && customSupported ? (["custom"] as PowerMode[]) : [])];
   const options = modes.map((m) => ({ mode: m, ...look(m) }));
   const activeIndex = options.findIndex((option) => option.mode === mode);
   const next = options[(Math.max(0, activeIndex) + 1) % options.length] ?? options[0];
@@ -659,6 +661,7 @@ function PowerTile() {
       .catch(async (raw) => {
         const message = String(raw);
         if (message.includes("helper-ready")) setError(t("Custom needs the elevated FPS helper. Start it from Hardware or the gaming overlay first."));
+        else if (message.includes("battery-saver")) setError(t("Turn off Battery Saver to use Max or Custom."));
         else if (message.includes("uac-cancelled")) setError(t("Admin permission is needed for Custom."));
         else if (message.includes("plugged")) setError(t("Plug in for Max and Custom."));
         else if (message.includes("lenovo") || message.includes("unsupported")) setError(t("Custom mode is not available on this device."));
@@ -702,6 +705,11 @@ function PowerTile() {
       {menuOpen && (
         <div className="absolute right-0 bottom-full z-50 mb-2 w-[212px] overflow-hidden rounded-[12px] bg-elevated p-1.5 shadow-2xl">
           <div className="px-2 py-1 text-[10px] font-medium tracking-wide text-label-3 uppercase">{t("Power mode")}</div>
+          {batterySaver && (
+            <div className="px-2 pb-1.5 text-[9px] leading-[12px] text-[#ff9f0a]">
+              {t("Battery Saver is on. Turn it off to use Max or Custom.")}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-0.5">
             {options.map((option) => (
               <button

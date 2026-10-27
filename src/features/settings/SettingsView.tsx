@@ -1058,6 +1058,18 @@ function Discord() {
           </>
         )}
       </Group>
+      <Group title={t("Discord calls")} id="settings-discord-calls">
+        <Row
+          label={t("Music during calls")}
+          status={t("Show the playing track in the notch instead of the call; Discord itself is unchanged.")}
+        >
+          <Switch
+            label={t("Music during calls")}
+            checked={s.discord.musicDuringCall}
+            onChange={(musicDuringCall) => updateSettings((cur) => ({ discord: { ...cur.discord, musicDuringCall } }))}
+          />
+        </Row>
+      </Group>
       <Group title={t("Verbindung")} id="settings-discord-connection">
         <Row label={t("Status")} error={state.error ? tBackend(state.error) : undefined}>
           <span className={`text-caption ${state.status === "ready" ? "text-green" : "text-label-2"}`}>

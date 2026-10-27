@@ -58,11 +58,12 @@ settings.subscribe(syncToastWatch);
 void listen("notch://power-cycle", async () => {
   try {
     const state = await systemControls.energy();
+    const highAvailable = state.plugged && !state.batterySaver;
     const modes: PowerMode[] = [
       "saver",
       "balanced",
-      ...(state.plugged ? (["max"] as PowerMode[]) : []),
-      ...(state.plugged && state.custom ? (["custom"] as PowerMode[]) : []),
+      ...(highAvailable ? (["max"] as PowerMode[]) : []),
+      ...(highAvailable && state.custom ? (["custom"] as PowerMode[]) : []),
     ];
     const index = modes.indexOf(state.scheme);
     const next = modes[(index + 1) % modes.length] ?? modes[0];

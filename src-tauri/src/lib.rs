@@ -182,6 +182,7 @@ pub fn run() {
         .manage(usage::UsageState::default())
         .manage(system::SystemState::default())
         .manage(display::DisplayState::default())
+        .manage(display::NotifyState::default())
         .manage(discord::DiscordState::default())
         .manage(vault::VaultState::default())
         .invoke_handler(tauri::generate_handler![
@@ -236,6 +237,7 @@ pub fn run() {
             convert::convert_files,
             display::display_monitors,
             display::display_apply,
+            display::notification_visible,
             display::apps_visible,
             fps::gaming_fps,
             fps::fps_unlock,

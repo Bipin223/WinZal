@@ -488,12 +488,15 @@ extern "system" {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Energy {
     saver: bool,
     /// "saver" | "balanced" | "max" | "custom"
     scheme: &'static str,
     /// AC adapter connected. Max and Custom are only available while plugged in.
     plugged: bool,
+    /// Windows Battery Saver is on; Windows will not honor Max/Custom.
+    battery_saver: bool,
     /// The fourth, purple Custom mode (a WinZal power plan) is available.
     custom: bool,
 }
@@ -534,6 +537,13 @@ fn ac_connected() -> bool {
     status.ACLineStatus != 0
 }
 
+/// Windows Battery Saver (the leaf icon) overrides the performance overlay.
+fn battery_saver() -> bool {
+    let mut status = SYSTEM_POWER_STATUS::default();
+    let _ = unsafe { GetSystemPowerStatus(&mut status) };
+    status.SystemStatusFlag == 1
+}
+
 fn activate_plan(plan: &GUID) -> Result<(), String> {
     let error = unsafe { PowerSetActiveScheme(None, Some(plan)) };
     if error == ERROR_SUCCESS {
@@ -562,7 +572,7 @@ fn energy_status() -> Result<Energy, String> {
     if !plugged && scheme == "custom" {
         scheme = "balanced";
     }
-    Ok(Energy { saver: scheme == "saver", scheme, plugged, custom: true })
+    Ok(Energy { saver: scheme == "saver", scheme, plugged, battery_saver: battery_saver(), custom: true })
 }
 
 /// Keep the promise of only two modes on battery: if Lenovo's custom thermal
@@ -660,6 +670,9 @@ pub fn restore_power(app: tauri::AppHandle) {
 fn apply_energy(mode: &str) -> Result<Energy, String> {
     let mode = if mode == "high" { "max" } else { mode };
     let plugged = ac_connected();
+    if matches!(mode, "max" | "custom") && battery_saver() {
+        return Err("battery-saver".into());
+    }
     if !plugged && matches!(mode, "max" | "custom") {
         return Err("plugged".into());
     }

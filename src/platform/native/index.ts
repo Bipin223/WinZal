@@ -125,6 +125,11 @@ export function setMemoryLow(low: boolean) {
   if (isNative) void invoke("memory_low", { low });
 }
 
+/** Keep the notch shown for a visible notification even in fullscreen. */
+export function setNotificationVisible(active: boolean) {
+  if (isNative) void invoke("notification_visible", { active });
+}
+
 /** Page out the WebView2 working set without changing the memory target. */
 export function trimMemory() {
   if (isNative) void invoke("trim_memory");

@@ -24,10 +24,12 @@ export function useLiveActivity(): { id: string | null } {
   const call = useDiscordCall();
   const np = useNowPlaying();
   const musicInPill = settings.use().appearance.musicInPill;
+  const musicDuringCall = settings.use().discord.musicDuringCall;
   if (gaming) return { id: "system" };
   if (timerLive) return { id: "timer" };
-  if (call) return { id: "discord" };
+  if (call && !(musicDuringCall && np?.isPlaying && musicInPill)) return { id: "discord" };
   if (np?.isPlaying && musicInPill) return { id: "media" };
+  if (call) return { id: "discord" };
   return { id: null };
 }
 

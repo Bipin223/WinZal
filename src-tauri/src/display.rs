@@ -11,6 +11,7 @@
 
 use std::collections::BTreeMap;
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
@@ -32,6 +33,16 @@ const POLL: Duration = Duration::from_millis(400);
 
 #[derive(Default)]
 pub struct DisplayState(Mutex<Config>);
+
+/// While a notification card is visible, keep the notch window shown even if
+/// fullscreen hiding would normally hide it (movie/video fullscreen).
+#[derive(Default)]
+pub struct NotifyState(AtomicBool);
+
+#[tauri::command]
+pub fn notification_visible(active: bool, state: State<'_, NotifyState>) {
+    state.0.store(active, Ordering::Relaxed);
+}
 
 #[derive(Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -176,7 +187,8 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
                     ForegroundInfo { app: app_id, title, fullscreen, gaming },
                 );
             }
-            let hide = (gaming && gaming_hide) || (fullscreen && hide_fullscreen && !gaming);
+            let notify = app.state::<NotifyState>().0.load(Ordering::Relaxed);
+            let hide = !notify && ((gaming && gaming_hide) || (fullscreen && hide_fullscreen && !gaming));
 
             if hide != hidden {
                 hidden = hide;

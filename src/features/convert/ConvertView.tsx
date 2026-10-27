@@ -23,6 +23,7 @@ import { PasteHint } from "../shelf/ShelfView";
 import { convertFiles, probeFiles, revealFile, type ConvertResult, type DroppedFile, type FileKind } from "../../platform/services";
 import { Button, Segmented, Slider } from "../../ui/controls";
 import { UnitsPanel } from "./units";
+import { convertRequest, takeConvertRequest } from "./request";
 import { HeaderActions } from "../../notch/header";
 import { t, tBackend } from "../../i18n";
 
@@ -97,11 +98,11 @@ function FilesPanel() {
     setTimeout(() => setNothing(false), 1600);
   });
 
-  // Take files as soon as they land on the notch (even if it was closed).
+  // Take files as soon as they land on the notch (even if it was closed) or
+  // when another tool (Shelf) hands a selection over.
   const dropped = drop.use().dropped;
-  useEffect(() => {
-    const paths = takeDropped();
-    if (!paths?.length) return;
+  const handedOver = convertRequest.use();
+  const load = (paths: string[]) => {
     void probeFiles(paths).then((p) => {
       setFiles(p.files);
       setFfmpeg(p.ffmpeg);
@@ -110,7 +111,15 @@ function FilesPanel() {
       // Preselect a format none of the files has yet.
       setTarget(kind ? (targets[kind].find((t) => !p.files.some((f) => sameFormat(f.ext, t))) ?? targets[kind][0]) : null);
     });
+  };
+  useEffect(() => {
+    const paths = takeDropped();
+    if (paths?.length) load(paths);
   }, [dropped]);
+  useEffect(() => {
+    const paths = takeConvertRequest();
+    if (paths?.length) load(paths);
+  }, [handedOver]);
 
   const kind = commonKind(files);
   const options = kind ? targets[kind] : [];
