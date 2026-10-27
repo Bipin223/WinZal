@@ -84,6 +84,28 @@ fn webview_args() -> String {
     }
 }
 
+/// Persist which renderer to use. One call writes both files so the choice is
+/// atomic and the app restarts into exactly CPU, iGPU, or dGPU.
+#[tauri::command]
+fn set_rendering(mode: String) -> Result<(), String> {
+    let (render, preference) = match mode.as_str() {
+        "cpu" => ("cpu", None),
+        "igpu" => ("gpu", Some("igpu")),
+        "dgpu" => ("gpu", Some("dgpu")),
+        other => return Err(format!("Unknown rendering mode: {other}")),
+    };
+    let render_path = render_mode_path().ok_or("LOCALAPPDATA is not available")?;
+    if let Some(dir) = render_path.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    }
+    std::fs::write(&render_path, render).map_err(|e| e.to_string())?;
+    if let Some(preference) = preference {
+        let pref_path = gpu_preference_path().ok_or("LOCALAPPDATA is not available")?;
+        std::fs::write(pref_path, preference).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 /// Persist the render mode; the frontend relaunches the app afterwards.
 #[tauri::command]
 fn set_webview_render_mode(mode: String) -> Result<(), String> {
@@ -186,7 +208,8 @@ pub fn run() {
             set_notch_height,
             notch_prompt_mode,
             set_webview_render_mode,
-    set_gpu_preference,
+            set_gpu_preference,
+            set_rendering,
             audio::audio_levels,
             ai::ai_chat,
             ai::ai_cancel,

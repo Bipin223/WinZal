@@ -843,18 +843,15 @@ function Performance() {
       setRestarting(false);
     }
   };
-  const setRenderMode = (gpu: boolean) => {
-    updateSettings({ appearance: { ...a, gpuAcceleration: gpu } });
+  const rendering: "cpu" | "igpu" | "dgpu" = !a.gpuAcceleration ? "cpu" : a.gpuPreference === "igpu" ? "igpu" : "dgpu";
+  const setRendering = (mode: "cpu" | "igpu" | "dgpu") => {
+    const gpu = mode !== "cpu";
+    updateSettings({
+      appearance: { ...a, gpuAcceleration: gpu, gpuPreference: gpu ? mode : a.gpuPreference },
+    });
     void restartWith(
-      () => invoke("set_webview_render_mode", { mode: gpu ? "gpu" : "cpu" }),
-      () => updateSettings({ appearance: { ...a, gpuAcceleration: !gpu } }),
-    );
-  };
-  const setGpuPreference = (gpuPreference: Settings["appearance"]["gpuPreference"]) => {
-    updateSettings({ appearance: { ...a, gpuPreference } });
-    void restartWith(
-      () => invoke("set_gpu_preference", { mode: gpuPreference }),
-      () => updateSettings({ appearance: { ...a, gpuPreference: a.gpuPreference } }),
+      () => invoke("set_rendering", { mode }),
+      () => updateSettings({ appearance: { ...a } }),
     );
   };
   return (
@@ -905,40 +902,25 @@ function Performance() {
         <Row
           label={restarting ? t("Restarting WinZal...") : t("Rendering")}
           status={
-            a.gpuAcceleration
-              ? t("Can stutter in games on this laptop")
-              : t("Recommended for games on this laptop")
+            rendering === "cpu"
+              ? t("Recommended for games on this laptop")
+              : rendering === "igpu"
+                ? t("iGPU: turn off Notch in games if it stutters")
+                : t("Discrete GPU: frees the iGPU")
           }
         >
           <Segmented
-            id="performance-render-mode"
+            id="performance-rendering"
             size="sm"
-            value={a.gpuAcceleration ? "gpu" : "cpu"}
-            onChange={(mode) => setRenderMode(mode === "gpu")}
+            value={rendering}
+            onChange={(mode) => setRendering(mode as "cpu" | "igpu" | "dgpu")}
             options={[
-              { value: "cpu", label: t("CPU (low RAM)") },
-              { value: "gpu", label: t("GPU (smooth)") },
+              { value: "cpu", label: "CPU" },
+              { value: "igpu", label: "iGPU" },
+              { value: "dgpu", label: "dGPU" },
             ]}
           />
         </Row>
-        {a.gpuAcceleration && (
-          <Row
-            label={t("Graphics card")}
-            status={a.gpuPreference === "igpu" ? t("iGPU: turn off Notch in games if it stutters") : undefined}
-          >
-            <Segmented
-              id="performance-gpu-preference"
-              size="sm"
-              value={a.gpuPreference}
-              onChange={(gpuPreference) => setGpuPreference(gpuPreference as Settings["appearance"]["gpuPreference"])}
-              options={[
-                { value: "dgpu", label: "dGPU" },
-                { value: "auto", label: t("Auto") },
-                { value: "igpu", label: "iGPU" },
-              ]}
-            />
-          </Row>
-        )}
         <FpsUnlockRow />
       </Group>
     </>
