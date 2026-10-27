@@ -5,6 +5,10 @@ import { settings } from "../../settings/store";
 /** Last state from Rust (`discord://state`). */
 export const discordState = createStore<DiscordSnapshot>({ status: "off", error: null, call: null });
 
+/** Which live view to show while a call is active. null = use the setting. */
+export type CallView = "call" | "music" | null;
+export const callView = createStore<CallView>(null);
+
 let started = false;
 
 /** Connects/disconnects when the Discord tool or the client ID changes. */

@@ -1,11 +1,11 @@
-import { useContext, useRef } from "react";
+import { useContext, useEffect, useRef } from "react";
 import { AnimatePresence, motion, useTransform } from "motion/react";
 import { springs } from "../design/motion";
 import { useNowPlaying } from "../platform/media";
 import { LiveActivity } from "../features/now-playing/LiveActivity";
 import { LiveTimer, useTimerLive } from "../features/timer/LiveTimer";
 import { LiveDiscord } from "../features/discord/LiveDiscord";
-import { useDiscordCall } from "../features/discord/store";
+import { callView, useDiscordCall } from "../features/discord/store";
 import { LiveGaming } from "../features/system/LiveGaming";
 import { useGamingLive } from "../features/system/gaming";
 import { settings } from "../settings/store";
@@ -23,11 +23,17 @@ export function useLiveActivity(): { id: string | null } {
   const timerLive = useTimerLive();
   const call = useDiscordCall();
   const np = useNowPlaying();
-  const musicInPill = settings.use().appearance.musicInPill;
-  const musicDuringCall = settings.use().discord.musicDuringCall;
+  const s = settings.use();
+  const view = callView.use();
+  const musicInPill = s.appearance.musicInPill;
+  useEffect(() => {
+    if (!call) callView.set(null);
+  }, [call]);
+  const showMusicInCall =
+    !!np?.isPlaying && musicInPill && (view === "music" || (view === null && s.discord.musicDuringCall));
   if (gaming) return { id: "system" };
   if (timerLive) return { id: "timer" };
-  if (call && !(musicDuringCall && np?.isPlaying && musicInPill)) return { id: "discord" };
+  if (call && !showMusicInCall) return { id: "discord" };
   if (np?.isPlaying && musicInPill) return { id: "media" };
   if (call) return { id: "discord" };
   return { id: null };
