@@ -894,7 +894,11 @@ function Performance() {
       <Group title={t("Performance")} id="settings-performance">
         <Row
           label={restarting ? t("Restarting WinZal...") : t("Rendering")}
-          status={!a.gpuAcceleration ? t("Lower RAM, more CPU") : undefined}
+          status={
+            a.gpuAcceleration
+              ? t("Can stutter in games on this laptop")
+              : t("Recommended for games on this laptop")
+          }
         >
           <Segmented
             id="performance-render-mode"
@@ -902,8 +906,8 @@ function Performance() {
             value={a.gpuAcceleration ? "gpu" : "cpu"}
             onChange={(mode) => setRenderMode(mode === "gpu")}
             options={[
-              { value: "gpu", label: t("GPU (smooth)") },
               { value: "cpu", label: t("CPU (low RAM)") },
+              { value: "gpu", label: t("GPU (smooth)") },
             ]}
           />
         </Row>

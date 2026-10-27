@@ -471,6 +471,8 @@
   "GPU (smooth)": "GPU (smooth)",
   "CPU (low RAM)": "CPU (low RAM)",
   "Lower RAM, more CPU": "Lower RAM, more CPU",
+  "Recommended for games on this laptop": "Recommended for games on this laptop",
+  "Can stutter in games on this laptop": "Can stutter in games on this laptop",
   "Interaction": "Interaction",
   "Loading...": "Loading...",
   "Modelle laden": "Loading models…",

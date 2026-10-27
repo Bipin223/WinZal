@@ -302,7 +302,7 @@ const defaults: Settings = {
     lyricsVisualizerStyle: "bars",
     lyricsGlowStyle: "aurora",
     lyricsAnimation: "word",
-    gpuAcceleration: true,
+    gpuAcceleration: false,
     gpuPreference: "dgpu",
   },
   discord: { clientId: "", presence: true, appName: "Bipin Rizal’s WinZal app", statusLine: "title" },
