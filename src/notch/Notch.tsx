@@ -12,6 +12,7 @@ import { gamingMeasured, gamingWidth } from "../features/system/gamingOverlay";
 import { useDragToMove } from "./drag";
 import { LiveSlot, useLiveActivity } from "./live";
 import { GamingSatellite } from "./GamingSatellite";
+import { TimerSatellite } from "./TimerSatellite";
 import { NotificationLayer } from "../notifications/NotificationLayer";
 import { notifications } from "../notifications/store";
 import { DOCK_HEIGHT, HEADER_HEIGHT, geometry, openGeometry, type NotchGeometry } from "./geometry";
@@ -85,7 +86,9 @@ export function Notch() {
   const floating = appearance.style === "windows";
   // Line as the normal closed look: hover and click work as usual, but nothing shows
   // while closed. Only a finished timer opens it into the notch, until dismissed.
-  const timerDone = timer.use().finished;
+  const timerState = timer.use();
+  const timerDone = timerState.finished;
+  const timerLive = timerState.endsAt !== null || timerDone;
   const idleLine = displaySettings.idleStyle === "line";
   const alert = idleLine && timerDone;
   const visible = toolSettings.filter((t) => t.enabled).map((t) => findTab(t.id)).filter((t): t is NotchTab => !!t);
@@ -227,6 +230,9 @@ export function Notch() {
   // Gaming stats own the pill; a playing track gets its own little island instead.
   const gamingSatellite =
     pillLive === "system" && !!np?.isPlaying && appearance.musicInPill && !idleLine && status !== "open";
+  // A running timer gets its own circle on the right whenever another live
+  // activity owns the main pill (gaming, call, music).
+  const timerSatellite = timerLive && !idleLine && status !== "open" && pillLive !== "timer";
   const surface = appearance.theme === "custom" ? appearance.themeColor : light ? LIGHT_SURFACE : DARK_SURFACE;
   const surfaceLight = isLightColor(surface);
   const transition = useTransitionFor(status, displayShape, lyricTarget > 0);
@@ -441,6 +447,7 @@ export function Notch() {
           </span>
         )}
         <GamingSatellite show={gamingSatellite} playing={!!np?.isPlaying} floating={floating} />
+        <TimerSatellite show={timerSatellite} floating={floating} />
         </motion.div>
       </div>
       <NotificationLayer />

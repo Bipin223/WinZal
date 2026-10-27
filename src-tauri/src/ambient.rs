@@ -544,6 +544,26 @@ fn battery_saver() -> bool {
     status.SystemStatusFlag == 1
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BatteryStatus {
+    percent: u32,
+    charging: bool,
+    plugged: bool,
+    present: bool,
+}
+
+#[tauri::command]
+pub fn battery_status() -> BatteryStatus {
+    let mut status = SYSTEM_POWER_STATUS::default();
+    let _ = unsafe { GetSystemPowerStatus(&mut status) };
+    let present = status.BatteryFlag != 128 && status.BatteryLifePercent != 255;
+    let percent = if present { status.BatteryLifePercent as u32 } else { 0 };
+    let plugged = status.ACLineStatus == 1;
+    let charging = present && ((status.BatteryFlag & 8) != 0 || (plugged && percent < 100));
+    BatteryStatus { percent, charging, plugged, present }
+}
+
 fn activate_plan(plan: &GUID) -> Result<(), String> {
     let error = unsafe { PowerSetActiveScheme(None, Some(plan)) };
     if error == ERROR_SUCCESS {

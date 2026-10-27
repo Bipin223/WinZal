@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+﻿import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { isNative } from "./native";
 import bundledChangelog from "../changelog.json";
@@ -15,7 +15,6 @@ export type SecretName =
   | "ai.gemini"
   | "ai.groq"
   | "ai.custom"
-  | "usage.custom"
   | "discord.secret";
 
 const mockSecrets = new Map<SecretName, string>();
@@ -31,62 +30,6 @@ export const secrets = {
   },
 };
 
-// ---------- AI usage ----------
-
-export type UsageId = "custom";
-
-/** User-defined usage endpoint (Settings → AI). */
-export interface CustomUsageConfig {
-  name: string;
-  url: string;
-  /** Header name, e.g. "Authorization". Empty = no auth header. */
-  header: string;
-  /** Dot path to the used value, e.g. "data.used". */
-  valuePath: string;
-  /** Optional dot path to the limit. Empty = the value is already a percentage. */
-  limitPath: string;
-  /** Optional dot path to an ISO date or Unix time. */
-  resetPath: string;
-  /** session | daily | weekly | monthly */
-  window: "session" | "daily" | "weekly" | "monthly";
-  /** Optional plan label. */
-  plan: string;
-}
-
-export interface UsageWindow {
-  /** session | daily | weekly | monthly */
-  kind: string;
-  usedPercent: number;
-  resetsAt: number | null;
-  /** Window length in seconds (for the "on track" marker). */
-  windowSecs: number | null;
-}
-
-export interface UsageProvider {
-  id: UsageId;
-  name?: string | null;
-  plan: string | null;
-  windows: UsageWindow[];
-  /** not-configured | invalid-url | no-key | invalid-path | rate-limited | offline | failed (with data: stale). */
-  error: string | null;
-  updatedAt: number;
-}
-
-export function fetchUsage(providers: string[], custom?: CustomUsageConfig | null): Promise<UsageProvider[]> {
-  if (isNative) return invoke<UsageProvider[]>("usage_fetch", { providers, custom: custom ?? null });
-  const now = Date.now();
-  if (!providers.includes("custom") || !custom) return Promise.resolve([]);
-  const provider: UsageProvider = {
-    id: "custom",
-    name: custom.name || "Custom",
-    plan: custom.plan || null,
-    windows: [{ kind: custom.window, usedPercent: 42, resetsAt: now + 2.4 * 3600_000, windowSecs: 5 * 3600 }],
-    error: null,
-    updatedAt: now,
-  };
-  return new Promise((r) => setTimeout(() => r([provider]), 350));
-}
-
 // ---------- System ----------
 
 export interface SystemStats {
@@ -99,7 +42,7 @@ export interface SystemStats {
   gpuName: string | null;
   gpuMemUsed: number;
   gpuMemTotal: number;
-  /** °C; null = no sensor. */
+  /** Â°C; null = no sensor. */
   cpuTemp: number | null;
   gpuTemp: number | null;
   /** ms; null = no reply. */
@@ -607,6 +550,13 @@ export interface EnergyState {
   custom: boolean;
 }
 
+export interface BatteryStatus {
+  percent: number;
+  charging: boolean;
+  plugged: boolean;
+  present: boolean;
+}
+
 export interface GlimState {
   supported: boolean;
   on: boolean;
@@ -627,6 +577,11 @@ const mockBluetoothPeers: BluetoothPeer[] = [
   { name: "Phone", address: 2, connected: false },
 ];
 const mockEnergy: EnergyState = { saver: false, scheme: "balanced", plugged: true, batterySaver: false, custom: false };
+
+export function batteryStatus(): Promise<BatteryStatus> {
+  if (isNative) return invoke<BatteryStatus>("battery_status");
+  return Promise.resolve({ percent: 84, charging: true, plugged: true, present: true });
+}
 const mockGlim: GlimState = { supported: true, on: false };
 
 /** One program in the volume mixer (all its audio sessions together). */

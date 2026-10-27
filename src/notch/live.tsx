@@ -32,9 +32,9 @@ export function useLiveActivity(): { id: string | null } {
   const showMusicInCall =
     !!np?.isPlaying && musicInPill && (view === "music" || (view === null && s.discord.musicDuringCall));
   if (gaming) return { id: "system" };
-  if (timerLive) return { id: "timer" };
   if (call && !showMusicInCall) return { id: "discord" };
   if (np?.isPlaying && musicInPill) return { id: "media" };
+  if (timerLive) return { id: "timer" };
   if (call) return { id: "discord" };
   return { id: null };
 }

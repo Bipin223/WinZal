@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, Reorder } from "motion/react";
 import {
   ArrowClockwise,
@@ -26,7 +26,7 @@ import { alarmSounds, playAlarm, stopAlarm, type AlarmDuration } from "../../lib
 import { nav } from "../../notch/nav";
 import { requestSize } from "../../notch/size";
 import { tabs } from "../../notch/tabs";
-import { autostart, display, fetchFps, fetchUsage, fpsHelperReady, requestToastAccess, secrets, toastAccess, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName, type ToastAccess } from "../../platform/services";
+import { autostart, display, fetchFps, fpsHelperReady, requestToastAccess, secrets, toastAccess, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName, type ToastAccess } from "../../platform/services";
 import { settings, updateAsk, updateSettings, type AskProvider, type Settings, type TypeRole, DEFAULT_TYPOGRAPHY } from "../../settings/store";
 import { TYPE_ROLES, typeValues } from "../appearance/typography";
 import { ChatBubbleIcon } from "../../ui/ChatBubbleIcon";
@@ -50,7 +50,6 @@ import { between, changelog, itemText, markSeen, useUnseen } from "../../lib/cha
 import { privacy, togglePresentation, usePresenting } from "../privacy/store";
 import { previewDiscord, previewIsland, previewTimer } from "../../notifications/store";
 import { locale, t, tBackend } from "../../i18n";
-import { usageError } from "../usage/UsageView";
 
 type PageId = "general" | "notch" | "appearance" | "display" | "performance" | "music" | "tools" | "timer" | "ai" | "discord" | "about";
 
@@ -68,7 +67,7 @@ const pages: { id: PageId; label: string; icon: Icon }[] = [
   { id: "about", label: "About", icon: UserCircle },
 ];
 
-/** Deep links from other tools (`navigate("settings", "<section>")`) â†’ page holding that section. */
+/** Deep links from other tools (`navigate("settings", "<section>")`) Ã¢â€ â€™ page holding that section. */
 const sectionPage: Record<string, PageId> = {
   weather: "general",
   updates: "general",
@@ -83,7 +82,6 @@ const sectionPage: Record<string, PageId> = {
   presentation: "display",
   alarm: "timer",
   ask: "ai",
-  usage: "ai",
   discord: "discord",
   vault: "tools",
   about: "about",
@@ -202,7 +200,6 @@ export function SettingsView() {
             {page === "ai" && (
               <>
                 <Ask />
-                <UsageSettings />
               </>
             )}
             {page === "discord" && <Discord />}
@@ -227,17 +224,17 @@ function Updates() {
   const busy = u.phase === "checking" || u.phase === "downloading";
   const status = {
     idle: undefined,
-    checking: t("Suche …"),
+    checking: t("Suche â€¦"),
     current: t("Du hast die neueste Version"),
     available: t("Neue Version gefunden"),
-    downloading: t("Wird geladen … {n} %", { n: Math.round(u.progress * 100) }),
-    error: t("Prüfung fehlgeschlagen – später erneut versuchen"),
+    downloading: t("Wird geladen â€¦ {n} %", { n: Math.round(u.progress * 100) }),
+    error: t("PrÃ¼fung fehlgeschlagen â€“ spÃ¤ter erneut versuchen"),
   }[u.phase];
   const upcoming = u.notes && u.version && u.current ? between(u.notes, u.current, u.version) : [];
 
   return (
     <Group title={t("Updates")} id="settings-updates">
-      <Row label={t("Version {v}", { v: u.current ?? "–" })} status={status}>
+      <Row label={t("Version {v}", { v: u.current ?? "â€“" })} status={status}>
         <Button disabled={busy} onClick={() => void checkForUpdate()}>
           {t("Jetzt suchen")}
         </Button>
@@ -245,7 +242,7 @@ function Updates() {
       <AnimatePresence initial={false}>
         {(u.phase === "available" || u.phase === "downloading") && u.version && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={fade} className="overflow-hidden">
-            <Row label={t("Version {v} verfügbar", { v: u.version })}>
+            <Row label={t("Version {v} verfÃ¼gbar", { v: u.version })}>
               {u.phase === "downloading" ? (
                 <div className="h-1.5 w-28 overflow-hidden rounded-full bg-fill-2">
                   <div className="h-full origin-left rounded-full bg-label transition-transform duration-150 ease-linear" style={{ transform: `scaleX(${u.progress})` }} />
@@ -395,14 +392,14 @@ function Ask() {
           <TextField
             value={s.ask.configs.custom.baseUrl}
             onChange={(baseUrl) => updateAsk("custom", { baseUrl: baseUrl.trim() })}
-            placeholder="https://…/v1"
+            placeholder="https://â€¦/v1"
             width="w-52"
           />
         </Row>
       )}
       <SecretRow
         name={`ai.${provider}` as SecretName}
-        label={t("API-Schlüssel")}
+        label={t("API-SchlÃ¼ssel")}
         onSaved={() => void load()}
       />
       <Row label={t("Modell")} error={error ?? undefined}>
@@ -475,7 +472,7 @@ function General() {
           ]}
         />
       </Row>
-      <Row label={t("Öffnen")}>
+      <Row label={t("Ã–ffnen")}>
         <Segmented
           id="open-mode"
           size="sm"
@@ -490,7 +487,7 @@ function General() {
       <AnimatePresence initial={false}>
         {s.openMode === "hover" && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={fade} className="overflow-hidden">
-            <Row label={t("Hover-Verzögerung")}>
+            <Row label={t("Hover-VerzÃ¶gerung")}>
               <Segmented
                 id="hover-delay"
                 size="sm"
@@ -518,7 +515,7 @@ function General() {
           />
         )}
       </Row>
-      <Row label={t("Tastenkürzel")}>
+      <Row label={t("TastenkÃ¼rzel")}>
         <span className="flex items-center gap-1 text-caption text-label-2">
           <Keyboard size={13} weight="bold" className="text-label-3" />
           {["Strg", "Alt", "Leertaste"].map((k) => (
@@ -568,7 +565,7 @@ function Display() {
       window.clearTimeout(stop);
     };
   }, []);
-  const label = (m: MonitorInfo, i: number) => `${m.primary ? t("Hauptbildschirm") : t("Bildschirm {n}", { n: i + 1 })} · ${m.width}×${m.height}`;
+  const label = (m: MonitorInfo, i: number) => `${m.primary ? t("Hauptbildschirm") : t("Bildschirm {n}", { n: i + 1 })} Â· ${m.width}Ã—${m.height}`;
 
   return (
     <Group id="settings-display">
@@ -622,8 +619,8 @@ function Display() {
           ]}
         />
       </Row>
-      <Row label={t("Nicht stören")}>
-        <Switch label={t("Nicht stören")} checked={focus} onChange={setFocusMode} />
+      <Row label={t("Nicht stÃ¶ren")}>
+        <Switch label={t("Nicht stÃ¶ren")} checked={focus} onChange={setFocusMode} />
       </Row>
       <Row label={t("Aufnahme-Punkte")}>
         <Switch label={t("Aufnahme-Punkte")} checked={s.privacyDots} onChange={(privacyDots) => updateSettings({ privacyDots })} />
@@ -668,7 +665,7 @@ function Typography() {
       <div className="mx-3 mt-2 rounded-[10px] bg-fill-2 px-3 py-3">
         <div className={info.className}>{t(info.sample)}</div>
         <div className="mt-1 text-[10px] text-label-4">
-          {eff.size % 1 === 0 ? eff.size : eff.size.toFixed(1)} px · {eff.weight}
+          {eff.size % 1 === 0 ? eff.size : eff.size.toFixed(1)} px Â· {eff.weight}
         </div>
       </div>
       <Row label={t("Size")}>
@@ -964,7 +961,7 @@ function GamingApps() {
       <Row label={t("Eigene .exe")}>
         <div className="flex items-center gap-1.5">
           <TextField value={manual} onChange={setManual} onSubmit={addManual} placeholder="game.exe" width="w-32" />
-          <Button onClick={addManual}>{t("Hinzufügen")}</Button>
+          <Button onClick={addManual}>{t("HinzufÃ¼gen")}</Button>
         </div>
       </Row>
     </Group>
@@ -986,11 +983,11 @@ function Presentation() {
   const presenting = usePresenting();
   const recording = privacy.use().screen;
   return (
-    <Group title={t("Präsentationsmodus")} id="settings-presentation">
+    <Group title={t("PrÃ¤sentationsmodus")} id="settings-presentation">
       <Row
-        label={t("Präsentationsmodus")}
+        label={t("PrÃ¤sentationsmodus")}
       >
-        <Switch label={t("Präsentationsmodus")} checked={presenting} onChange={togglePresentation} />
+        <Switch label={t("PrÃ¤sentationsmodus")} checked={presenting} onChange={togglePresentation} />
       </Row>
       <Row label={t("Bei Bildschirmaufnahme")}>
         <Switch
@@ -1000,18 +997,18 @@ function Presentation() {
         />
       </Row>
       {auto && recording && !presenting && (
-        <Row label={t("Für diese Aufnahme aus")} />
+        <Row label={t("FÃ¼r diese Aufnahme aus")} />
       )}
     </Group>
   );
 }
 
 const discordStatus: Record<string, string> = {
-  off: "Aus – Tool „Discord“ einschalten",
+  off: "Aus â€“ Tool â€žDiscordâ€œ einschalten",
   "no-config": "Client-ID und Secret fehlen",
-  "no-client": "Discord läuft nicht",
-  connecting: "Verbinde …",
-  authorizing: "In Discord bestätigen",
+  "no-client": "Discord lÃ¤uft nicht",
+  connecting: "Verbinde â€¦",
+  authorizing: "In Discord bestÃ¤tigen",
   ready: "Verbunden",
   error: "Fehler",
 };
@@ -1036,7 +1033,7 @@ function Discord() {
         </Row>
         {s.discord.presence && (
           <>
-            <Row label={t("Wird angezeigt nach „Listening to“")}>
+            <Row label={t("Wird angezeigt nach â€žListening toâ€œ")}>
               <Segmented<"title" | "artist" | "app">
                 id="discord-status"
                 size="sm"
@@ -1044,7 +1041,7 @@ function Discord() {
                 onChange={(statusLine) => updateSettings((cur) => ({ discord: { ...cur.discord, statusLine } }))}
                 options={[
                   { value: "title", label: t("Titel") },
-                  { value: "artist", label: t("Künstler") },
+                  { value: "artist", label: t("KÃ¼nstler") },
                   { value: "app", label: t("App-Name") },
                 ]}
               />
@@ -1089,7 +1086,7 @@ function Discord() {
 }
 
 const durations: { value: string; label: string }[] = [
-  { value: "0", label: "1×" },
+  { value: "0", label: "1Ã—" },
   { value: "5", label: "5 s" },
   { value: "15", label: "15 s" },
   { value: "30", label: "30 s" },
@@ -1116,8 +1113,8 @@ function Alarm() {
       <Row label={t("Alarm-Ton")}>
         <div className="flex items-center gap-1.5">
           <button
-            aria-label={previewing ? t("Stopp") : t("Probehören")}
-            title={previewing ? t("Stopp") : t("Probehören")}
+            aria-label={previewing ? t("Stopp") : t("ProbehÃ¶ren")}
+            title={previewing ? t("Stopp") : t("ProbehÃ¶ren")}
             onClick={() => {
               if (!previewing) return preview();
               stopAlarm();
@@ -1138,105 +1135,15 @@ function Alarm() {
           />
         </div>
       </Row>
-      <Row label={t("Lautstärke")}>
+      <Row label={t("LautstÃ¤rke")}>
         <div className="flex w-52 items-center gap-2">
-          <Slider label={t("Lautstärke")} value={Math.round(a.volume * 100)} min={5} max={100} step={5} onChange={(v) => set({ volume: v / 100 })} />
+          <Slider label={t("LautstÃ¤rke")} value={Math.round(a.volume * 100)} min={5} max={100} step={5} onChange={(v) => set({ volume: v / 100 })} />
           <span className="tabular w-8 text-right text-caption text-label-2">{Math.round(a.volume * 100)}</span>
         </div>
       </Row>
       <Row label={t("Dauer")}>
         <Segmented id="alarm-duration" size="sm" value={String(a.duration)} onChange={(v) => set({ duration: Number(v) as AlarmDuration })} options={durations.map((o) => ({ ...o, label: t(o.label) }))} />
       </Row>
-    </Group>
-  );
-}
-
-/** AI usage: one custom endpoint, configured here. */
-function UsageSettings() {
-  const usage = settings.use().usage;
-  const cfg = usage.config;
-  const [testing, setTesting] = useState(false);
-  const [test, setTest] = useState<{ ok: boolean; text: string } | null>(null);
-  const setCfg = (patch: Partial<Settings["usage"]["config"]>) =>
-    updateSettings((cur) => ({ usage: { ...cur.usage, config: { ...cur.usage.config, ...patch } } }));
-
-  const runTest = async () => {
-    setTesting(true);
-    setTest(null);
-    try {
-      const [provider] = await fetchUsage(["custom"], cfg);
-      const window = provider?.windows[0];
-      const error = provider?.error;
-      setTest(
-        window
-          ? { ok: true, text: `${Math.round(window.usedPercent)} %` }
-          : { ok: false, text: error ? t(usageError[error] ?? error) : t("No data") },
-      );
-    } catch (e) {
-      setTest({ ok: false, text: tBackend(String(e)) });
-    } finally {
-      setTesting(false);
-    }
-  };
-
-  const windowOptions = [
-    { value: "session", label: t("Session") },
-    { value: "daily", label: t("Today") },
-    { value: "weekly", label: t("Week") },
-    { value: "monthly", label: t("Month") },
-  ];
-
-  return (
-    <Group title={t("AI-Nutzung")} id="settings-usage">
-      <Row label={t("Show AI usage")}>
-        <Switch
-          label={t("Show AI usage")}
-          checked={usage.custom}
-          onChange={(custom) => updateSettings((cur) => ({ usage: { ...cur.usage, custom } }))}
-        />
-      </Row>
-      {usage.custom && (
-        <>
-          <Row label={t("Name")}>
-            <TextField value={cfg.name} onChange={(name) => setCfg({ name })} placeholder="My AI" width="w-52" />
-          </Row>
-          <Row label={t("Endpoint")}>
-            <TextField value={cfg.url} onChange={(url) => setCfg({ url })} placeholder="https://…" width="w-52" />
-          </Row>
-          <Row label={t("Auth header")}>
-            <TextField value={cfg.header} onChange={(header) => setCfg({ header })} placeholder="Authorization" width="w-40" />
-          </Row>
-          <SecretRow name="usage.custom" label={t("Header value")} />
-          <Row label={t("Value path")}>
-            <TextField value={cfg.valuePath} onChange={(valuePath) => setCfg({ valuePath })} placeholder="data.used" width="w-52" />
-          </Row>
-          <Row label={t("Limit path")}>
-            <TextField value={cfg.limitPath} onChange={(limitPath) => setCfg({ limitPath })} placeholder="data.limit" width="w-52" />
-          </Row>
-          <Row label={t("Reset path")}>
-            <TextField value={cfg.resetPath} onChange={(resetPath) => setCfg({ resetPath })} placeholder="data.reset" width="w-52" />
-          </Row>
-          <Row label={t("Window")}>
-            <Select
-              width="w-40"
-              value={cfg.window}
-              options={windowOptions}
-              onChange={(window) => setCfg({ window: window as Settings["usage"]["config"]["window"] })}
-            />
-          </Row>
-          <Row label={t("Plan")}>
-            <TextField value={cfg.plan} onChange={(plan) => setCfg({ plan })} placeholder="Pro" width="w-32" />
-          </Row>
-          <Row label={t("Test")}>
-            <div className="flex items-center gap-2">
-              {test && <span className={`text-caption ${test.ok ? "text-green" : "text-red"}`}>{test.text}</span>}
-              <Button onClick={() => void runTest()} disabled={testing}>
-                {testing ? t("Testing…") : t("Test")}
-              </Button>
-            </div>
-          </Row>
-        </>
-      )}
     </Group>
   );
 }
@@ -1367,7 +1274,7 @@ function Weather() {
         />
       </Row>
       <Row label={t("Ort")}>
-        <Button onClick={() => setSearching((v) => !v)}>{w?.name ?? t("Wird erkannt …")}</Button>
+        <Button onClick={() => setSearching((v) => !v)}>{w?.name ?? t("Wird erkannt â€¦")}</Button>
       </Row>
       <AnimatePresence initial={false}>
         {searching && (
@@ -1436,7 +1343,7 @@ function Tools() {
 
 /**
  * Field for a key. Stored values are never read back, it only shows
- * "saved âœ“". Typing a new one overwrites it, saving empty deletes it.
+ * "saved Ã¢Å“â€œ". Typing a new one overwrites it, saving empty deletes it.
  */
 function SecretRow({ name, label, onSaved }: { name: SecretName; label: string; onSaved?: () => void }) {
   const [stored, setStored] = useState(false);
@@ -1482,12 +1389,12 @@ function SecretRow({ name, label, onSaved }: { name: SecretName; label: string; 
             setError(null);
           }}
           onSubmit={() => void save()}
-          placeholder={stored ? t("Gespeichert") : t("Einfügen")}
+          placeholder={stored ? t("Gespeichert") : t("EinfÃ¼gen")}
           width="w-40"
         />
         {(value || stored) && (
           <Button onClick={() => void save()} disabled={!value && !stored}>
-            {value ? t("Sichern") : t("Löschen")}
+            {value ? t("Sichern") : t("LÃ¶schen")}
           </Button>
         )}
       </div>

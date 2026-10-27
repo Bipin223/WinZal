@@ -10,7 +10,7 @@ use windows::Win32::Security::Credentials::{
 };
 
 /// Allowed names, so the frontend can't create arbitrary entries.
-const ALLOWED: &[&str] = &["ai.gemini", "ai.groq", "ai.custom", "usage.custom", "discord.secret", "discord.token"];
+const ALLOWED: &[&str] = &["ai.gemini", "ai.groq", "ai.custom", "discord.secret", "discord.token"];
 
 fn target(name: &str) -> Result<HSTRING, String> {
     if !ALLOWED.contains(&name) {

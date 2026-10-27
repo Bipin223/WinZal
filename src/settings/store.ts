@@ -44,20 +44,6 @@ export interface Settings {
   hoverDelay: "fast" | "normal" | "patient";
   /** Order = order in the tool bar. */
   tools: { id: string; enabled: boolean }[];
-  /** AI usage: one user-defined endpoint. */
-  usage: {
-    custom: boolean;
-    config: {
-      name: string;
-      url: string;
-      header: string;
-      valuePath: string;
-      limitPath: string;
-      resetPath: string;
-      window: "session" | "daily" | "weekly" | "monthly";
-      plan: string;
-    };
-  };
   /** `saveHistory` off keeps chats in memory only; existing files are never deleted by the switch. */
   ask: { provider: AskProvider; configs: Record<AskProvider, AskProviderConfig>; saveHistory: boolean };
   /** `auto` = detected via IP (again on every start); a picked location stays. */
@@ -211,7 +197,6 @@ export const TOOL_IDS = [
   "shelf",
   "ask",
   "convert",
-  "usage",
   "weather",
   "system",
   "discord",
@@ -225,19 +210,6 @@ const defaults: Settings = {
   hoverDelay: "normal",
   notifications: true,
   tools: TOOL_IDS.map((id) => ({ id, enabled: !DEFAULT_OFF.has(id) })),
-  usage: {
-    custom: false,
-    config: {
-      name: "Custom",
-      url: "",
-      header: "Authorization",
-      valuePath: "",
-      limitPath: "",
-      resetPath: "",
-      window: "session",
-      plan: "",
-    },
-  },
   ask: {
     provider: "gemini",
     configs: {
@@ -359,11 +331,6 @@ settings.set((s) => {
     ...defaults,
     ...s,
     tools,
-    usage: {
-      ...defaults.usage,
-      ...s.usage,
-      config: { ...defaults.usage.config, ...(s.usage as { config?: Partial<Settings["usage"]["config"]> } | undefined)?.config },
-    },
     typography: {
       caption: { ...defaults.typography.caption, ...s.typography?.caption },
       footnote: { ...defaults.typography.footnote, ...s.typography?.footnote },

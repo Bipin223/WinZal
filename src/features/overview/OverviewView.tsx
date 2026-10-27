@@ -1,6 +1,6 @@
-import { type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Eye, EyeSlash, MusicNoteSimple, Timer } from "@phosphor-icons/react";
+import { Eye, EyeSlash, Lightning, MusicNoteSimple, Timer } from "@phosphor-icons/react";
 import { DiscordLogo } from "../../ui/brands";
 import { content, springs } from "../../design/motion";
 import { HeaderActions, HeaderButton } from "../../notch/header";
@@ -19,6 +19,8 @@ import { CompactClock } from "../../notch/ClockFace";
 import { useMinute } from "../../lib/useMinute";
 import { useSecond } from "../../lib/useSecond";
 import { PowerActions, QuickControls, SystemRow } from "./Controls";
+import { BatteryIcon } from "../../ui/glyphs";
+import { batteryStatus, systemControls, type BatteryStatus } from "../../platform/services";
 
 /*
  *   9:43 AM        [🔒 🌙 ↻ ⏻]                 ☀ 70°
@@ -34,6 +36,7 @@ export function OverviewView() {
   return (
     <div className="flex h-full flex-col gap-2 px-4 pt-1 pb-3">
       <HeaderActions>
+        <BatteryIndicator />
         <HeaderButton
           label={presenting ? t("Präsentationsmodus beenden") : t("Präsentationsmodus")}
           active={presenting}
@@ -47,6 +50,50 @@ export function OverviewView() {
       <QuickControls />
       <SystemRow />
     </div>
+  );
+}
+
+function BatteryIndicator() {
+  const [battery, setBattery] = useState<BatteryStatus | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      void batteryStatus()
+        .then((next) => alive && setBattery(next))
+        .catch(() => {});
+    };
+    load();
+    const id = window.setInterval(load, 15_000);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+    };
+  }, []);
+  if (!battery?.present) return null;
+  const percent = Math.min(100, Math.max(0, battery.percent));
+  const onPower = battery.charging || battery.plugged;
+  return (
+    <motion.button
+      type="button"
+      aria-label={`Battery ${percent}%${battery.plugged ? " · plugged in" : ""}`}
+      title={`Battery ${percent}%${battery.plugged ? " · plugged in" : ""}`}
+      onClick={() => void systemControls.openUri("ms-settings:powersleep")}
+      initial={{ opacity: 0, scale: 0.86 }}
+      animate={{ opacity: 1, scale: 1, transition: springs.snappy }}
+      className="pressable pressable-fill flex h-7 items-center gap-1 rounded-full bg-fill-1 px-2"
+    >
+      {onPower && (
+        <motion.span
+          className="flex text-green"
+          animate={{ scale: [1, 1.14, 1], opacity: [0.72, 1, 0.72] }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <Lightning size={12} weight="fill" />
+        </motion.span>
+      )}
+      <span className="tabular text-caption font-semibold text-label-2">{percent}%</span>
+      <BatteryIcon size={16} level={percent / 100} className={onPower ? "text-green" : "text-label-2"} />
+    </motion.button>
   );
 }
 

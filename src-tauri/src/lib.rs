@@ -22,7 +22,6 @@ pub mod secrets;
 mod system;
 mod temps;
 mod toasts;
-pub mod usage;
 mod vault;
 
 use std::sync::Mutex;
@@ -179,7 +178,6 @@ pub fn run() {
         .manage(TrayItems::default())
         .manage(audio::AudioState::default())
         .manage(ai::AiState::default())
-        .manage(usage::UsageState::default())
         .manage(system::SystemState::default())
         .manage(display::DisplayState::default())
         .manage(display::NotifyState::default())
@@ -224,7 +222,6 @@ pub fn run() {
             secrets::secret_set,
             secrets::secret_delete,
             secrets::secret_has,
-            usage::usage_fetch,
             system::system_stats,
             files::file_probe,
             files::file_text,
@@ -271,6 +268,7 @@ pub fn run() {
             ambient::bluetooth_connect,
             ambient::energy_get,
             ambient::energy_set,
+            ambient::battery_status,
             ambient::glim_get,
             ambient::glim_set,
             ambient::power_action,

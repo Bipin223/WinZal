@@ -5,7 +5,6 @@ import {
   ClipboardText,
   CloudSun,
   Cpu,
-  Gauge,
   GearSix,
   SquaresFour,
   MusicNotesSimple,
@@ -27,7 +26,6 @@ import { ShelfView } from "../features/shelf/ShelfView";
 import { AskView } from "../features/ask/AskView";
 import { ConvertView } from "../features/convert/ConvertView";
 
-import { UsageView } from "../features/usage/UsageView";
 import { WeatherView } from "../features/weather/WeatherView";
 import { SystemView } from "../features/system/SystemView";
 import { DiscordView } from "../features/discord/DiscordView";
@@ -61,7 +59,6 @@ export const tabs: NotchTab[] = [
   { id: "shelf", label: "Ablage", icon: Tray, size: { w: 560, h: 236 }, View: ShelfView },
   { id: "ask", label: "Ask", icon: ChatBubbleIcon as unknown as Icon, size: { w: 560, h: 440 }, View: AskView },
   { id: "convert", label: "Converter", icon: ArrowsLeftRight, size: { w: 520, h: 290 }, View: ConvertView },
-  { id: "usage", label: "AI-Nutzung", icon: Gauge, size: { w: 600, h: 320 }, View: UsageView },
   { id: "weather", label: "Wetter", icon: CloudSun, size: { w: 520, h: 250 }, View: WeatherView },
   { id: "system", label: "Hardware", icon: Cpu, size: { w: 600, h: 248 }, View: SystemView },
   { id: "discord", label: "Discord", icon: DiscordLogo, size: { w: 520, h: 210 }, View: DiscordView },
