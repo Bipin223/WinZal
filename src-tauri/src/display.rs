@@ -46,6 +46,11 @@ pub struct Config {
     /// "off" | "games" | "always".
     #[serde(default)]
     gaming_mode: String,
+    /// Hide the notch while a recognized game is foreground, even when the
+    /// gaming overlay is on. Useful for iGPU/auto where the window itself
+    /// competes with the game.
+    #[serde(default)]
+    gaming_hide: bool,
     /// Lowercase exe names whose foreground presence shows the gaming overlay.
     #[serde(default)]
     gaming_apps: Vec<String>,
@@ -144,9 +149,9 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
         loop {
             thread::sleep(POLL);
             let state = app.state::<DisplayState>();
-            let (hide_fullscreen, mode, apps) = {
+            let (hide_fullscreen, mode, apps, gaming_hide) = {
                 let c = state.0.lock().unwrap();
-                (c.hide_fullscreen, c.gaming_mode.clone(), c.gaming_apps.clone())
+                (c.hide_fullscreen, c.gaming_mode.clone(), c.gaming_apps.clone(), c.gaming_hide)
             };
             let foreground = unsafe { GetForegroundWindow() };
             let fullscreen = foreground != own && covers_monitor(foreground, own);
@@ -171,7 +176,7 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
                     ForegroundInfo { app: app_id, title, fullscreen, gaming },
                 );
             }
-            let hide = hide_fullscreen && !gaming && fullscreen;
+            let hide = (gaming && gaming_hide) || (fullscreen && hide_fullscreen && !gaming);
 
             if hide != hidden {
                 hidden = hide;

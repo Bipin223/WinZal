@@ -803,6 +803,16 @@ function GamingSettings() {
       </Row>
     </Group>
     <Group title={t("Gaming mode")} id="settings-gaming-mode">
+      <Row
+        label={t("Notch in games")}
+        status={g.hideInGames ? t("Hidden while a game is foreground") : undefined}
+      >
+        <Switch
+          label={t("Notch in games")}
+          checked={!g.hideInGames}
+          onChange={(on) => setG({ hideInGames: !on })}
+        />
+      </Row>
       <Row label={t("Gaming overlay")}>
         <Switch
           label={t("Gaming overlay")}
@@ -912,7 +922,10 @@ function Performance() {
           />
         </Row>
         {a.gpuAcceleration && (
-          <Row label={t("Graphics card")}>
+          <Row
+            label={t("Graphics card")}
+            status={a.gpuPreference === "igpu" ? t("iGPU: turn off Notch in games if it stutters") : undefined}
+          >
             <Segmented
               id="performance-gpu-preference"
               size="sm"

@@ -119,7 +119,8 @@ pub fn run() {
     let shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::Space);
     let presentation = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyP);
     let silent = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyS);
-    let (h_shortcut, h_presentation, h_silent) = (shortcut.clone(), presentation.clone(), silent.clone());
+    let power = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT | Modifiers::SHIFT), Code::KeyM);
+    let (h_shortcut, h_presentation, h_silent, h_power) = (shortcut.clone(), presentation.clone(), silent.clone(), power.clone());
 
     tauri::Builder::default()
         // A second launch doesn't open a second notch.
@@ -140,6 +141,8 @@ pub fn run() {
                         let _ = app.emit("notch://presentation-toggle", ());
                     } else if pressed == &h_silent {
                         let _ = app.emit("notch://silent-toggle", ());
+                    } else if pressed == &h_power {
+                        let _ = app.emit("notch://power-cycle", ());
                     }
                 })
                 .build(),
@@ -305,6 +308,7 @@ pub fn run() {
             let _ = app.global_shortcut().register(shortcut);
             let _ = app.global_shortcut().register(presentation);
             let _ = app.global_shortcut().register(silent);
+            let _ = app.global_shortcut().register(power);
             enable_autostart_once(app.handle());
             build_tray(app)?;
             Ok(())

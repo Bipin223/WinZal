@@ -1,5 +1,6 @@
 import { StrictMode, useEffect, useLayoutEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { createRoot } from "react-dom/client";
 import { MotionConfig } from "motion/react";
 import "./styles/global.css";
@@ -7,6 +8,7 @@ import { Notch } from "./notch/Notch";
 import { DesktopMock } from "./dev/DesktopMock";
 import { isNative } from "./platform/native";
 import { startDropListener } from "./platform/drop";
+import { systemControls, type PowerMode } from "./platform/services";
 import { clipboard } from "./platform/clipboard";
 import { settings } from "./settings/store";
 import { setMotionScale, setMotionStyle } from "./design/motion";
@@ -52,6 +54,24 @@ const syncToastWatch = () => {
 syncToastWatch();
 settings.subscribe(syncToastWatch);
 
+// Ctrl+Alt+M works over fullscreen games, where the Power tile cannot be clicked.
+void listen("notch://power-cycle", async () => {
+  try {
+    const state = await systemControls.energy();
+    const modes: PowerMode[] = [
+      "saver",
+      "balanced",
+      ...(state.plugged ? (["max"] as PowerMode[]) : []),
+      ...(state.plugged && state.custom ? (["custom"] as PowerMode[]) : []),
+    ];
+    const index = modes.indexOf(state.scheme);
+    const next = modes[(index + 1) % modes.length] ?? modes[0];
+    await systemControls.setEnergy(next);
+  } catch {
+    // The normal Power tile still shows the error.
+  }
+});
+
 // Show one island notification per newly discovered update.
 let lastUpdateNotice = "";
 const watchUpdateNotice = () => {
@@ -73,7 +93,7 @@ watchUpdateNotice();
 let lastDisplay = "";
 const syncDisplay = () => {
   const { display, gaming } = settings.get();
-  const key = `${display.visibility}|${display.monitor}|${display.offset}|${gaming.mode}|${gaming.apps.join(",")}`;
+  const key = `${display.visibility}|${display.monitor}|${display.offset}|${gaming.mode}|${gaming.apps.join(",")}|${gaming.hideInGames}`;
   if (key === lastDisplay) return;
   lastDisplay = key;
   applyDisplay();

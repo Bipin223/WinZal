@@ -308,7 +308,7 @@ export const display = {
           { name: "\\.\DISPLAY1", primary: true, width: 2560, height: 1440 },
           { name: "\\.\DISPLAY2", primary: false, width: 1920, height: 1080 },
         ]),
-  apply: (config: { hideFullscreen: boolean; monitor: string | null; offset: number; gamingMode: string; gamingApps: string[] }) => {
+  apply: (config: { hideFullscreen: boolean; monitor: string | null; offset: number; gamingMode: string; gamingApps: string[]; gamingHide: boolean }) => {
     if (isNative) void invoke("display_apply", { config });
   },
   /** true while an app covers the notch's monitor in fullscreen. */

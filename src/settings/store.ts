@@ -90,6 +90,8 @@ export interface Settings {
     style: "text" | "bars";
     /** Thin separator between the left (FPS/CPU) and right (GPU/RAM) groups. */
     divider: boolean;
+    /** Hide the whole notch while a game is foreground (best for iGPU/auto). */
+    hideInGames: boolean;
   };
   /** Dots like on iPhone: mic/camera (green) or screen recording (red) in use. */
   privacyDots: boolean;
@@ -257,6 +259,7 @@ const defaults: Settings = {
     showRam: true,
     style: "text",
     divider: false,
+    hideInGames: false,
   },
   typography: { ...DEFAULT_TYPOGRAPHY },
   privacyDots: true,
@@ -525,6 +528,7 @@ function migrateGaming(old: unknown): Settings["gaming"] {
     showRam?: unknown;
     style?: unknown;
     divider?: unknown;
+    hideInGames?: unknown;
   };
   const mode = legacy.mode === "off" ? "off" : "games";
   let apps = Array.isArray(legacy.apps) ? legacy.apps.filter((id): id is string => typeof id === "string" && id.length > 0) : [];
@@ -553,6 +557,7 @@ function migrateGaming(old: unknown): Settings["gaming"] {
     showRam: legacy.showRam !== false && !minimal,
     style: legacy.style === "bars" || legacy.style === "dots" || legacy.style === "graph" ? "bars" : "text",
     divider: legacy.divider === true,
+    hideInGames: legacy.hideInGames === true,
   };
 }
 

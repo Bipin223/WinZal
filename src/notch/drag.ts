@@ -17,6 +17,7 @@ export function applyDisplay(offset = settings.get().display.offset) {
     offset,
     gamingMode: s.gaming.mode,
     gamingApps: s.gaming.apps,
+    gamingHide: s.gaming.hideInGames,
   });
 }
 
