@@ -19,7 +19,7 @@ import { CompactClock } from "../../notch/ClockFace";
 import { useMinute } from "../../lib/useMinute";
 import { useSecond } from "../../lib/useSecond";
 import { PowerActions, QuickControls, SystemRow } from "./Controls";
-import { BatteryIcon } from "../../ui/glyphs";
+import { BatterySolidIcon } from "../../ui/glyphs";
 import { batteryStatus, systemControls, type BatteryStatus } from "../../platform/services";
 
 /*
@@ -88,11 +88,11 @@ function BatteryIndicator() {
           animate={{ scale: [1, 1.14, 1], opacity: [0.72, 1, 0.72] }}
           transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
         >
-          <Lightning size={12} weight="fill" />
+          <Lightning size={13} weight="fill" />
         </motion.span>
       )}
-      <span className="tabular text-caption font-semibold text-label-2">{percent}%</span>
-      <BatteryIcon size={16} level={percent / 100} className={onPower ? "text-green" : "text-label-2"} />
+      <span className="tabular text-[11px] font-bold text-label-2">{percent}%</span>
+      <BatterySolidIcon size={20} level={percent / 100} className={onPower ? "text-green" : "text-label-2"} />
     </motion.button>
   );
 }

@@ -102,6 +102,27 @@ export function BluetoothOffIcon({ size = 22, className }: Props) {
   );
 }
 
+/** Solid charging battery: no outline, bold fill for the Overview header. */
+export function BatterySolidIcon({ size = 20, className, level = 0.82 }: Props & { level?: number }) {
+  const width = 16.2 * Math.max(0, Math.min(1, level));
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <rect x="2.1" y="6.6" width="17.8" height="10.8" rx="3.2" fill="currentColor" opacity="0.2" />
+      <motion.rect
+        x="3.5"
+        y="8"
+        height="8"
+        rx="2"
+        fill="currentColor"
+        initial={{ width: 0 }}
+        animate={{ width }}
+        transition={{ type: "spring", stiffness: 300, damping: 26 }}
+      />
+      <rect x="20.4" y="9.8" width="1.8" height="4.4" rx="0.9" fill="currentColor" />
+    </svg>
+  );
+}
+
 /** iPhone-style battery: pure black/white, fill level tells the power mode. */
 export function BatteryIcon({ size = 17, className, level = 0.82 }: Props & { level?: number }) {
   const inner = 13.4 * Math.max(0, Math.min(1, level));
