@@ -5,6 +5,7 @@ mod audio;
 mod audio_out;
 mod clipboard;
 mod controls;
+mod convert;
 mod files;
 mod discord;
 mod display;
@@ -231,6 +232,8 @@ pub fn run() {
             files::copy_files,
             files::file_preview,
             files::file_preview_large,
+            convert::convert_probe,
+            convert::convert_files,
             display::display_monitors,
             display::display_apply,
             display::apps_visible,

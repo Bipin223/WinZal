@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import {
+  ArrowsLeftRight,
   CheckCircle,
   ClipboardText,
   CloudSun,
@@ -24,6 +25,7 @@ import { NotesView } from "../features/notes/NotesView";
 import { ClipboardView } from "../features/clipboard/ClipboardView";
 import { ShelfView } from "../features/shelf/ShelfView";
 import { AskView } from "../features/ask/AskView";
+import { ConvertView } from "../features/convert/ConvertView";
 
 import { UsageView } from "../features/usage/UsageView";
 import { WeatherView } from "../features/weather/WeatherView";
@@ -58,6 +60,7 @@ export const tabs: NotchTab[] = [
   { id: "clipboard", label: "Zwischenablage", icon: ClipboardText, size: { w: 600, h: 236 }, View: ClipboardView },
   { id: "shelf", label: "Ablage", icon: Tray, size: { w: 560, h: 236 }, View: ShelfView },
   { id: "ask", label: "Ask", icon: ChatBubbleIcon as unknown as Icon, size: { w: 560, h: 440 }, View: AskView },
+  { id: "convert", label: "Converter", icon: ArrowsLeftRight, size: { w: 520, h: 290 }, View: ConvertView },
   { id: "usage", label: "AI-Nutzung", icon: Gauge, size: { w: 600, h: 320 }, View: UsageView },
   { id: "weather", label: "Wetter", icon: CloudSun, size: { w: 520, h: 250 }, View: WeatherView },
   { id: "system", label: "Hardware", icon: Cpu, size: { w: 600, h: 248 }, View: SystemView },

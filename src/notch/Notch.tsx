@@ -671,14 +671,24 @@ function useTransitionFor(status: NotchStatus, shape: NotchGeometry, smooth = fa
 }
 
 /**
- * Quick drop: drag files over the notch and it opens Shelf.
- * A cancelled drag closes it again if it only opened for that.
+ * Quick drop: drag files over the notch and it opens on Shelf or Converter
+ * (whichever was used last). A cancelled drag closes it again if it only opened for that.
  */
 function useQuickDrop(status: NotchStatus, open: () => void, dismiss: () => void) {
   const openedByDrag = useRef(false);
+  const fileTool = useRef<"shelf" | "convert">("convert");
   const holding = useRef(false);
   const statusRef = useRef(status);
   statusRef.current = status;
+
+  useEffect(
+    () =>
+      nav.subscribe(() => {
+        const id = nav.get().tabId;
+        if (id === "shelf" || id === "convert") fileTool.current = id;
+      }),
+    [],
+  );
 
   useEffect(
     () =>
@@ -692,7 +702,7 @@ function useQuickDrop(status: NotchStatus, open: () => void, dismiss: () => void
             open();
           }
           const current = nav.get().tabId;
-          if (current !== "shelf") navigate("shelf");
+          if (current !== "shelf" && current !== "convert") navigate(fileTool.current);
         } else if (!dragging && holding.current) {
           // Drag over: dropped → stay open, cancelled → close again.
           holding.current = false;

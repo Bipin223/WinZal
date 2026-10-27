@@ -210,6 +210,7 @@ export const TOOL_IDS = [
   "clipboard",
   "shelf",
   "ask",
+  "convert",
   "usage",
   "weather",
   "system",
