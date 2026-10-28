@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { motion } from "motion/react";
-import { batteryStatus, type BatteryStatus, type PowerMode } from "../../platform/services";
+import type { PowerMode } from "../../platform/services";
 import { BatteryIcon } from "../../ui/glyphs";
 import { BatteryMeter } from "../../ui/BatteryMeter";
 import { springs } from "../../design/motion";
+import { useBatteryStatus } from "./battery";
 
 export type PowerOption = {
   mode: PowerMode;
@@ -34,21 +35,7 @@ export function PowerMenu({
   onClose: () => void;
 }) {
   const box = useRef<HTMLDivElement>(null);
-  const [batt, setBatt] = useState<BatteryStatus | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    const load = () =>
-      void batteryStatus()
-        .then((next) => alive && setBatt(next))
-        .catch(() => {});
-    load();
-    const id = window.setInterval(load, 2000);
-    return () => {
-      alive = false;
-      window.clearInterval(id);
-    };
-  }, []);
+  const batt = useBatteryStatus();
 
   useEffect(() => {
     const onDown = (event: PointerEvent) => {

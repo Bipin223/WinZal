@@ -38,8 +38,11 @@ export function BatteryMeter({ percent, charging = false, plugged = false, saver
   const radius = xs ? 4 : md ? 5 : 4;
   const tipW = xs ? 1.5 : 2;
   const tipH = xs ? 4.5 : md ? 5.5 : 5;
-  const fontSize = xs ? 7.25 : md ? 9 : 7.5;
-  const bolt = xs ? 6 : md ? 7.5 : 6;
+  // The number is the point of the capsule: let it fill the height like the
+  // reference. Three digits need a small step down or they touch the bolt.
+  const tighten = level >= 100 ? 0.74 : 1;
+  const fontSize = (xs ? 9.5 : md ? 12.5 : 10.5) * tighten;
+  const bolt = (xs ? 6.5 : md ? 8 : 7) * tighten;
   const glow = low
     ? "0 0 9px rgb(255 69 58 / 0.28)"
     : saver
@@ -66,7 +69,7 @@ export function BatteryMeter({ percent, charging = false, plugged = false, saver
       >
         <span
           className="flex items-center justify-center leading-none font-extrabold tabular"
-          style={{ gap: xs ? 1 : md ? 1.2 : 1, fontSize, color: ink }}
+          style={{ gap: md ? 0.6 : 0.5, fontSize, color: ink, letterSpacing: xs ? "-0.03em" : "-0.02em" }}
         >
           <motion.span
             key={level}

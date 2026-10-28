@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Eye, EyeSlash, MusicNoteSimple, Timer } from "@phosphor-icons/react";
 import { DiscordLogo } from "../../ui/brands";
@@ -20,7 +20,8 @@ import { useMinute } from "../../lib/useMinute";
 import { useSecond } from "../../lib/useSecond";
 import { PowerActions, QuickControls, SystemRow } from "./Controls";
 import { BatteryMeter } from "../../ui/BatteryMeter";
-import { batteryStatus, systemControls, type BatteryStatus } from "../../platform/services";
+import { useBatteryStatus } from "./battery";
+import { systemControls } from "../../platform/services";
 
 /*
  *   9:43 AM        [🔒 🌙 ↻ ⏻]                 ☀ 70°
@@ -54,21 +55,7 @@ export function OverviewView() {
 }
 
 function BatteryIndicator() {
-  const [battery, setBattery] = useState<BatteryStatus | null>(null);
-  useEffect(() => {
-    let alive = true;
-    const load = () => {
-      void batteryStatus()
-        .then((next) => alive && setBattery(next))
-        .catch(() => {});
-    };
-    load();
-    const id = window.setInterval(load, 15_000);
-    return () => {
-      alive = false;
-      window.clearInterval(id);
-    };
-  }, []);
+  const battery = useBatteryStatus();
   if (!battery?.present) return null;
   const percent = Math.min(100, Math.max(0, battery.percent));
   return (
