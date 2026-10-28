@@ -366,7 +366,7 @@ pub struct BluetoothPeer {
     connected: bool,
 }
 
-const A2DP_SOURCE: GUID = GUID::from_u128(0x0000110a_0000_1000_8000_00805f9b34fb);
+const A2DP_SINK: GUID = GUID::from_u128(0x0000110b_0000_1000_8000_00805f9b34fb);
 const HANDSFREE: GUID = GUID::from_u128(0x0000111e_0000_1000_8000_00805f9b34fb);
 
 /// Paired Bluetooth devices for the notch dropdown.
@@ -428,16 +428,21 @@ fn connect_bluetooth(address: u64) -> Result<bool, String> {
         if code != 0 {
             return Err(format!("Bluetooth device lookup failed ({code})"));
         }
+
+        // Always prefer the high-quality A2DP media profile. Enabling HFP makes
+        // Windows select the mono communications/headset link, which is what
+        // makes Bluetooth audio sound like a screen-recording call.
+        unsafe {
+            BluetoothSetServiceState(Some(radio), &info, &A2DP_SINK, BLUETOOTH_SERVICE_ENABLE);
+        }
+        let _ = unsafe {
+            BluetoothSetServiceState(Some(radio), &info, &HANDSFREE, BLUETOOTH_SERVICE_DISABLE)
+        };
+
         if info.fConnected.as_bool() {
             return Ok(true);
         }
 
-        let services = [A2DP_SOURCE, HANDSFREE];
-        for service in services {
-            unsafe {
-                BluetoothSetServiceState(Some(radio), &info, &service, BLUETOOTH_SERVICE_ENABLE);
-            }
-        }
         for _ in 0..10 {
             std::thread::sleep(std::time::Duration::from_millis(300));
             let code = unsafe { BluetoothGetDeviceInfo(Some(radio), &mut info) };
@@ -447,17 +452,14 @@ fn connect_bluetooth(address: u64) -> Result<bool, String> {
         }
 
         // Some devices keep the service enabled while asleep, so a disable/enable
-        // cycle is the only way to wake the audio link.
-        for service in services {
-            unsafe {
-                BluetoothSetServiceState(Some(radio), &info, &service, BLUETOOTH_SERVICE_DISABLE);
-            }
+        // cycle is the only way to wake the audio link. Cycle A2DP only: HFP must
+        // stay off so Windows cannot fall back to the low-quality call profile.
+        unsafe {
+            BluetoothSetServiceState(Some(radio), &info, &A2DP_SINK, BLUETOOTH_SERVICE_DISABLE);
         }
         std::thread::sleep(std::time::Duration::from_millis(350));
-        for service in services {
-            unsafe {
-                BluetoothSetServiceState(Some(radio), &info, &service, BLUETOOTH_SERVICE_ENABLE);
-            }
+        unsafe {
+            BluetoothSetServiceState(Some(radio), &info, &A2DP_SINK, BLUETOOTH_SERVICE_ENABLE);
         }
         for _ in 0..20 {
             std::thread::sleep(std::time::Duration::from_millis(300));
