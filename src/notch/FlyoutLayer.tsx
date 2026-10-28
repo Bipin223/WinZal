@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowClockwise,
@@ -13,14 +13,12 @@ import {
 } from "@phosphor-icons/react";
 import { springs } from "../design/motion";
 import { media, useNowPlaying, type MediaSession } from "../platform/media";
-import { systemControls, type EnergyState, type PowerMode } from "../platform/services";
-import { fpsHelperReady } from "../platform/services";
+import { systemControls } from "../platform/services";
 import { settings } from "../settings/store";
-import { BatteryIcon } from "../ui/glyphs";
+import { PowerOrbit } from "./PowerOrbit";
 import { t } from "../i18n";
 import { Switch } from "../ui/controls";
 import { SelectedDot } from "../ui/SelectedDot";
-import { bumpPowerMode } from "../features/overview/power";
 import { closeFlyout, flyout, type FlyoutKind } from "./flyout";
 import {
   connectBluetooth,
@@ -41,18 +39,20 @@ import {
 export function FlyoutLayer() {
   const { kind, side } = flyout.use();
   const material = settings.use().appearance.material;
+  const circular = kind === "power";
   return (
     <AnimatePresence>
       {kind && (
         <motion.div
           key={kind}
           data-flyout-hit
-          className={`pointer-events-auto absolute z-40 overflow-hidden rounded-[20px] border border-separator shadow-[0_26px_60px_-18px_rgb(0_0_0/0.8),0_6px_18px_rgb(0_0_0/0.35)] ${
-            material === "glass" ? "bg-notch backdrop-blur-2xl" : "bg-elevated"
-          }`}
+          className={`pointer-events-auto absolute z-40 overflow-hidden border border-separator shadow-[0_26px_60px_-18px_rgb(0_0_0/0.8),0_6px_18px_rgb(0_0_0/0.35)] ${
+            circular ? "rounded-full" : "rounded-[20px]"
+          } ${material === "glass" ? "bg-notch backdrop-blur-2xl" : "bg-elevated"}`}
           style={{
-            width: kind === "sessions" ? 334 : 300,
-            maxHeight: 336,
+            width: circular ? 268 : kind === "sessions" ? 334 : 300,
+            height: circular ? 268 : undefined,
+            maxHeight: circular ? 268 : 336,
             top: 0,
             ...(side === "left" ? { right: "calc(100% + 12px)" } : { left: "calc(100% + 12px)" }),
             transformOrigin: side === "left" ? "100% 18%" : "0% 18%",
@@ -65,7 +65,7 @@ export function FlyoutLayer() {
           {kind === "wifi" && <WifiFlyout />}
           {kind === "bluetooth" && <BluetoothFlyout />}
           {kind === "sessions" && <SessionsFlyout />}
-          {kind === "power" && <PowerFlyout />}
+          {kind === "power" && <PowerOrbit />}
         </motion.div>
       )}
     </AnimatePresence>
@@ -143,7 +143,7 @@ function WifiFlyout() {
       <Header
         icon={enabled ? <WifiHigh size={19} weight="bold" /> : <WifiSlash size={19} weight="bold" />}
         title={t("WLAN")}
-        detail={busy ? t("Wird umgeschaltet…") : enabled ? net?.name || t("An") : t("Aus")}
+        detail={busy ? t("Wird umgeschaltetâ€¦") : enabled ? net?.name || t("An") : t("Aus")}
       >
         <Switch checked={enabled} onChange={() => toggleWifi()} label={t("WLAN")} />
       </Header>
@@ -197,7 +197,7 @@ function BluetoothFlyout() {
       <Header
         icon={<Bluetooth size={19} weight="bold" />}
         title="Bluetooth"
-        detail={busy ? t("Wird umgeschaltet…") : !bt?.available ? t("Einstellungen") : enabled ? t("An") : t("Aus")}
+        detail={busy ? t("Wird umgeschaltetâ€¦") : !bt?.available ? t("Einstellungen") : enabled ? t("An") : t("Aus")}
       >
         <Switch checked={enabled} onChange={() => toggleBluetooth()} label="Bluetooth" />
       </Header>
@@ -309,7 +309,7 @@ function SessionsFlyout() {
               >
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[11px] leading-[14px] font-semibold text-label">
-                    {session.title || session.artist || "—"}
+                    {session.title || session.artist || "â€”"}
                   </span>
                   {session.title && session.artist && (
                     <span className="block truncate text-[9px] leading-[11px] text-label-3">{session.artist}</span>
@@ -343,122 +343,5 @@ function SessionsFlyout() {
   );
 }
 
-function PowerFlyout() {
-  const [energy, setEnergy] = useState<EnergyState | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    const load = () =>
-      void systemControls
-        .energy()
-        .then((next) => alive && !busy && setEnergy(next))
-        .catch(() => {});
-    load();
-    const id = window.setInterval(load, 5000);
-    return () => {
-      alive = false;
-      window.clearInterval(id);
-    };
-  }, [busy]);
-
-  const mode: PowerMode = energy?.scheme ?? "balanced";
-  const plugged = energy?.plugged ?? true;
-  const saver = energy?.batterySaver ?? false;
-  const custom = energy?.custom ?? false;
-  const high = plugged && !saver;
-  const look = (m: PowerMode) => {
-    switch (m) {
-      case "saver":
-        return { label: t("Sparmodus"), level: 0.28, tone: "text-[#0a84ff]" };
-      case "max":
-        return { label: t("Max"), level: 0.92, tone: "text-[#ff453a]" };
-      case "custom":
-        return { label: t("Custom"), level: 0.8, tone: "text-[#bf5af2]" };
-      default:
-        return { label: t("Ausgeglichen"), level: 0.6, tone: "text-label" };
-    }
-  };
-  const current = look(mode);
-  const modes: PowerMode[] = ["saver", "balanced", ...(high ? (["max"] as PowerMode[]) : []), ...(high && custom ? (["custom"] as PowerMode[]) : [])];
-
-  const select = (target: PowerMode) => {
-    if (busy) return;
-    setError(null);
-    setBusy(true);
-    setEnergy((e) => (e ? { ...e, saver: target === "saver", scheme: target } : e));
-    let finished = false;
-    const watchdog = window.setTimeout(() => {
-      if (finished) return;
-      finished = true;
-      setBusy(false);
-      setError(t("Power change timed out. Try again."));
-    }, 10_000);
-    const run = async () => {
-      if (target === "custom" && !(await fpsHelperReady())) throw new Error("helper-ready");
-      return systemControls.setEnergy(target);
-    };
-    void run()
-      .then((next) => {
-        setEnergy(next);
-        bumpPowerMode();
-      })
-      .catch(async (raw) => {
-        const message = String(raw);
-        if (message.includes("helper-ready")) setError(t("Custom needs the elevated FPS helper. Start it from Hardware or the gaming overlay first."));
-        else if (message.includes("battery-saver")) setError(t("Turn off Battery Saver to use Max or Custom."));
-        else if (message.includes("uac-cancelled")) setError(t("Admin permission is needed for Custom."));
-        else if (message.includes("plugged")) setError(t("Plug in for Max and Custom."));
-        else if (message.includes("lenovo") || message.includes("unsupported")) setError(t("Custom mode is not available on this device."));
-        else if (message.includes("helper")) setError(t("Could not start the elevated helper."));
-        else setError(t("Could not change the power mode."));
-        await systemControls.energy().then(setEnergy).catch(() => {});
-      })
-      .finally(() => {
-        window.clearTimeout(watchdog);
-        if (finished) return;
-        finished = true;
-        setBusy(false);
-      });
-  };
-
-  return (
-    <div className="flex max-h-[360px] flex-col">
-      <Header
-        icon={<BatteryIcon level={current.level} size={19} className={current.tone} />}
-        title={t("Power mode")}
-        detail={energy ? `${current.label} · ${plugged ? t("Plugged in") : t("On battery")}` : "—"}
-      />
-      {saver && (
-        <div className="mx-3 mb-1 rounded-[8px] bg-orange/10 px-2 py-1.5 text-[9px] leading-[12px] text-orange">
-          {t("Battery Saver is on. Turn it off to use Max or Custom.")}
-        </div>
-      )}
-      <div className="px-1.5 pb-1">
-        {modes.map((m) => {
-          const option = look(m);
-          return (
-            <button
-              key={m}
-              type="button"
-              disabled={busy}
-              onClick={() => select(m)}
-              className={`flex w-full items-center gap-2 rounded-[10px] px-2 py-1.5 text-left transition-colors duration-150 ${
-                mode === m ? "bg-fill-2" : "hover:bg-fill-1"
-              }`}
-            >
-              <BatteryIcon level={option.level} size={17} className={option.tone} />
-              <span className="min-w-0 flex-1 truncate text-caption text-label">{option.label}</span>
-              {mode === m && <SelectedDot />}
-            </button>
-          );
-        })}
-      </div>
-      <ErrorRow error={error} />
-      <SettingsLink label={t("Power settings")} uri="ms-settings:powersleep" />
-    </div>
-  );
-}
-
 export type { FlyoutKind };
+
