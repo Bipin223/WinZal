@@ -113,10 +113,11 @@ function ToggleTile(props: {
       props.onHold?.();
       window.setTimeout(() => setHoldProgress(0), 160);
       // If the pointer leaves before the release click, do not swallow the next
-      // real tap on this tile later.
+      // real tap on this tile later. Only the click that follows the release
+      // needs to be ignored, so keep this short.
       window.setTimeout(() => {
         holdFired.current = false;
-      }, 900);
+      }, 400);
     }, holdMs);
   };
 
@@ -338,6 +339,8 @@ function PowerTile() {
   const [menuOpen, setMenuOpen] = useState(false);
   const busyRef = useRef(false);
   const settle = useRef(0);
+  // A click on the tile while the popover is open closes it; do not also cycle.
+  const suppressClick = useRef(0);
 
   useEffect(() => {
     // Don't let the 5 s poll race a just-clicked mode and flip the tile back.
@@ -401,13 +404,7 @@ function PowerTile() {
     void run()
       .then(setEnergy)
       .catch(async () => {
-        // The attached Power panel owns the detailed error text.
-
-
-
-
-
-
+        // Re-read the real mode so the tile never lies about the state.
         await systemControls.energy().then(setEnergy).catch(() => setEnergy(null));
       })
       .finally(() => {
@@ -421,7 +418,12 @@ function PowerTile() {
   };
 
   return (
-    <div className="relative min-w-0">
+    <div
+      className="relative min-w-0"
+      onPointerDownCapture={() => {
+        if (menuOpen) suppressClick.current = Date.now() + 450;
+      }}
+    >
       <ToggleTile
         label="Power"
         state={busy ? "." : current.label}
@@ -431,9 +433,19 @@ function PowerTile() {
         glyphKey={mode}
         straight
         bareIcon
-        onClick={() => select(next.mode)}
+        onClick={() => {
+          if (Date.now() < suppressClick.current) {
+            suppressClick.current = 0;
+            return;
+          }
+          if (menuOpen) {
+            setMenuOpen(false);
+            return;
+          }
+          select(next.mode);
+        }}
         onHold={() => setMenuOpen(true)}
-        holdMs={1}
+        holdMs={220}
         onContextMenu={(e) => {
           e.preventDefault();
           void systemControls.openUri("ms-settings:powersleep");

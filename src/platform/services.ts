@@ -560,6 +560,8 @@ export interface BatteryStatus {
   charging: boolean;
   plugged: boolean;
   present: boolean;
+  /** Windows Battery Saver is on. */
+  saver: boolean;
 }
 
 export interface GlimState {
@@ -585,7 +587,7 @@ const mockEnergy: EnergyState = { saver: false, scheme: "balanced", plugged: tru
 
 export function batteryStatus(): Promise<BatteryStatus> {
   if (isNative) return invoke<BatteryStatus>("battery_status");
-  return Promise.resolve({ percent: 84, charging: true, plugged: true, present: true });
+  return Promise.resolve({ percent: 84, charging: true, plugged: true, present: true, saver: false });
 }
 const mockGlim: GlimState = { supported: true, on: false };
 

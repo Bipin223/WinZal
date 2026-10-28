@@ -578,6 +578,8 @@ pub struct BatteryStatus {
     charging: bool,
     plugged: bool,
     present: bool,
+    /// Windows Battery Saver (the leaf icon / power slider).
+    saver: bool,
 }
 
 #[tauri::command]
@@ -587,8 +589,12 @@ pub fn battery_status() -> BatteryStatus {
     let present = status.BatteryFlag != 128 && status.BatteryLifePercent != 255;
     let percent = if present { status.BatteryLifePercent as u32 } else { 0 };
     let plugged = status.ACLineStatus == 1;
-    let charging = present && ((status.BatteryFlag & 8) != 0 || (plugged && percent < 100));
-    BatteryStatus { percent, charging, plugged, present }
+    // Trust the OS charging flag alone. The old "plugged in and below 100 %"
+    // fallback lit the bolt forever on laptops with a charge limit (Lenovo
+    // conservation mode), so a plugged-in battery looked like it was charging.
+    let charging = present && (status.BatteryFlag & 8) != 0;
+    let saver = status.SystemStatusFlag == 1;
+    BatteryStatus { percent, charging, plugged, present, saver }
 }
 
 fn activate_plan(plan: &GUID) -> Result<(), String> {

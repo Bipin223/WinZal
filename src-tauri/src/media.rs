@@ -223,23 +223,12 @@ pub fn spawn(app: AppHandle) {
                 }
             }
             playing_since.retain(|id, _| seen.contains(id));
-            // Explicitly chosen app: keep it while it plays, but hand over to another
-            // playing app as soon as it pauses/stops. That makes multiple players feel
-            // automatic instead of sticking to the last session forever.
+            // Explicitly chosen app: keep showing it while it exists, playing or
+            // paused. Selecting a paused session is a deliberate choice; the old
+            // auto-handoff to a playing app made that impossible.
             let current = if let Some(id) = selected.as_deref() {
                 match all.iter().find(|s| session_app_id(s) == id) {
-                    Some(session) => {
-                        let playing = is_playing(session);
-                        let next = if playing {
-                            Some(session)
-                        } else {
-                            first_playing(&all, Some(id), &playing_since)
-                        };
-                        if !playing && next.is_some() {
-                            app.state::<MediaState>().set_selected(None);
-                        }
-                        next.and_then(|session| read(session, &mut artwork).ok())
-                    }
+                    Some(session) => read(session, &mut artwork).ok(),
                     None => {
                         // The chosen app closed: fall back to another playing app.
                         app.state::<MediaState>().set_selected(None);

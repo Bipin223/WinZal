@@ -81,7 +81,7 @@ function BatteryIndicator() {
       animate={{ opacity: 1, scale: 1, transition: springs.snappy }}
       className="pressable flex h-7 items-center rounded-full px-0.5 outline-none transition-colors duration-150 hover:bg-fill-1 focus:outline-none"
     >
-      <BatteryMeter percent={percent} charging={battery.charging} plugged={battery.plugged} size="md" />
+      <BatteryMeter percent={percent} charging={battery.charging} plugged={battery.plugged} saver={battery.saver} size="md" />
     </motion.button>
   );
 }

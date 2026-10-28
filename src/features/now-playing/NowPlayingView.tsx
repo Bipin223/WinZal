@@ -78,6 +78,7 @@ export function NowPlayingView() {
             ))}
           <button
             type="button"
+            data-flyout-toggle
             onClick={() => {
               setMixerOpen(false);
               setSyncOpen(false);

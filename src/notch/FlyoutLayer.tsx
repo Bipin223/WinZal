@@ -297,6 +297,14 @@ function SessionsFlyout() {
             >
               <button
                 type="button"
+                onClick={() => toggle(session)}
+                aria-label={session.isPlaying ? t("Pause") : t("Abspielen")}
+                className="pressable ml-1 flex size-7 shrink-0 items-center justify-center rounded-[7px] text-label-2 hover:bg-fill-2 hover:text-label"
+              >
+                {session.isPlaying ? <Pause size={12} weight="fill" /> : <Play size={12} weight="fill" />}
+              </button>
+              <button
+                type="button"
                 onClick={() => {
                   media.select(session.appId);
                   closeFlyout();
@@ -311,22 +319,7 @@ function SessionsFlyout() {
                     <span className="block truncate text-[9px] leading-[11px] text-label-3">{session.artist}</span>
                   )}
                 </span>
-                {session.isPlaying && (
-                  <motion.span
-                    className="size-1.5 shrink-0 rounded-full bg-green"
-                    animate={{ opacity: [0.65, 1, 0.65] }}
-                    transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-                  />
-                )}
                 {np?.appId === session.appId && <SelectedDot />}
-              </button>
-              <button
-                type="button"
-                onClick={() => toggle(session)}
-                aria-label={session.isPlaying ? t("Pause") : t("Abspielen")}
-                className="pressable mr-1 flex size-7 shrink-0 items-center justify-center rounded-[7px] text-label-2 hover:bg-fill-2 hover:text-label"
-              >
-                {session.isPlaying ? <Pause size={12} weight="fill" /> : <Play size={12} weight="fill" />}
               </button>
             </div>
           ))
