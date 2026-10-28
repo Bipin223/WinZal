@@ -17,11 +17,16 @@ type Props = {
  * The white reference battery: one solid off-white capsule, the charge number
  * and a bolt inside, plus a small terminal. No outline and no percentage sign.
  *
- * Charging is white with a bolt; Battery Saver is yellow; under 20 % is red.
+ * A connected charger shows the bolt; unplugged has no bolt. Battery Saver is
+ * yellow; under 20 % is red.
  */
 export function BatteryMeter({ percent, charging = false, plugged = false, saver = false, size = "md", className = "" }: Props) {
   const level = Math.max(0, Math.min(100, Math.round(percent)));
   const low = level < 20;
+  // Lenovo conservation mode keeps the battery below 100 % and often leaves
+  // Windows' charging flag off while the charger is connected. The cable is the
+  // reliable signal for the bolt: connected = bolt, unplugged = no bolt.
+  const powered = charging || plugged;
   // Critical and saver states override the normal white body. The bolt alone
   // communicates charging; a plugged-in full battery stays white.
   const body = low ? "var(--color-red)" : saver ? "var(--color-yellow)" : "#f4f4f6";
@@ -39,7 +44,7 @@ export function BatteryMeter({ percent, charging = false, plugged = false, saver
     ? "0 0 9px rgb(255 69 58 / 0.28)"
     : saver
       ? "0 0 9px rgb(255 214 10 / 0.26)"
-      : charging
+      : powered
         ? "0 0 11px rgb(255 255 255 / 0.2), 0 1px 2px rgb(0 0 0 / 0.22)"
         : "0 0 10px rgb(255 255 255 / 0.16), 0 1px 2px rgb(0 0 0 / 0.22)";
 
@@ -70,7 +75,7 @@ export function BatteryMeter({ percent, charging = false, plugged = false, saver
           >
             {level}
           </motion.span>
-          {charging && (
+          {powered && (
             <motion.span
               className="flex"
               animate={{ scale: [1, 1.16, 1], opacity: [0.82, 1, 0.82] }}
