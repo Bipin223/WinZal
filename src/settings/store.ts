@@ -17,6 +17,8 @@ export type TypeRole = "caption" | "footnote" | "body" | "title" | "display";
 export type TypeAxis = { size: number; weight: number };
 
 /** Lyric entrance effects; `word` is the retained original. */
+export type LyricsFont = "inter" | "system" | "mono";
+
 export type LyricAnimation =
   | "word"
   | "apple"
@@ -161,6 +163,8 @@ export interface Settings {
     lyricsPillHeight: number;
     /** Lyric text weight. */
     lyricsTextWeight: number;
+  /** Typeface used by the lyric pill. */
+  lyricsFont: LyricsFont;
     /** Subtle waveform behind the lyric, in the cover's accent color. */
     lyricsVisualizer: boolean;
     /** Equalizer style at the right of the lyrics pill. */
@@ -280,6 +284,7 @@ const defaults: Settings = {
     lyricsPillAuto: true,
     lyricsPillHeight: 30,
     lyricsTextWeight: 600,
+  lyricsFont: "inter",
     lyricsVisualizer: true,
     lyricsVisualizerStyle: "bars",
     lyricsGlowStyle: "aurora",
@@ -376,6 +381,10 @@ settings.set((s) => {
         return 12;
       })(),
       lyricsVisualizer: s.appearance?.lyricsVisualizer ?? defaults.appearance.lyricsVisualizer,
+      lyricsFont: (() => {
+        const stored = (s.appearance as { lyricsFont?: string } | undefined)?.lyricsFont;
+        return stored === "system" || stored === "mono" ? stored : "inter";
+      })(),
       // Old bold/regular choice became two continuous weight sliders.
       clockClosedWeight: (() => {
         const stored = (s.appearance as { clockClosedWeight?: number } | undefined)?.clockClosedWeight;

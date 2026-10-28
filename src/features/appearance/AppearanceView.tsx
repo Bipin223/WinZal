@@ -58,6 +58,7 @@ const DEFAULTS: Appearance = {
   lyricsPillAuto: true,
   lyricsPillHeight: 30,
   lyricsTextWeight: 600,
+  lyricsFont: "inter",
   lyricsVisualizer: true,
   lyricsVisualizerStyle: "bars",
   lyricsGlowStyle: "wave",

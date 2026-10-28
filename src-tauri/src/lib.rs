@@ -3,7 +3,6 @@ mod ambient;
 mod ask_history;
 mod audio;
 mod audio_out;
-mod charging_sound;
 mod clipboard;
 mod controls;
 mod convert;
@@ -329,7 +328,6 @@ pub fn run() {
             display::spawn(app.handle().clone(), window);
             ambient::spawn_energy_watch();
             ambient::restore_power(app.handle().clone());
-            charging_sound::spawn();
             media::spawn(app.handle().clone());
             clipboard::spawn(app.handle().clone());
             toasts::spawn(app.handle().clone());

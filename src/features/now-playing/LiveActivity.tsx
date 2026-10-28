@@ -10,6 +10,7 @@ import { LyricEqualizer, LyricGlow } from "./LyricVisualizer";
 import { useLyrics } from "./lyrics";
 import { LyricEffect } from "./LyricEffect";
 import { lyricsTextWidth } from "./lyricsWidth";
+import { lyricsFontFamily } from "./lyricsFont";
 import { LiveEdge } from "../../notch/liveEdges";
 import { settings, type LyricAnimation } from "../../settings/store";
 import { t } from "../../i18n";
@@ -21,6 +22,7 @@ import { t } from "../../i18n";
 export function LiveActivity({ np }: { np: NowPlaying }) {
   const appearance = settings.use().appearance;
   const { current, next, index, start, end, words, status } = useLyrics(np, appearance.lyricsInPill);
+  const lyricsFamily = lyricsFontFamily(appearance.lyricsFont);
 
   // Measure the line at its real font size. The notch uses this to expand only
   // as far as the lyric needs, so readable text is not hidden behind the fade.
@@ -31,7 +33,7 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
     }
     const ctx = document.createElement("canvas").getContext("2d");
     if (!ctx) return;
-    const family = getComputedStyle(document.body).fontFamily;
+    const family = lyricsFamily;
     const size = appearance.lyricsTextSize;
     const weight = appearance.lyricsTextWeight;
     ctx.font = `${weight} ${size}px ${family}`;
@@ -41,10 +43,11 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
       width = Math.max(width, ctx.measureText(next).width);
     }
     lyricsTextWidth.set(Math.ceil(width));
-  }, [appearance.lyricsInPill, appearance.lyricsLayout, appearance.lyricsTextSize, appearance.lyricsTextWeight, appearance.lyricsAnimation, current, next]);
+  }, [appearance.lyricsInPill, appearance.lyricsLayout, appearance.lyricsFont, appearance.lyricsTextSize, appearance.lyricsTextWeight, appearance.lyricsAnimation, current, next]);
   return (
     <motion.div
       className="absolute inset-0 flex items-center gap-2 px-[9px]"
+      style={{ fontFamily: lyricsFamily }}
       initial={{ opacity: 0, filter: "blur(4px)" }}
       animate={{ opacity: 1, filter: "blur(0px)", transition: content.enter }}
       exit={{ opacity: 0, filter: "blur(4px)", transition: content.exit }}
