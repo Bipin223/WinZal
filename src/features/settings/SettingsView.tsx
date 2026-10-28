@@ -540,18 +540,7 @@ function General() {
           ))}
         </span>
       </Row>
-      <Row label={t("Motion style")}>
-        <Segmented
-          id="motion-style"
-          size="sm"
-          value={s.appearance.motionStyle}
-          onChange={(motionStyle) => updateSettings((p) => ({ appearance: { ...p.appearance, motionStyle } }))}
-          options={[
-            { value: "default", label: t("Default") },
-            { value: "ios", label: t("iOS") },
-          ]}
-        />
-      </Row>
+
     </Group>
   );
 }
@@ -648,7 +637,9 @@ function Display() {
 
 /** Font roles: size and weight offsets, 0 = default. */
 function Typography() {
-  const typo = settings.use().typography;
+  const s = settings.use();
+  const typo = s.typography;
+  const uiFont = s.appearance.uiFont;
   const [role, setRole] = useState<TypeRole>("body");
   const axis = typo[role];
   const info = TYPE_ROLES.find((r) => r.value === role)!;
@@ -661,6 +652,21 @@ function Typography() {
   const formatWeight = (value: number) => (value === 0 ? t("Default") : `${value > 0 ? "+" : ""}${value}`);
   return (
     <Group title={t("Font")} id="settings-font">
+      <Row label={t("Schriftfamilie")}>
+        <Select
+          value={uiFont}
+          onChange={(uiFont) => updateSettings((cur) => ({ appearance: { ...cur.appearance, uiFont } }))}
+          options={[
+            { value: "inter", label: "Inter" },
+            { value: "poppins", label: "Poppins" },
+            { value: "onest", label: "Onest" },
+            { value: "coolvetica", label: "Coolvetica" },
+            { value: "system", label: "System" },
+            { value: "mono", label: "Mono" },
+          ]}
+          width="w-32"
+        />
+      </Row>
       <div className="grid grid-cols-5 gap-1.5 px-3 pt-3">
         {TYPE_ROLES.map((entry) => (
           <button

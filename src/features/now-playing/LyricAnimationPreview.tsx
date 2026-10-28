@@ -1,6 +1,5 @@
-import { settings, type Settings } from "../../settings/store";
+import type { Settings } from "../../settings/store";
 import { LyricEffect } from "./LyricEffect";
-import { lyricsFontFamily } from "./lyricsFont";
 
 type Animation = Settings["appearance"]["lyricsAnimation"];
 
@@ -11,13 +10,9 @@ type Animation = Settings["appearance"]["lyricsAnimation"];
  */
 export function LyricAnimationPreview({ animation }: { animation: Animation }) {
   const sample = "When you light the candle";
-  const family = lyricsFontFamily(settings.use().appearance.lyricsFont);
   if (animation === "word") {
     return (
-      <div
-        className="flex h-full items-center justify-center px-1 text-[9px] font-semibold whitespace-nowrap text-white"
-        style={{ fontFamily: family }}
-      >
+      <div className="flex h-full items-center justify-center px-1 text-[9px] font-semibold whitespace-nowrap text-white">
         {sample.split(" ").map((word, i, all) => (
           <span key={i} className="anim-word inline-block" style={{ animationDelay: `${i * 0.12}s` }}>
             {word}
@@ -29,19 +24,13 @@ export function LyricAnimationPreview({ animation }: { animation: Animation }) {
   }
   if (animation === "apple") {
     return (
-      <div
-        className="flex h-full items-center justify-center overflow-hidden px-1 text-[9px] font-semibold whitespace-nowrap text-white"
-        style={{ fontFamily: family }}
-      >
+      <div className="flex h-full items-center justify-center overflow-hidden px-1 text-[9px] font-semibold whitespace-nowrap text-white">
         <span className="anim-apple inline-block">light the candle</span>
       </div>
     );
   }
   return (
-    <div
-      className="flex h-full items-center justify-center overflow-hidden px-1 text-[9px] font-semibold whitespace-nowrap text-white"
-      style={{ fontFamily: family }}
-    >
+    <div className="flex h-full items-center justify-center overflow-hidden px-1 text-[9px] font-semibold whitespace-nowrap text-white">
       <LyricEffect animation={animation} text="light the candle" index={0} preview />
     </div>
   );

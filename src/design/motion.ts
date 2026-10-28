@@ -13,56 +13,38 @@ const slow = Number(new URLSearchParams(location.search).get("slow")) || 1;
 
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-export type MotionStyle = "default" | "ios";
-
 // 0 = off, 1 = full. Set from Settings → Performance → Motion.
 let motionScale = 1;
 export function setMotionScale(value: number) {
   motionScale = Math.max(0, Math.min(1, value));
 }
 
-/*
- * "default" preserves WinZal's existing feel. "ios" is one baked-in Apple
- * profile for chrome only: the same per-surface durations, tuned damping.
- * Lyric springs never take an iOS override, so the reading experience stays
- * identical in both modes.
- */
-let motionStyle: MotionStyle = "default";
-export function setMotionStyle(value: MotionStyle) {
-  motionStyle = value;
-}
-
-/**
- * Chrome springs can take an iOS profile. Lyric springs omit it, so they are
- * fixed in both modes.
- */
-function spring(visualDuration: number, bounce: number, ios?: { duration: number; bounce: number }): Transition {
+function spring(visualDuration: number, bounce: number): Transition {
   const factor = 0.25 + 0.75 * motionScale;
   if (reduceMotion || motionScale === 0) return { type: "spring", visualDuration: 0.001, bounce: 0 };
-  const config = motionStyle === "ios" && ios ? ios : { duration: visualDuration, bounce };
-  return { type: "spring", visualDuration: config.duration * factor * slow, bounce: config.bounce };
+  return { type: "spring", visualDuration: visualDuration * factor * slow, bounce };
 }
 
 export const springs = {
   /** Notch opens: lively, a noticeable but short overshoot. */
   get open() {
-    return spring(0.42, 0.24, { duration: 0.40, bounce: 0.12 });
+    return spring(0.42, 0.24);
   },
   /** Notch closes: faster than opening, no bounce. */
   get close() {
-    return spring(0.32, 0.04, { duration: 0.30, bounce: 0 });
+    return spring(0.32, 0.04);
   },
   /** Hover nudge: small and playful, says "I see you". */
   get peek() {
-    return spring(0.26, 0.32, { duration: 0.26, bounce: 0.30 });
+    return spring(0.26, 0.32);
   },
   /** Shape change while open (tab switch, live activity). */
   get morph() {
-    return spring(0.36, 0.14, { duration: 0.36, bounce: 0.12 });
+    return spring(0.36, 0.14);
   },
   /** Small elements inside (tab pill, toggles). */
   get snappy() {
-    return spring(0.24, 0.12, { duration: 0.24, bounce: 0.10 });
+    return spring(0.24, 0.12);
   },
   /** Apple Music lyric line: soft scale/slide, never overshoots. Fixed. */
   get lyrics() {

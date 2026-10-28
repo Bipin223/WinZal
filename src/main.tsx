@@ -11,8 +11,9 @@ import { startDropListener } from "./platform/drop";
 import { systemControls, type PowerMode } from "./platform/services";
 import { clipboard } from "./platform/clipboard";
 import { settings } from "./settings/store";
-import { setMotionScale, setMotionStyle } from "./design/motion";
+import { setMotionScale } from "./design/motion";
 import { applyTypography } from "./features/appearance/typography";
+import { uiFontFamily } from "./ui/font";
 import { applyDisplay } from "./notch/drag";
 import { startFocusMode } from "./notch/focus";
 import { startSilentMode } from "./notch/silent";
@@ -177,12 +178,14 @@ function Root() {
   const s = settings.use();
   const motion = s.appearance.motion;
   setMotionScale(motion / 100);
-  setMotionStyle(s.appearance.motionStyle);
+  const uiFamily = uiFontFamily(s.appearance.uiFont);
   useLayoutEffect(() => applyTypography(s.typography), [s.typography]);
+  useLayoutEffect(() => {
+    document.documentElement.style.setProperty("--font-sans", uiFamily);
+  }, [uiFamily]);
   useEffect(() => {
     document.documentElement.dataset.motion = motion === 0 ? "off" : motion < 50 ? "reduced" : "full";
-    document.documentElement.dataset.motionStyle = s.appearance.motionStyle;
-  }, [motion, s.appearance.motionStyle]);
+  }, [motion]);
   return (
     <MotionConfig reducedMotion={motion === 0 ? "always" : "user"}>
       {!isNative && <DesktopMock />}

@@ -8,9 +8,8 @@ type Props = {
   plugged?: boolean;
   /** Windows Battery Saver is on: yellow body. */
   saver?: boolean;
-  /** `md` for the Overview header, `sm` for tight rows, `xs` for popovers. */
-  size?: "xs" | "sm" | "md";
-  className?: string;
+  /** `md` for the Overview header, `xs` for the Power strip. */
+  size?: "xs" | "md";
 };
 
 /**
@@ -20,7 +19,7 @@ type Props = {
  * A connected charger shows the bolt; unplugged has no bolt. Battery Saver is
  * yellow; under 20 % is red.
  */
-export function BatteryMeter({ percent, charging = false, plugged = false, saver = false, size = "md", className = "" }: Props) {
+export function BatteryMeter({ percent, charging = false, plugged = false, saver = false, size = "md" }: Props) {
   const level = Math.max(0, Math.min(100, Math.round(percent)));
   const low = level < 20;
   // Lenovo conservation mode keeps the battery below 100 % and often leaves
@@ -32,17 +31,16 @@ export function BatteryMeter({ percent, charging = false, plugged = false, saver
   const body = low ? "var(--color-red)" : saver ? "var(--color-yellow)" : "#f4f4f6";
   const ink = "#26262a";
   const md = size === "md";
-  const xs = size === "xs";
-  const width = xs ? 22 : md ? 28 : 24;
-  const height = xs ? 12 : md ? 15 : 13;
-  const radius = xs ? 4 : md ? 5 : 4;
-  const tipW = xs ? 1.5 : 2;
-  const tipH = xs ? 4.5 : md ? 5.5 : 5;
+  const width = md ? 28 : 22;
+  const height = md ? 15 : 12;
+  const radius = md ? 5 : 4;
+  const tipW = md ? 2 : 1.5;
+  const tipH = md ? 5.5 : 4.5;
   // The number is the point of the capsule: let it fill the height like the
   // reference. Three digits need a small step down or they touch the bolt.
   const tighten = level >= 100 ? 0.74 : 1;
-  const fontSize = (xs ? 9.5 : md ? 12.5 : 10.5) * tighten;
-  const bolt = (xs ? 6.5 : md ? 8 : 7) * tighten;
+  const fontSize = (md ? 12.5 : 9.5) * tighten;
+  const bolt = (md ? 8 : 6.5) * tighten;
   const glow = low
     ? "0 0 9px rgb(255 69 58 / 0.28)"
     : saver
@@ -53,7 +51,7 @@ export function BatteryMeter({ percent, charging = false, plugged = false, saver
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center ${className}`}
+      className="inline-flex shrink-0 items-center"
       aria-label={`Battery ${level}%${charging ? " · charging" : ""}${saver ? " · Battery Saver" : ""}${plugged ? " · plugged in" : ""}`}
     >
       <span
@@ -69,7 +67,7 @@ export function BatteryMeter({ percent, charging = false, plugged = false, saver
       >
         <span
           className="flex items-center justify-center leading-none font-extrabold tabular"
-          style={{ gap: md ? 0.6 : 0.5, fontSize, color: ink, letterSpacing: xs ? "-0.03em" : "-0.02em" }}
+          style={{ gap: md ? 0.6 : 0.5, fontSize, color: ink, letterSpacing: md ? "-0.02em" : "-0.03em" }}
         >
           <motion.span
             key={level}

@@ -1,6 +1,5 @@
 ﻿import { createStore } from "../lib/store";
 import type { AlarmDuration, AlarmSound } from "../lib/sound";
-import type { MotionStyle } from "../design/motion";
 import { isClockStyle, type ClockStyle } from "../notch/clockStyles";
 
 export type AskProvider = "gemini" | "groq" | "custom";
@@ -17,7 +16,7 @@ export type TypeRole = "caption" | "footnote" | "body" | "title" | "display";
 export type TypeAxis = { size: number; weight: number };
 
 /** Lyric entrance effects; `word` is the retained original. */
-export type LyricsFont = "inter" | "poppins" | "onest" | "outfit" | "system" | "mono";
+export type UiFont = "inter" | "poppins" | "onest" | "coolvetica" | "system" | "mono";
 
 export type LyricAnimation =
   | "word"
@@ -143,8 +142,6 @@ export interface Settings {
     lyricsLayout: "inline" | "lines";
     /** Global motion intensity, 0 = off, 100 = full. */
     motion: number;
-    /** Global chrome spring feel: default (current) or iOS. */
-    motionStyle: MotionStyle;
     /** Continuous lyric font size in px; the pill and visualizer grow with it. */
     lyricsTextSize: number;
     /** Global seconds added to lyric timestamps (+ = lines appear later). */
@@ -163,8 +160,8 @@ export interface Settings {
     lyricsPillHeight: number;
     /** Lyric text weight. */
     lyricsTextWeight: number;
-  /** Typeface used by the lyric pill. */
-  lyricsFont: LyricsFont;
+  /** Typeface used across the whole notch UI. */
+  uiFont: UiFont;
     /** Subtle waveform behind the lyric, in the cover's accent color. */
     lyricsVisualizer: boolean;
     /** Equalizer style at the right of the lyrics pill. */
@@ -274,7 +271,6 @@ const defaults: Settings = {
     lyricsInPill: false,
     lyricsLayout: "inline",
     motion: 100,
-    motionStyle: "default",
     lyricsTextSize: 12,
     lyricsOffset: 0,
     lyricsTrackOffsets: {},
@@ -284,7 +280,7 @@ const defaults: Settings = {
     lyricsPillAuto: true,
     lyricsPillHeight: 30,
     lyricsTextWeight: 600,
-  lyricsFont: "inter",
+  uiFont: "inter",
     lyricsVisualizer: true,
     lyricsVisualizerStyle: "bars",
     lyricsGlowStyle: "aurora",
@@ -381,10 +377,11 @@ settings.set((s) => {
         return 12;
       })(),
       lyricsVisualizer: s.appearance?.lyricsVisualizer ?? defaults.appearance.lyricsVisualizer,
-      lyricsFont: (() => {
-        const stored = (s.appearance as { lyricsFont?: string } | undefined)?.lyricsFont;
-        const valid: LyricsFont[] = ["inter", "poppins", "onest", "outfit", "system", "mono"];
-        return valid.includes(stored as LyricsFont) ? (stored as LyricsFont) : "inter";
+      uiFont: (() => {
+        const stored = s.appearance as { uiFont?: string; lyricsFont?: string } | undefined;
+        const value = stored?.uiFont ?? stored?.lyricsFont;
+        const valid: UiFont[] = ["inter", "poppins", "onest", "coolvetica", "system", "mono"];
+        return valid.includes(value as UiFont) ? (value as UiFont) : "inter";
       })(),
       // Old bold/regular choice became two continuous weight sliders.
       clockClosedWeight: (() => {
@@ -449,10 +446,6 @@ settings.set((s) => {
       motion: (() => {
         const stored = (s.appearance as { motion?: number } | undefined)?.motion;
         return typeof stored === "number" ? Math.min(100, Math.max(0, stored)) : 100;
-      })(),
-      motionStyle: (() => {
-        const stored = (s.appearance as { motionStyle?: string } | undefined)?.motionStyle;
-        return stored === "ios" ? "ios" : "default";
       })(),
       // The experimental RGB accent was removed; fall back to auto.
       accent: s.appearance?.accent === "rgb" ? defaults.appearance.accent : s.appearance?.accent ?? defaults.appearance.accent,

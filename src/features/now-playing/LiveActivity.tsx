@@ -10,7 +10,7 @@ import { LyricEqualizer, LyricGlow } from "./LyricVisualizer";
 import { useLyrics } from "./lyrics";
 import { LyricEffect } from "./LyricEffect";
 import { lyricsTextWidth } from "./lyricsWidth";
-import { lyricsFontFamily } from "./lyricsFont";
+import { uiFontFamily } from "../../ui/font";
 import { LiveEdge } from "../../notch/liveEdges";
 import { settings, type LyricAnimation } from "../../settings/store";
 import { t } from "../../i18n";
@@ -22,7 +22,7 @@ import { t } from "../../i18n";
 export function LiveActivity({ np }: { np: NowPlaying }) {
   const appearance = settings.use().appearance;
   const { current, next, index, start, end, words, status } = useLyrics(np, appearance.lyricsInPill);
-  const lyricsFamily = lyricsFontFamily(appearance.lyricsFont);
+  const uiFamily = uiFontFamily(appearance.uiFont);
 
   // Measure the line at its real font size. The notch uses this to expand only
   // as far as the lyric needs, so readable text is not hidden behind the fade.
@@ -36,7 +36,7 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
       if (cancelled) return;
       const ctx = document.createElement("canvas").getContext("2d");
       if (!ctx) return;
-      const family = lyricsFamily;
+      const family = uiFamily;
       const size = appearance.lyricsTextSize;
       const weight = appearance.lyricsTextWeight;
       ctx.font = `${weight} ${size}px ${family}`;
@@ -50,16 +50,15 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
     // Measure after the chosen family is ready, otherwise a newly picked font
     // is measured with the fallback and the pill opens at the wrong width.
     void document.fonts
-      .load(`${appearance.lyricsTextWeight} ${appearance.lyricsTextSize}px ${lyricsFamily}`)
+      .load(`${appearance.lyricsTextWeight} ${appearance.lyricsTextSize}px ${uiFamily}`)
       .then(measure, measure);
     return () => {
       cancelled = true;
     };
-  }, [appearance.lyricsInPill, appearance.lyricsLayout, appearance.lyricsFont, appearance.lyricsTextSize, appearance.lyricsTextWeight, appearance.lyricsAnimation, current, next]);
+  }, [appearance.lyricsInPill, appearance.lyricsLayout, appearance.uiFont, appearance.lyricsTextSize, appearance.lyricsTextWeight, appearance.lyricsAnimation, current, next]);
   return (
     <motion.div
       className="absolute inset-0 flex items-center gap-2 px-[9px]"
-      style={{ fontFamily: lyricsFamily }}
       initial={{ opacity: 0, filter: "blur(4px)" }}
       animate={{ opacity: 1, filter: "blur(0px)", transition: content.enter }}
       exit={{ opacity: 0, filter: "blur(4px)", transition: content.exit }}

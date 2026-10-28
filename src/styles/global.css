@@ -1,7 +1,6 @@
 @import "tailwindcss";
 @import "@fontsource-variable/inter/opsz.css";
 @import "@fontsource-variable/onest/index.css";
-@import "@fontsource-variable/outfit/index.css";
 @import "@fontsource/poppins/latin-400.css";
 @import "@fontsource/poppins/latin-500.css";
 @import "@fontsource/poppins/latin-600.css";
@@ -49,19 +48,13 @@ body {
 
 /*
  * Press feedback for everything clickable. Reacts instantly (scale on press),
- * hover only with a real mouse. The global motion style tunes the press spring.
+ * hover only with a real mouse. The press spring is tuned globally.
  */
 :root {
   --press-duration: 140ms;
   --press-ease: var(--ease-out);
   --press-scale: 0.94;
   --press-wide-scale: 0.985;
-}
-:root[data-motion-style="ios"] {
-  --press-duration: 150ms;
-  --press-ease: cubic-bezier(0.32, 0.72, 0, 1);
-  --press-scale: 0.95;
-  --press-wide-scale: 0.99;
 }
 .pressable {
   transition:
