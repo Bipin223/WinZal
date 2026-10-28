@@ -33,13 +33,6 @@ pub fn memory_low(low: bool, window: WebviewWindow) {
     }
 }
 
-/// Page out the WebView2 tree without changing the memory target. Used periodically
-/// while the notch is open; the next paint pages the hot bits back in.
-#[tauri::command]
-pub fn trim_memory() {
-    trim_async();
-}
-
 fn trim_async() {
     if TRIMMING.swap(true, Ordering::AcqRel) {
         return;

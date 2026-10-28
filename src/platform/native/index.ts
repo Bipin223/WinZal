@@ -135,11 +135,6 @@ export function setNotificationVisible(active: boolean) {
   if (isNative) void invoke("notification_visible", { active });
 }
 
-/** Page out the WebView2 working set without changing the memory target. */
-export function trimMemory() {
-  if (isNative) void invoke("trim_memory");
-}
-
 /** Mirrors focus mode into the tray menu's check item. */
 export function syncFocusTray(on: boolean) {
   if (isNative) void invoke("tray_focus", { on });

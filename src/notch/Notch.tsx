@@ -3,7 +3,7 @@ import { AnimatePresence, animate, motion, useMotionValue, type Transition } fro
 import { Drop, GearSix, Ghost, MoonStars, PushPin } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
 import { useNowPlaying } from "../platform/media";
-import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onSilentExit, onTrayOpen, setHitRect, setMemoryLow, setNotchHeight, setSilent, trimMemory } from "../platform/native";
+import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onSilentExit, onTrayOpen, setHitRect, setMemoryLow, setNotchHeight, setSilent } from "../platform/native";
 import { PrivacyDots } from "../features/privacy/PrivacyDots";
 import { FOCUS_CLICKS, focusMode, setFocusMode } from "./focus";
 import { silentMode, setSilentMode } from "./silent";
@@ -55,7 +55,7 @@ function fillWithAlpha(hex: string, alpha: number): string {
 /** If the notch was closed at most this long, it reopens on the last used tool. */
 const RESUME_MS = 60_000;
 /** Closed this long → lower WebView2's memory target. */
-const MEMORY_LOW_AFTER_MS = 20_000;
+const MEMORY_LOW_AFTER_MS = 60_000;
 /** Compact the transparent window while closed; the open panel needs the full height. */
 const CLOSED_WINDOW_HEIGHT = 120;
 const OPEN_WINDOW_HEIGHT = 560;
@@ -352,34 +352,20 @@ export function Notch() {
     return () => window.clearTimeout(id);
   }, [status]);
 
-  // Closed for a while → WebView2 may trim memory; back to normal on the first touch
-  // (peek), so the hover delay covers paging it back in before the notch opens.
-  // While a game owns the foreground, keep the overlay hot: paging it out every
-  // 30 s is exactly the kind of hitch that shows up as a stutter in-game.
+  // After a minute closed, let WebView2 lower its memory target; the first
+  // hover/peek restores normal before the notch opens, so paging stays hidden.
+  // Do not trim the working set while the panel is open: paging out live
+  // compositor pages was the only source of periodic hitches.
   useEffect(() => {
     if (status !== "closed" || gamingLive) {
       setMemoryLow(false);
       return;
     }
-    let interval: number | undefined;
-    const id = window.setTimeout(() => {
-      setMemoryLow(true);
-      interval = window.setInterval(() => setMemoryLow(true), 30_000);
-    }, MEMORY_LOW_AFTER_MS);
+    const id = window.setTimeout(() => setMemoryLow(true), MEMORY_LOW_AFTER_MS);
     return () => {
       window.clearTimeout(id);
-      if (interval !== undefined) window.clearInterval(interval);
       setMemoryLow(false);
     };
-  }, [status, gamingLive]);
-
-  // While open, page the WebView2 working set out every 20 s. This keeps Task
-  // Manager near the memory target without losing the live UI; hot pages fault
-  // back in immediately. Skip it while gaming for the same reason.
-  useEffect(() => {
-    if (status === "closed" || gamingLive) return;
-    const id = window.setInterval(() => trimMemory(), 20_000);
-    return () => window.clearInterval(id);
   }, [status, gamingLive]);
 
   // 1–9 switches tools while open and not typing.

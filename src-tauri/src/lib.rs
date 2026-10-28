@@ -194,7 +194,6 @@ pub fn run() {
             media::media_sessions,
             media::media_select,
             memory::memory_low,
-            memory::trim_memory,
             drop::drop_reinstall,
             clipboard::clipboard_list,
             clipboard::clipboard_mode,
