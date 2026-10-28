@@ -79,7 +79,7 @@ function BatteryIndicator() {
       onClick={() => void systemControls.openUri("ms-settings:powersleep")}
       initial={{ opacity: 0, scale: 0.86 }}
       animate={{ opacity: 1, scale: 1, transition: springs.snappy }}
-      className="pressable flex h-7 items-center rounded-full px-0.5 transition-colors duration-150 hover:bg-fill-1"
+      className="pressable flex h-7 items-center rounded-full px-0.5 outline-none transition-colors duration-150 hover:bg-fill-1 focus:outline-none"
     >
       <BatteryMeter percent={percent} charging={battery.charging} plugged={battery.plugged} size="md" />
     </motion.button>

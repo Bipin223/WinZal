@@ -2,8 +2,6 @@
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowClockwise,
-  CaretDown,
-  CaretRight,
   Lock,
   Moon,
   MoonStars,
@@ -31,7 +29,7 @@ import {
 import { BatteryIcon, BluetoothOffIcon, BluetoothOnIcon, WifiOffIcon, WifiOnIcon } from "../../ui/glyphs";
 import { SelectedDot } from "../../ui/SelectedDot";
 import { focusMode, refreshFocusMode, setFocusMode } from "../../notch/focus";
-import { openFlyout, toggleFlyout, flyout } from "../../notch/flyout";
+import { toggleFlyout } from "../../notch/flyout";
 import { useBluetoothAmbient, useWifiAmbient, toggleBluetooth, toggleWifi } from "./ambient";
 import { t } from "../../i18n";
 
@@ -54,16 +52,10 @@ function ToggleTile(props: {
   glyphKey?: string;
   iconClassName?: string;
   onClick: () => void;
-  /** Long-press (~420 ms) opens the attached flyout; tap still toggles. */
+  /** Long-press (~420 ms) opens the attached panel. Tap still does the primary action. */
   onHold?: () => void;
   onContextMenu?: (e: React.MouseEvent) => void;
   onWheel?: (e: React.WheelEvent) => void;
-  /** Separate dropdown affordance, e.g. choose a Wi-Fi network. */
-  onMenu?: () => void;
-  menuLabel?: string;
-  /** Rotate the dropdown arrow while its attached panel is open. */
-  menuOpen?: boolean;
-  chevron?: boolean;
   /** Active-state dot (Wi-Fi / Bluetooth). */
   dot?: string;
   /** Always-visible state dot (Power modes). */
@@ -156,7 +148,7 @@ function ToggleTile(props: {
         onPointerUp={stopHold}
         onPointerCancel={stopHold}
         onPointerLeave={stopHold}
-        className="flex h-full min-w-0 flex-1 items-center gap-1 overflow-hidden rounded-[12px] px-1.5 text-left"
+        className="flex h-full min-w-0 flex-1 items-center gap-1 overflow-hidden rounded-[12px] px-1.5 text-left outline-none focus:outline-none"
       >
         <motion.span
           className={`relative flex size-6 shrink-0 items-center justify-center rounded-full ${
@@ -217,30 +209,7 @@ function ToggleTile(props: {
             {props.state}
           </span>
         </span>
-
-        {props.chevron && (
-          <CaretRight size={9} weight="bold" className={props.active ? "text-on-label/35" : "text-label-4"} />
-        )}
       </motion.button>
-
-      {props.onMenu && (
-        <button
-          type="button"
-          aria-label={props.menuLabel}
-          onClick={props.onMenu}
-          className={`mr-1 flex size-5 shrink-0 items-center justify-center rounded-[5px] ${
-            props.active ? "text-on-label/45 hover:text-on-label/70" : "text-label-4 hover:text-label-2"
-          }`}
-        >
-          <motion.span
-            className="flex"
-            animate={{ transform: props.menuOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-            transition={springs.snappy}
-          >
-            <CaretDown size={9} weight="bold" />
-          </motion.span>
-        </button>
-      )}
 
       {props.active && props.dot && (
         <motion.span
@@ -297,9 +266,8 @@ function FocusTile() {
 
 /* â”€â”€ Wi-Fi â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-function WifiTile({ onOpen }: { onOpen: () => void }) {
+function WifiTile() {
   const { net, busy, error } = useWifiAmbient();
-  const menuOpen = flyout.use().kind === "wifi";
   const enabled = !!(net?.enabled ?? net?.connected);
   const state = busy ? "." : enabled ? (net?.connected ? net.name || t("Verbunden") : t("An")) : t("Aus");
 
@@ -316,10 +284,7 @@ function WifiTile({ onOpen }: { onOpen: () => void }) {
         iconSize={22}
         dot="#30d158"
         onClick={toggleWifi}
-        onHold={onOpen}
-        onMenu={() => toggleFlyout("wifi")}
-        menuOpen={menuOpen}
-        menuLabel={t("Choose Wi-Fi network")}
+        onHold={() => toggleFlyout("wifi")}
         onContextMenu={(e) => {
           e.preventDefault();
           void systemControls.openUri("ms-settings:network-wifi");
@@ -332,9 +297,8 @@ function WifiTile({ onOpen }: { onOpen: () => void }) {
 
 /* â”€â”€ Bluetooth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-function BluetoothTile({ onOpen }: { onOpen: () => void }) {
+function BluetoothTile() {
   const { bt, busy, error } = useBluetoothAmbient();
-  const menuOpen = flyout.use().kind === "bluetooth";
   const active = !!bt?.on;
   const state = busy ? "." : bt?.available ? (active ? t("An") : t("Aus")) : t("Einstellungen");
 
@@ -351,10 +315,7 @@ function BluetoothTile({ onOpen }: { onOpen: () => void }) {
         iconSize={22}
         dot="#30d158"
         onClick={toggleBluetooth}
-        onHold={onOpen}
-        onMenu={() => toggleFlyout("bluetooth")}
-        menuOpen={menuOpen}
-        menuLabel={t("Choose Bluetooth device")}
+        onHold={() => toggleFlyout("bluetooth")}
         onContextMenu={(e) => {
           e.preventDefault();
           void systemControls.openUri("ms-settings:bluetooth");
@@ -481,11 +442,10 @@ function PowerTile() {
         straight
         bareIcon
         onClick={() => select(next.mode)}
-        onMenu={() => {
+        onHold={() => {
           setMenuOpen((open) => !open);
           setError(null);
         }}
-        menuLabel={t("Power mode")}
         onContextMenu={(e) => {
           e.preventDefault();
           void systemControls.openUri("ms-settings:powersleep");
@@ -560,6 +520,7 @@ function GlimTile() {
           .then(setGlim)
           .catch(() => systemControls.glim().then(setGlim));
       }}
+      onHold={() => void systemControls.openUri("ms-settings:nightlight")}
       onContextMenu={(e) => {
         e.preventDefault();
         void systemControls.openUri("ms-settings:nightlight");
@@ -757,8 +718,8 @@ export function QuickControls() {
 export function SystemRow() {
   return (
     <div className="grid grid-cols-4 gap-2">
-      <WifiTile onOpen={() => openFlyout("wifi")} />
-      <BluetoothTile onOpen={() => openFlyout("bluetooth")} />
+      <WifiTile />
+      <BluetoothTile />
       <PowerTile />
       <GlimTile />
     </div>

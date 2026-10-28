@@ -68,7 +68,7 @@ export function Switch({
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`pressable relative h-[18px] w-[30px] shrink-0 rounded-full transition-colors duration-200 ${checked ? "bg-green" : "bg-fill-3"}`}
+      className={`pressable relative h-[18px] w-[30px] shrink-0 rounded-full outline-none transition-colors duration-200 focus:outline-none ${checked ? "bg-green" : "bg-fill-3"}`}
     >
       <motion.span
         className="absolute top-[2px] left-[2px] size-[14px] rounded-full bg-white shadow-sm"

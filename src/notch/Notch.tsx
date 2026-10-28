@@ -3,7 +3,7 @@ import { AnimatePresence, animate, motion, useMotionValue, type Transition } fro
 import { Drop, GearSix, Ghost, MoonStars, PushPin } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
 import { useNowPlaying } from "../platform/media";
-import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onSilentExit, onTrayOpen, setHitRect, setMemoryLow, setNotchHeight, setNotchWidth, setSilent, trimMemory } from "../platform/native";
+import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onSilentExit, onTrayOpen, setHitRect, setMemoryLow, setNotchHeight, setSilent, trimMemory } from "../platform/native";
 import { PrivacyDots } from "../features/privacy/PrivacyDots";
 import { FOCUS_CLICKS, focusMode, setFocusMode } from "./focus";
 import { silentMode, setSilentMode } from "./silent";
@@ -117,8 +117,6 @@ export function Notch() {
   const call = useDiscordCall();
   const charge = chargingPulse.use();
   const chargingView = charge.active && status !== "open" && !idleLine;
-  const flyoutState = flyout.use();
-  const flyoutOpen = flyoutState.kind !== null;
 
   // Like the Dynamic Island: opening jumps to the running activity's tool,
   // but only after a pause. Closed briefly (copying a key, grabbing a file) → you
@@ -243,7 +241,7 @@ export function Notch() {
   // stopped the pill from shrinking when date/day/weather were turned off.
   const clockContent = measuredClockWidth > 0 ? measuredClockWidth : 206 + clockExtra;
   const clockShapeWidth =
-    Math.min(740, Math.max(120, clockContent + extraWidth + (status === "peek" ? 16 : 0))) +
+    Math.min(740, Math.max(76, clockContent + extraWidth + (status === "peek" ? 16 : 0))) +
     (showRecording ? RECORDING_EXTRA : 0);
   const displayShape = {
     ...finalShape,
@@ -299,20 +297,6 @@ export function Notch() {
   useEffect(() => {
     if (status !== "open" && flyout.get().kind !== null) closeFlyout();
   }, [status]);
-
-  // Widen the transparent window only while a panel is out, so the resting
-  // notch keeps its small compositor surface. The window is re-centered by Rust.
-  useEffect(() => {
-    if (!isNative) return;
-    if (flyoutOpen) {
-      setNotchWidth(1260);
-      return;
-    }
-    // Let the exit spring finish before clipping the transparent window back
-    // to the resting width.
-    const id = window.setTimeout(() => setNotchWidth(760), 340);
-    return () => window.clearTimeout(id);
-  }, [flyoutOpen]);
 
   useNativeBridge(hitRef, handleEnter, onPointerLeave, hideForNote);
   const drag = useDragToMove(status);
@@ -571,6 +555,9 @@ function ClosedClock({ rowRef }: { rowRef: RefObject<HTMLDivElement | null> }) {
   const size = appearance.clockClosedSize;
   const smallSize = Math.max(8, Math.round(size * 0.66));
   const { period } = formatTimeParts(now);
+  // Clock-only mode: no date/day/weather. In that minimal state the period is
+  // hidden too, so the pill can shrink to just the time.
+  const extras = appearance.clockShowWeather || appearance.clockShowDate || appearance.clockShowDay;
 
   // One-line faces share the baseline with PM and the weather; the two-line
   // Stacked face keeps the side text centered against the block.
@@ -591,15 +578,17 @@ function ClosedClock({ rowRef }: { rowRef: RefObject<HTMLDivElement | null> }) {
               height={appearance.islandHeight}
             />
           </span>
-          {period && appearance.clockShowPeriod && (
+          {extras && period && appearance.clockShowPeriod && (
             <span className="shrink-0 text-label-3 leading-none" style={{ fontSize: `${smallSize}px` }}>
               {period}
             </span>
           )}
         </span>
-        <span className="flex shrink-0 items-baseline text-label-3 leading-none" style={{ fontSize: `${smallSize}px` }}>
-          <ClockMeta now={now} compact />
-        </span>
+        {extras && (
+          <span className="flex shrink-0 items-baseline text-label-3 leading-none" style={{ fontSize: `${smallSize}px` }}>
+            <ClockMeta now={now} compact />
+          </span>
+        )}
       </div>
     </div>
   );

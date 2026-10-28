@@ -355,7 +355,7 @@ struct FocusState(Mutex<isize>);
 fn set_notch_height(height: f64, window: WebviewWindow) -> Result<(), String> {
     let height = height.clamp(120.0, 700.0);
     window
-        .set_size(tauri::LogicalSize::new(760.0, height))
+        .set_size(tauri::LogicalSize::new(1260.0, height))
         .map_err(|error| error.to_string())
 }
 

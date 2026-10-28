@@ -125,7 +125,7 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
               ) : (
                 <div
                   className="flex w-fit max-w-full items-center justify-center overflow-hidden rounded-full bg-black px-2 shadow-[0_6px_18px_rgb(0_0_0/0.35)] transition-[width,height] duration-200"
-                  style={{ minWidth: 120 + Math.max(0, a.islandWidth), height: a.islandHeight }}
+                  style={{ minWidth: 80 + Math.max(0, a.islandWidth), height: a.islandHeight }}
                 >
                   {a.clockWeather && (
                     <div
@@ -238,14 +238,21 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
                     </>
                   )}
                   <ToggleRow label={t("AM / PM")} checked={a.clockShowPeriod} onChange={(clockShowPeriod) => set({ clockShowPeriod })} />
-                  <ToggleRow
-                    label={t("Accent first digit")}
-                    checked={a.clockAccentFirstDigit}
-                    onChange={(clockAccentFirstDigit) => set({ clockAccentFirstDigit })}
-                  />
                 </div>
               </>
             )}
+          </Section>
+
+          <Section label={t("Clock accent")}>
+            <ToggleRow
+              label={t("Accent first digit")}
+              checked={a.clockAccentFirstDigit}
+              onChange={(clockAccentFirstDigit) => set({ clockAccentFirstDigit })}
+            />
+            <div className="mt-2">
+              <div className="mb-1 text-caption font-medium text-label-2">{t("Color")}</div>
+              <Swatches value={a.clockAccent} colors={CLOCK_ACCENTS} onChange={(clockAccent) => set({ clockAccent })} />
+            </div>
           </Section>
 
           <Section label={t("Style")}>
@@ -299,10 +306,6 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
             />
             <div className="mt-2">
               <ToggleRow label={t("Emphasized hour")} checked={a.clockEmphasis} onChange={(clockEmphasis) => set({ clockEmphasis })} />
-            </div>
-            <div className="mt-2">
-              <div className="mb-1 text-caption font-medium text-label-2">{t("Clock accent")}</div>
-              <Swatches value={a.clockAccent} colors={CLOCK_ACCENTS} onChange={(clockAccent) => set({ clockAccent })} />
             </div>
           </Section>
         </>

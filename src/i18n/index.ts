@@ -1,27 +1,31 @@
 import { en } from "./en";
+import { fixMojibake } from "./encoding";
+import { settings } from "../settings/store";
 
 /*
- * English-only build. The original text still doubles as the lookup key, but no
- * second language ships with the app any more.
+ * English/German UI. The original text still doubles as the lookup key:
+ *   - German mode returns the repaired original string.
+ *   - English mode looks it up in en.json and falls back to the original.
  * Placeholders: t("vor {n} Min.", { n: 5 }).
  *
  * No hook needed: the notch subscribes to the settings and re-renders the whole tree.
  */
-export type Language = "en";
+export type Language = "en" | "de";
 
 export function lang(): Language {
-  return "en";
+  return settings.get().language;
 }
 
 export function t(de: string, vars?: Record<string, string | number>): string {
-  let s = en[de] ?? de;
+  const key = fixMojibake(de);
+  let s = lang() === "de" ? key : en[de] ?? en[key] ?? key;
   if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
   return s;
 }
 
 /** Locale for Intl (numbers, dates, weekdays). */
 export function locale(): string {
-  return "en-GB";
+  return lang() === "de" ? "de-DE" : "en-GB";
 }
 
 /** Error texts from Rust (AI chat, converter) arrive in German; translate them by pattern. */
@@ -67,6 +71,7 @@ const backendPatterns: [RegExp, string][] = [
 ];
 
 export function tBackend(msg: string): string {
+  msg = fixMojibake(msg);
   if (lang() !== "en") return msg;
   for (const [re, en] of backendPatterns) if (re.test(msg)) return msg.replace(re, en);
   return msg;

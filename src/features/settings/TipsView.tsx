@@ -27,7 +27,7 @@ export function TipsView() {
 
       <Group title={t("Wi-Fi, Bluetooth and audio")}>
         <Tip icon={<WifiHigh size={15} weight="bold" />} title={t("Hold Wi-Fi or Bluetooth")}>
-          {t("Tap the tile to switch the radio on or off. Hold the tile, or click its small arrow, to spring out the list on the matching side of the notch.")}
+          {t("Tap the tile to switch the radio on or off. Hold the tile to spring out the list on the matching side of the notch.")}
         </Tip>
         <Tip icon={<MusicNotesSimple size={15} weight="fill" />} title={t("Audio sessions")}>
           {t("In Now Playing, open the arrow next to the track. The session list springs out on the right; pick a session to show it, or pause one without changing the current track.")}
