@@ -9,6 +9,8 @@ export interface AppNotification {
   kind: NotificationKind;
   brand?: NotificationBrand;
   app: string;
+  /** Windows app id (AUMID) when the toast came from the system listener. */
+  appId?: string;
   title: string;
   body: string;
   color: string;

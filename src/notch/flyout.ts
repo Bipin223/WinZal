@@ -1,6 +1,6 @@
 import { createStore } from "../lib/store";
 
-export type FlyoutKind = "wifi" | "bluetooth" | "sessions";
+export type FlyoutKind = "wifi" | "bluetooth" | "sessions" | "power";
 
 /**
  * The attached panel that is currently open beside the notch. Only one can be

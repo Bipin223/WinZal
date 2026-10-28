@@ -30,12 +30,12 @@ export function BatteryMeter({ percent, charging = false, plugged = false, size 
   const body = !onPower && critical ? "var(--color-red)" : !onPower && low ? "var(--color-orange)" : "#f4f4f6";
   const ink = "#26262a";
   const md = size === "md";
-  const width = md ? 32 : 28;
-  const height = md ? 17 : 14;
-  const radius = md ? 5.5 : 4;
-  const tipW = md ? 2.5 : 2;
-  const tipH = md ? 6.5 : 5.5;
-  const fontSize = md ? 10.5 : 8;
+  const width = md ? 28 : 24;
+  const height = md ? 15 : 13;
+  const radius = md ? 5 : 4;
+  const tipW = md ? 2 : 2;
+  const tipH = md ? 5.5 : 5;
+  const fontSize = md ? 9 : 7.5;
   const glow = onPower
     ? "0 0 11px rgb(255 255 255 / 0.2), 0 1px 2px rgb(0 0 0 / 0.22)"
     : critical || low
@@ -57,7 +57,7 @@ export function BatteryMeter({ percent, charging = false, plugged = false, size 
       >
         <span
           className="flex items-center justify-center leading-none font-extrabold tabular"
-          style={{ gap: md ? 1.5 : 1, fontSize, color: ink }}
+          style={{ gap: md ? 1.2 : 1, fontSize, color: ink }}
         >
           <motion.span
             key={level}
@@ -72,7 +72,7 @@ export function BatteryMeter({ percent, charging = false, plugged = false, size 
               animate={{ scale: [1, 1.16, 1], opacity: [0.82, 1, 0.82] }}
               transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
             >
-              <Lightning size={md ? 8.5 : 6} weight="fill" />
+              <Lightning size={md ? 7.5 : 6} weight="fill" />
             </motion.span>
           )}
         </span>

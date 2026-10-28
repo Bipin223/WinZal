@@ -27,10 +27,10 @@ import {
   type VolumeState,
 } from "../../platform/services";
 import { BatteryIcon, BluetoothOffIcon, BluetoothOnIcon, WifiOffIcon, WifiOnIcon } from "../../ui/glyphs";
-import { SelectedDot } from "../../ui/SelectedDot";
 import { focusMode, refreshFocusMode, setFocusMode } from "../../notch/focus";
 import { toggleFlyout } from "../../notch/flyout";
 import { useBluetoothAmbient, useWifiAmbient, toggleBluetooth, toggleWifi } from "./ambient";
+import { powerRevision } from "./power";
 import { t } from "../../i18n";
 
 type TileIcon = React.ComponentType<{ size?: number; weight?: IconWeight; className?: string }>;
@@ -331,12 +331,10 @@ function BluetoothTile() {
 
 function PowerTile() {
   const [energy, setEnergy] = useState<EnergyState | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const box = useRef<HTMLDivElement>(null);
   const busyRef = useRef(false);
   const settle = useRef(0);
+  const revision = powerRevision.use();
 
   useEffect(() => {
     // Don't let the 5 s poll race a just-clicked mode and flip the tile back.
@@ -349,14 +347,11 @@ function PowerTile() {
     return () => clearInterval(id);
   }, []);
 
+  // The attached power flyout changed the mode: reflect it immediately.
   useEffect(() => {
-    if (!menuOpen) return;
-    const outside = (e: PointerEvent) => {
-      if (!box.current?.contains(e.target as Node)) setMenuOpen(false);
-    };
-    window.addEventListener("pointerdown", outside);
-    return () => window.removeEventListener("pointerdown", outside);
-  }, [menuOpen]);
+    if (revision === 0) return;
+    void systemControls.energy().then(setEnergy).catch(() => {});
+  }, [revision]);
 
   const mode: PowerMode = energy?.scheme ?? "balanced";
   const plugged = energy?.plugged ?? true;
@@ -382,10 +377,9 @@ function PowerTile() {
   const next = options[(Math.max(0, activeIndex) + 1) % options.length] ?? options[0];
 
   const select = (target: PowerMode) => {
-    setMenuOpen(false);
     if (busyRef.current) return;
     if (target === mode && energy) return;
-    setError(null);
+
     busyRef.current = true;
     settle.current = Date.now() + 20_000;
     setBusy(true);
@@ -399,7 +393,7 @@ function PowerTile() {
       busyRef.current = false;
       settle.current = Date.now() + 2500;
       setBusy(false);
-      setError(t("Power change timed out. Try again."));
+
     }, 10_000);
     const run = async () => {
       // Custom needs the elevated Lenovo helper. The task-only start never
@@ -409,15 +403,14 @@ function PowerTile() {
     };
     void run()
       .then(setEnergy)
-      .catch(async (raw) => {
-        const message = String(raw);
-        if (message.includes("helper-ready")) setError(t("Custom needs the elevated FPS helper. Start it from Hardware or the gaming overlay first."));
-        else if (message.includes("battery-saver")) setError(t("Turn off Battery Saver to use Max or Custom."));
-        else if (message.includes("uac-cancelled")) setError(t("Admin permission is needed for Custom."));
-        else if (message.includes("plugged")) setError(t("Plug in for Max and Custom."));
-        else if (message.includes("lenovo") || message.includes("unsupported")) setError(t("Custom mode is not available on this device."));
-        else if (message.includes("helper")) setError(t("Could not start the elevated helper."));
-        else setError(t("Could not change the power mode."));
+      .catch(async () => {
+        // The attached Power panel owns the detailed error text.
+
+
+
+
+
+
         await systemControls.energy().then(setEnergy).catch(() => setEnergy(null));
       })
       .finally(() => {
@@ -431,10 +424,10 @@ function PowerTile() {
   };
 
   return (
-    <div ref={box} className="relative min-w-0">
+    <div className="relative min-w-0">
       <ToggleTile
         label="Power"
-        state={busy ? "…" : current.label}
+        state={busy ? "." : current.label}
         active={false}
         statusDot={current.dot}
         renderGlyph={() => <BatteryIcon level={current.level} size={22} className={current.tone} />}
@@ -443,8 +436,8 @@ function PowerTile() {
         bareIcon
         onClick={() => select(next.mode)}
         onHold={() => {
-          setMenuOpen((open) => !open);
-          setError(null);
+
+          toggleFlyout("power");
         }}
         onContextMenu={(e) => {
           e.preventDefault();
@@ -452,31 +445,6 @@ function PowerTile() {
         }}
         title={t("Power mode")}
       />
-      {menuOpen && (
-        <div className="absolute right-0 bottom-full z-50 mb-2 w-[212px] overflow-hidden rounded-[12px] bg-elevated p-1.5 shadow-2xl">
-          <div className="px-2 py-1 text-[10px] font-medium tracking-wide text-label-3 uppercase">{t("Power mode")}</div>
-          {batterySaver && (
-            <div className="px-2 pb-1.5 text-[9px] leading-[12px] text-[#ff9f0a]">
-              {t("Battery Saver is on. Turn it off to use Max or Custom.")}
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-0.5">
-            {options.map((option) => (
-              <button
-                key={option.mode}
-                type="button"
-                onClick={() => select(option.mode)}
-                className="flex min-w-0 items-center gap-1.5 rounded-[8px] px-2 py-1.5 text-left hover:bg-fill-2"
-              >
-                <BatteryIcon level={option.level} size={15} className={option.tone} />
-                <span className="min-w-0 flex-1 truncate text-[11px] text-label">{option.label}</span>
-                {mode === option.mode && <SelectedDot />}
-              </button>
-            ))}
-          </div>
-          {error && <div className="px-2.5 py-1 text-[9px] leading-[12px] text-[#ff9f0a]">{error}</div>}
-        </div>
-      )}
     </div>
   );
 }

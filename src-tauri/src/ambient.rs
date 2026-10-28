@@ -19,7 +19,7 @@ use windows::Win32::Devices::Bluetooth::{
 use windows::Win32::Foundation::{CloseHandle, ERROR_SUCCESS, HANDLE, LPARAM, WPARAM};
 use windows::Win32::NetworkManagement::WiFi::{
     dot11_BSS_type_any, wlan_connection_mode_profile, WlanCloseHandle, WlanConnect, WlanEnumInterfaces, WlanFreeMemory,
-    WlanOpenHandle, WLAN_CONNECTION_PARAMETERS, WLAN_INTERFACE_INFO_LIST,
+    WlanOpenHandle, WlanScan, WLAN_CONNECTION_PARAMETERS, WLAN_INTERFACE_INFO_LIST,
 };
 use windows::Win32::System::Power::{
     GetSystemPowerStatus, PowerSetActiveScheme, SetSuspendState, SYSTEM_POWER_STATUS,
@@ -184,6 +184,8 @@ fn wifi_profiles() -> Vec<String> {
 #[tauri::command]
 pub async fn wifi_networks() -> Result<Vec<WifiNetwork>, String> {
     tauri::async_runtime::spawn_blocking(|| {
+        wlan_scan();
+        std::thread::sleep(Duration::from_millis(1200));
         let out = Command::new("netsh")
             .args(["wlan", "show", "networks", "mode=bssid"])
             .creation_flags(CREATE_NO_WINDOW)
@@ -368,6 +370,29 @@ pub struct BluetoothPeer {
 
 const A2DP_SINK: GUID = GUID::from_u128(0x0000110b_0000_1000_8000_00805f9b34fb);
 const HANDSFREE: GUID = GUID::from_u128(0x0000111e_0000_1000_8000_00805f9b34fb);
+
+/// Ask Windows for a fresh full scan. `netsh wlan show networks` can otherwise
+/// show only the network the adapter is currently parked on; the WLAN API scan
+/// makes the full visible list available to the next query.
+fn wlan_scan() {
+    unsafe {
+        let mut negotiated = 0u32;
+        let mut client = HANDLE::default();
+        if WlanOpenHandle(2, None, &mut negotiated, &mut client) != 0 {
+            return;
+        }
+        let mut list: *mut WLAN_INTERFACE_INFO_LIST = std::ptr::null_mut();
+        if WlanEnumInterfaces(client, None, &mut list) == 0 && !list.is_null() {
+            let count = (*list).dwNumberOfItems as usize;
+            let interfaces = std::slice::from_raw_parts((*list).InterfaceInfo.as_ptr(), count);
+            if let Some(interface) = interfaces.first() {
+                let _ = WlanScan(client, &interface.InterfaceGuid, None, None, None);
+            }
+            WlanFreeMemory(list as *const _);
+        }
+        let _ = WlanCloseHandle(client, None);
+    }
+}
 
 /// Paired Bluetooth devices for the notch dropdown.
 #[tauri::command]

@@ -348,6 +348,11 @@ export function setToastWatch(enabled: boolean): Promise<void> {
   return isNative ? invoke<void>("toast_watch", { enabled }) : Promise.resolve();
 }
 
+/** Focus/open the app that produced a notification. */
+export function openNotificationApp(appId: string, app: string): Promise<void> {
+  return isNative ? invoke<void>("open_notification_app", { appId, app }) : Promise.resolve();
+}
+
 // ---------- Gaming mode ----------
 
 /** FPS of the foreground process (ETW). error: no-admin | failed. */

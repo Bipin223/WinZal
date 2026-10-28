@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
 import { setNotificationVisible } from "../platform/native";
+import { openNotificationApp } from "../platform/services";
 import { DiscordLogo } from "../ui/brands";
 import { dismissNotification, notifications, type AppNotification } from "./store";
 import { requestNotchOpen } from "../notch/openRequest";
@@ -106,7 +107,10 @@ function IslandNotification({ item }: { item: AppNotification }) {
           window.setTimeout(() => (dragged.current = false), 80);
         }}
         onClick={() => {
-          if (!dragged.current) dismissNotification(item.id);
+          if (!dragged.current) {
+            dismissNotification(item.id);
+            void openNotificationApp(item.appId ?? "", item.app).catch(() => {});
+          }
         }}
       >
         <motion.div

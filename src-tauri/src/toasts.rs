@@ -1,3 +1,5 @@
+use std::os::windows::process::CommandExt;
+use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Mutex, OnceLock};
 use std::thread;
@@ -10,7 +12,13 @@ use windows::UI::Notifications::Management::{
     UserNotificationListener, UserNotificationListenerAccessStatus,
 };
 use windows::UI::Notifications::{KnownNotificationBindings, NotificationKinds, UserNotificationChangedEventArgs};
+use windows::core::BOOL;
+use windows::Win32::Foundation::{HWND, LPARAM};
 use windows::Win32::System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED};
+use windows::Win32::UI::WindowsAndMessaging::{
+    EnumWindows, GetWindowTextLengthW, GetWindowTextW, IsWindowVisible, SetForegroundWindow, ShowWindow,
+    SW_RESTORE,
+};
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -216,4 +224,63 @@ pub async fn toast_request(app: AppHandle) -> Result<&'static str, String> {
 #[tauri::command]
 pub fn toast_list() -> Result<Vec<SystemToast>, String> {
     read_toasts()
+}
+
+struct WindowSearch {
+    needle: String,
+    found: Option<HWND>,
+}
+
+unsafe extern "system" fn find_app_window(hwnd: HWND, lparam: LPARAM) -> BOOL {
+    let search = unsafe { &mut *(lparam.0 as *mut WindowSearch) };
+    if !unsafe { IsWindowVisible(hwnd).as_bool() } {
+        return true.into();
+    }
+    let len = unsafe { GetWindowTextLengthW(hwnd) };
+    if len <= 0 {
+        return true.into();
+    }
+    let mut buffer = vec![0u16; len as usize + 1];
+    let n = unsafe { GetWindowTextW(hwnd, &mut buffer) };
+    let title = String::from_utf16_lossy(&buffer[..n.max(0) as usize]).to_lowercase();
+    if title.contains(&search.needle) {
+        search.found = Some(hwnd);
+        return false.into();
+    }
+    true.into()
+}
+
+/// Clicking a notification card opens or focuses the app that sent it.
+/// Running windows are matched by their title first; packaged apps fall back
+/// to their AUMID through the Apps folder.
+#[tauri::command]
+pub fn open_notification_app(app_id: String, app: String) -> Result<(), String> {
+    let needle = app.trim().to_lowercase();
+    if !needle.is_empty() && needle != "windows" {
+        let mut search = WindowSearch { needle, found: None };
+        let _ = unsafe {
+            EnumWindows(
+                Some(find_app_window),
+                LPARAM(&mut search as *mut WindowSearch as isize),
+            )
+        };
+        if let Some(hwnd) = search.found {
+            let _ = unsafe { ShowWindow(hwnd, SW_RESTORE) };
+            let _ = unsafe { SetForegroundWindow(hwnd) };
+            return Ok(());
+        }
+    }
+
+    let id = app_id.trim();
+    if !id.is_empty() {
+        let target = format!("shell:AppsFolder\\{id}");
+        Command::new("explorer.exe")
+            .arg(target)
+            .creation_flags(0x0800_0000)
+            .spawn()
+            .map_err(|error| error.to_string())?;
+        return Ok(());
+    }
+
+    Err("Could not find the app window".into())
 }

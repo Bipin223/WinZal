@@ -41,6 +41,7 @@ function show(toast: SystemToast) {
     kind: brand.brand ? "message" : kindFor(app),
     brand: brand.brand,
     app,
+    appId: toast.appId,
     title: toast.title || app,
     body: toast.body || "",
     color: brand.color ?? colorFor(app),

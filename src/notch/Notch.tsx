@@ -273,10 +273,18 @@ export function Notch() {
   const hitRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
-      if (hitRef.current?.contains(e.target as Node)) return;
-      // The attached flyout lives outside the notch's own hit wrapper; its
-      // buttons must receive the click before anything closes.
-      if (e.target instanceof Element && e.target.closest("[data-flyout-hit]")) return;
+      const target = e.target;
+      const inNotch = !!hitRef.current?.contains(target as Node);
+      // The attached panel lives outside the notch: clicks in it must reach its
+      // controls. A click anywhere on the notch itself now closes the panel but
+      // keeps the notch open; a click outside both closes both.
+      const inPanel = !inNotch && target instanceof Element && !!target.closest("[data-flyout-hit]");
+      if (inPanel) return;
+      if (inNotch) {
+        if (target instanceof Element && target.closest("[data-edge-drag]")) return;
+        if (flyout.get().kind !== null) closeFlyout();
+        return;
+      }
       if (flyout.get().kind !== null) closeFlyout();
       dismiss();
     };
@@ -498,6 +506,25 @@ export function Notch() {
               transition={springs.snappy}
             />
           </span>
+        )}
+        {/* Endpoint grips: the notch can be moved even while an attached panel
+            or satellite extends it. A click on the panel closes the panel; this
+            grip keeps it open and drags the whole assembly. */}
+        {!lineView && (
+          <>
+            <div
+              aria-hidden
+              data-drag-handle
+              data-edge-drag
+              className="pointer-events-auto absolute inset-y-0 left-0 z-20 w-1.5 cursor-ew-resize rounded-l-[inherit] transition-colors duration-150 hover:bg-white/10"
+            />
+            <div
+              aria-hidden
+              data-drag-handle
+              data-edge-drag
+              className="pointer-events-auto absolute inset-y-0 right-0 z-20 w-1.5 cursor-ew-resize rounded-r-[inherit] transition-colors duration-150 hover:bg-white/10"
+            />
+          </>
         )}
         <GamingSatellite show={gamingSatellite} playing={!!np?.isPlaying} floating={floating} />
         <ActivitySwitch

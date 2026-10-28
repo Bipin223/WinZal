@@ -244,6 +244,7 @@ pub fn run() {
             toasts::toast_access,
             toasts::toast_request,
             toasts::toast_list,
+            toasts::open_notification_app,
             toasts::toast_watch,
             controls::volume_get,
             controls::volume_set,
