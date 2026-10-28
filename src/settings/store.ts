@@ -17,7 +17,7 @@ export type TypeRole = "caption" | "footnote" | "body" | "title" | "display";
 export type TypeAxis = { size: number; weight: number };
 
 /** Lyric entrance effects; `word` is the retained original. */
-export type LyricsFont = "inter" | "system" | "mono";
+export type LyricsFont = "inter" | "poppins" | "onest" | "outfit" | "system" | "mono";
 
 export type LyricAnimation =
   | "word"
@@ -383,7 +383,8 @@ settings.set((s) => {
       lyricsVisualizer: s.appearance?.lyricsVisualizer ?? defaults.appearance.lyricsVisualizer,
       lyricsFont: (() => {
         const stored = (s.appearance as { lyricsFont?: string } | undefined)?.lyricsFont;
-        return stored === "system" || stored === "mono" ? stored : "inter";
+        const valid: LyricsFont[] = ["inter", "poppins", "onest", "outfit", "system", "mono"];
+        return valid.includes(stored as LyricsFont) ? (stored as LyricsFont) : "inter";
       })(),
       // Old bold/regular choice became two continuous weight sliders.
       clockClosedWeight: (() => {

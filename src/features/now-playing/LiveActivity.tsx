@@ -31,18 +31,30 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
       lyricsTextWidth.set(0);
       return;
     }
-    const ctx = document.createElement("canvas").getContext("2d");
-    if (!ctx) return;
-    const family = lyricsFamily;
-    const size = appearance.lyricsTextSize;
-    const weight = appearance.lyricsTextWeight;
-    ctx.font = `${weight} ${size}px ${family}`;
-    let width = ctx.measureText(current).width;
-    if (appearance.lyricsLayout === "lines" && next) {
-      ctx.font = `${Math.max(100, weight - 100)} ${Math.max(8, size - 3)}px ${family}`;
-      width = Math.max(width, ctx.measureText(next).width);
-    }
-    lyricsTextWidth.set(Math.ceil(width));
+    let cancelled = false;
+    const measure = () => {
+      if (cancelled) return;
+      const ctx = document.createElement("canvas").getContext("2d");
+      if (!ctx) return;
+      const family = lyricsFamily;
+      const size = appearance.lyricsTextSize;
+      const weight = appearance.lyricsTextWeight;
+      ctx.font = `${weight} ${size}px ${family}`;
+      let width = ctx.measureText(current).width;
+      if (appearance.lyricsLayout === "lines" && next) {
+        ctx.font = `${Math.max(100, weight - 100)} ${Math.max(8, size - 3)}px ${family}`;
+        width = Math.max(width, ctx.measureText(next).width);
+      }
+      lyricsTextWidth.set(Math.ceil(width));
+    };
+    // Measure after the chosen family is ready, otherwise a newly picked font
+    // is measured with the fallback and the pill opens at the wrong width.
+    void document.fonts
+      .load(`${appearance.lyricsTextWeight} ${appearance.lyricsTextSize}px ${lyricsFamily}`)
+      .then(measure, measure);
+    return () => {
+      cancelled = true;
+    };
   }, [appearance.lyricsInPill, appearance.lyricsLayout, appearance.lyricsFont, appearance.lyricsTextSize, appearance.lyricsTextWeight, appearance.lyricsAnimation, current, next]);
   return (
     <motion.div

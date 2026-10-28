@@ -14,7 +14,7 @@ import { lyricsFontFamily } from "../now-playing/lyricsFont";
 import { LyricEqualizer, LyricGlow } from "../now-playing/LyricVisualizer";
 import { Equalizer } from "../now-playing/Equalizer";
 import { SelectedDot } from "../../ui/SelectedDot";
-import { Button, Group, Row, Segmented, Slider, Switch } from "../../ui/controls";
+import { Button, Group, Row, Segmented, Select, Slider, Switch } from "../../ui/controls";
 
 /**
  * Music-specific settings in one place: what the closed pill shows and how
@@ -88,16 +88,18 @@ export function MusicSettings() {
               />
             </Row>
             <Row label={t("Songtext-Schrift")}>
-              <Segmented
-                id="lyrics-font"
-                size="sm"
+              <Select
                 value={a.lyricsFont}
                 onChange={(lyricsFont) => set({ lyricsFont })}
                 options={[
                   { value: "inter", label: "Inter" },
+                  { value: "poppins", label: "Poppins" },
+                  { value: "onest", label: "Onest" },
+                  { value: "outfit", label: "Outfit" },
                   { value: "system", label: "System" },
                   { value: "mono", label: "Mono" },
                 ]}
+                width="w-32"
               />
             </Row>
             <Row label={t("Textgröße")}>
@@ -368,11 +370,21 @@ function LyricsPillPreview() {
   const a = settings.use().appearance;
   const [textWidth, setTextWidth] = useState(0);
   useLayoutEffect(() => {
-    const ctx = document.createElement("canvas").getContext("2d");
-    if (!ctx) return;
-    const family = lyricsFontFamily(a.lyricsFont);
-    ctx.font = `${a.lyricsTextWeight} ${a.lyricsTextSize}px ${family}`;
-    setTextWidth(ctx.measureText("When you light the candle").width);
+    let cancelled = false;
+    const measure = () => {
+      if (cancelled) return;
+      const ctx = document.createElement("canvas").getContext("2d");
+      if (!ctx) return;
+      const family = lyricsFontFamily(a.lyricsFont);
+      ctx.font = `${a.lyricsTextWeight} ${a.lyricsTextSize}px ${family}`;
+      setTextWidth(ctx.measureText("When you light the candle").width);
+    };
+    void document.fonts
+      .load(`${a.lyricsTextWeight} ${a.lyricsTextSize}px ${lyricsFontFamily(a.lyricsFont)}`)
+      .then(measure, measure);
+    return () => {
+      cancelled = true;
+    };
   }, [a.lyricsTextSize, a.lyricsTextWeight, a.lyricsFont]);
   const width = a.lyricsPillAuto
     ? Math.max(a.lyricsPillMinWidth, Math.min(a.lyricsPillLength, textWidth + (a.lyricsVisualizer ? 108 : 78)))
