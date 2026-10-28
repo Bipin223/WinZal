@@ -15,7 +15,6 @@ import { springs } from "../design/motion";
 import { media, useNowPlaying, type MediaSession } from "../platform/media";
 import { systemControls } from "../platform/services";
 import { settings } from "../settings/store";
-import { PowerOrbit } from "./PowerOrbit";
 import { t } from "../i18n";
 import { Switch } from "../ui/controls";
 import { SelectedDot } from "../ui/SelectedDot";
@@ -39,20 +38,18 @@ import {
 export function FlyoutLayer() {
   const { kind, side } = flyout.use();
   const material = settings.use().appearance.material;
-  const circular = kind === "power";
   return (
     <AnimatePresence>
       {kind && (
         <motion.div
           key={kind}
           data-flyout-hit
-          className={`pointer-events-auto absolute z-40 overflow-hidden border border-separator shadow-[0_26px_60px_-18px_rgb(0_0_0/0.8),0_6px_18px_rgb(0_0_0/0.35)] ${
-            circular ? "rounded-full" : "rounded-[20px]"
-          } ${material === "glass" ? "bg-notch backdrop-blur-2xl" : "bg-elevated"}`}
+          className={`pointer-events-auto absolute z-40 overflow-hidden rounded-[20px] border border-separator shadow-[0_26px_60px_-18px_rgb(0_0_0/0.8),0_6px_18px_rgb(0_0_0/0.35)] ${
+            material === "glass" ? "bg-notch backdrop-blur-2xl" : "bg-elevated"
+          }`}
           style={{
-            width: circular ? 268 : kind === "sessions" ? 334 : 300,
-            height: circular ? 268 : undefined,
-            maxHeight: circular ? 268 : 336,
+            width: kind === "sessions" ? 334 : 300,
+            maxHeight: 336,
             top: 0,
             ...(side === "left" ? { right: "calc(100% + 12px)" } : { left: "calc(100% + 12px)" }),
             transformOrigin: side === "left" ? "100% 18%" : "0% 18%",
@@ -65,7 +62,6 @@ export function FlyoutLayer() {
           {kind === "wifi" && <WifiFlyout />}
           {kind === "bluetooth" && <BluetoothFlyout />}
           {kind === "sessions" && <SessionsFlyout />}
-          {kind === "power" && <PowerOrbit />}
         </motion.div>
       )}
     </AnimatePresence>

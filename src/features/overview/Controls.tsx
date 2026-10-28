@@ -30,7 +30,7 @@ import { BatteryIcon, BluetoothOffIcon, BluetoothOnIcon, WifiOffIcon, WifiOnIcon
 import { focusMode, refreshFocusMode, setFocusMode } from "../../notch/focus";
 import { toggleFlyout } from "../../notch/flyout";
 import { useBluetoothAmbient, useWifiAmbient, toggleBluetooth, toggleWifi } from "./ambient";
-import { powerRevision } from "./power";
+import { PowerMenu } from "./PowerMenu";
 import { t } from "../../i18n";
 
 type TileIcon = React.ComponentType<{ size?: number; weight?: IconWeight; className?: string }>;
@@ -52,8 +52,10 @@ function ToggleTile(props: {
   glyphKey?: string;
   iconClassName?: string;
   onClick: () => void;
-  /** Long-press (~420 ms) opens the attached panel. Tap still does the primary action. */
+  /** Short press-and-hold opens the attached panel. Tap still does the primary action. */
   onHold?: () => void;
+  /** Hold duration in ms. Default 420; Power uses a quick hold. */
+  holdMs?: number;
   onContextMenu?: (e: React.MouseEvent) => void;
   onWheel?: (e: React.WheelEvent) => void;
   /** Active-state dot (Wi-Fi / Bluetooth). */
@@ -97,9 +99,10 @@ function ToggleTile(props: {
     stopHold();
     holdFired.current = false;
     holdOrigin.current = { x: e.screenX, y: e.screenY };
+    const holdMs = props.holdMs ?? 420;
     const began = performance.now();
     const tick = () => {
-      const progress = Math.min(1, (performance.now() - began) / 420);
+      const progress = Math.min(1, (performance.now() - began) / holdMs);
       setHoldProgress(progress);
       if (progress < 1) holdFrame.current = requestAnimationFrame(tick);
     };
@@ -114,7 +117,7 @@ function ToggleTile(props: {
       window.setTimeout(() => {
         holdFired.current = false;
       }, 900);
-    }, 420);
+    }, holdMs);
   };
 
   const moveHold = (e: React.PointerEvent) => {
@@ -332,9 +335,9 @@ function BluetoothTile() {
 function PowerTile() {
   const [energy, setEnergy] = useState<EnergyState | null>(null);
   const [busy, setBusy] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const busyRef = useRef(false);
   const settle = useRef(0);
-  const revision = powerRevision.use();
 
   useEffect(() => {
     // Don't let the 5 s poll race a just-clicked mode and flip the tile back.
@@ -346,12 +349,6 @@ function PowerTile() {
     const id = setInterval(load, 5000);
     return () => clearInterval(id);
   }, []);
-
-  // The attached power flyout changed the mode: reflect it immediately.
-  useEffect(() => {
-    if (revision === 0) return;
-    void systemControls.energy().then(setEnergy).catch(() => {});
-  }, [revision]);
 
   const mode: PowerMode = energy?.scheme ?? "balanced";
   const plugged = energy?.plugged ?? true;
@@ -435,16 +432,25 @@ function PowerTile() {
         straight
         bareIcon
         onClick={() => select(next.mode)}
-        onHold={() => {
-
-          toggleFlyout("power");
-        }}
+        onHold={() => setMenuOpen(true)}
+        holdMs={160}
         onContextMenu={(e) => {
           e.preventDefault();
           void systemControls.openUri("ms-settings:powersleep");
         }}
         title={t("Power mode")}
       />
+      <AnimatePresence>
+        {menuOpen && (
+          <PowerMenu
+            options={options}
+            mode={mode}
+            busy={busy}
+            onPick={(target) => select(target)}
+            onClose={() => setMenuOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
