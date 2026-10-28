@@ -93,21 +93,8 @@ const sectionPage: Record<string, PageId> = {
 /** Last open page survives closing/opening the notch (the component is rebuilt). */
 let savedPage: PageId = "general";
 
-/** Trim the settings window to the page so short pages don't leave a blank area. */
-const PAGE_HEIGHT: Record<PageId, number> = {
-  general: 460,
-  notch: 460,
-  appearance: 460,
-  display: 460,
-  performance: 460,
-  music: 460,
-  tools: 460,
-  timer: 460,
-  ai: 460,
-  discord: 460,
-  tips: 460,
-  about: 410,
-};
+/** One fixed shape for every settings page so switching sections never resizes the notch. */
+const SETTINGS_SIZE = { w: 660, h: 460 };
 
 /**
  * Settings like macOS: categories on the left, only their content on the right.
@@ -123,9 +110,9 @@ export function SettingsView() {
   };
 
   useEffect(() => {
-    requestSize("settings", { w: 660, h: PAGE_HEIGHT[page] });
-  }, [page]);
-  useEffect(() => () => requestSize("settings", null), []);
+    requestSize("settings", SETTINGS_SIZE);
+    return () => requestSize("settings", null);
+  }, []);
 
   useEffect(() => {
     if (!section || !sectionPage[section]) return;
