@@ -183,6 +183,10 @@ fn control_session(session: &Session, action: &str, position: Option<f64>) -> wi
 }
 
 const POLL: Duration = Duration::from_millis(400);
+/// A deliberately selected app that pauses hands over to another playing app
+/// after this short grace. The grace is long enough to press play on the
+/// selected session, but short enough that the notch follows the music.
+const SELECTED_PAUSED_GRACE: Duration = Duration::from_millis(2000);
 /// How long after a track change the cover keeps being re-read, so a late one replaces
 /// whatever Windows showed first.
 const ARTWORK_SETTLE: Duration = Duration::from_secs(10);
@@ -197,6 +201,8 @@ pub fn spawn(app: AppHandle) {
             Artwork { key: String::new(), since: Instant::now(), data: None, fingerprint: 0 };
         // First playing session wins: app id → when we first saw it playing.
         let mut playing_since: HashMap<String, Instant> = HashMap::new();
+        // When the explicitly chosen app paused, so it can hand over after a grace.
+        let mut selected_paused: Option<(String, Instant)> = None;
         // Requested once and reused: a new manager per poll is a cross-process
         // round trip every 400 ms. Dropped (and requested again) on an error.
         let mut manager: Option<SessionManager> = None;
@@ -223,21 +229,46 @@ pub fn spawn(app: AppHandle) {
                 }
             }
             playing_since.retain(|id, _| seen.contains(id));
-            // Explicitly chosen app: keep showing it while it exists, playing or
-            // paused. Selecting a paused session is a deliberate choice; the old
-            // auto-handoff to a playing app made that impossible.
-            let current = if let Some(id) = selected.as_deref() {
+            // Explicitly chosen app: show it while it plays. If it pauses while
+            // another app is playing, hand over after a short grace so the notch
+            // follows the music instead of sticking to a silent player. The grace
+            // still lets the user select a paused session and press play.
+            let mut current = None;
+            if let Some(id) = selected.as_deref() {
                 match all.iter().find(|s| session_app_id(s) == id) {
-                    Some(session) => read(session, &mut artwork).ok(),
+                    Some(session) if is_playing(session) => {
+                        selected_paused = None;
+                        current = read(session, &mut artwork).ok();
+                    }
+                    Some(session) => {
+                        if first_playing(&all, Some(id), &playing_since).is_some() {
+                            let now = Instant::now();
+                            let since = match selected_paused.as_ref() {
+                                Some((paused_id, since)) if paused_id == id => *since,
+                                _ => {
+                                    selected_paused = Some((id.to_string(), now));
+                                    now
+                                }
+                            };
+                            if since.elapsed() >= SELECTED_PAUSED_GRACE {
+                                app.state::<MediaState>().set_selected(None);
+                                selected_paused = None;
+                            } else {
+                                current = read(session, &mut artwork).ok();
+                            }
+                        } else {
+                            // No other player: keep the paused selection indefinitely.
+                            selected_paused = None;
+                            current = read(session, &mut artwork).ok();
+                        }
+                    }
                     None => {
                         // The chosen app closed: fall back to another playing app.
                         app.state::<MediaState>().set_selected(None);
-                        None
+                        selected_paused = None;
                     }
                 }
-            } else {
-                None
-            };
+            }
             let current = current.or_else(|| {
                 pick(manager_ref, &all, shown, &playing_since).and_then(|session| read(&session, &mut artwork).ok())
             });

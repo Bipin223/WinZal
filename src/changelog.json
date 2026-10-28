@@ -1,5 +1,39 @@
 [
   {
+    "version": "1.7.9",
+    "date": "2026-10-28",
+    "items": [
+      {
+        "de": "Kompakte Benachrichtigung als Liquid-Glass-Kapsel: echtes App-Symbol, App-Name, Titel und zweizeilige Nachricht; Klick öffnet die App, Wischen schließt sie, nach unten öffnet die Notch",
+        "en": "Compact liquid-glass notification capsule: real app icon, app name, title and a two-line message; click opens the app, swipe dismisses, swipe down opens the notch"
+      },
+      {
+        "de": "Runde App-Symbole für alle Benachrichtigungen; durchscheinendes Glas ohne zusätzliche schwarze Rechteck-Ebene",
+        "en": "Circular app icons for every notification; translucent glass without the extra black rectangular layer"
+      },
+      {
+        "de": "Hindi-/Devanagari-Songtexte werden oben und unten nicht mehr abgeschnitten",
+        "en": "Hindi/Devanagari lyrics are no longer clipped at the top or bottom"
+      },
+      {
+        "de": "Globale UI-Schriftart in den Einstellungen: Inter, Onest, System oder Mono",
+        "en": "Global UI font in Settings: Inter, Onest, System or Mono"
+      },
+      {
+        "de": "Horizontale Glas-Leiste für den Energiemodus; Akku-Bolt bei angeschlossenem Ladegerät, 1-Sekunden-Abgleich, Hinweis unter 20 % und ein einzelner Lade-Ton",
+        "en": "Horizontal glass Power strip; battery bolt when the charger is connected, 1-second sync, low-battery alert under 20% and a single charge chime"
+      },
+      {
+        "de": "Audio-Sessions: Play/Pause links, Klick wechselt die Session im Now Playing, erneuter Klick auf den Pfeil schließt das Panel",
+        "en": "Audio sessions: play/pause on the left, click switches the Now Playing session, clicking the caret again closes the panel"
+      },
+      {
+        "de": "Feste Form für alle Einstellungsseiten; Speicher wird erst nach 60 s geschlossenem Zustand freigegeben, nicht während die Notch offen ist",
+        "en": "Fixed shape for every Settings page; memory is released only after 60 s closed, never while the notch is open"
+      }
+    ]
+  },
+  {
     "version": "1.7.8",
     "date": "2026-10-25",
     "items": [
