@@ -99,7 +99,7 @@ function ToggleTile(props: {
     stopHold();
     holdFired.current = false;
     holdOrigin.current = { x: e.screenX, y: e.screenY };
-    const holdMs = props.holdMs ?? 420;
+    const holdMs = Math.max(1, props.holdMs ?? 420);
     const began = performance.now();
     const tick = () => {
       const progress = Math.min(1, (performance.now() - began) / holdMs);
@@ -358,13 +358,13 @@ function PowerTile() {
   const look = (m: PowerMode) => {
     switch (m) {
       case "saver":
-        return { label: t("Sparmodus"), level: 0.28, tone: "text-[#0a84ff]", dot: "#0a84ff" };
+        return { label: t("Sparmodus"), level: 0.28, tone: "text-[#0a84ff]", color: "#0a84ff", dot: "#0a84ff" };
       case "max":
-        return { label: t("Max"), level: 0.92, tone: "text-[#ff453a]", dot: "#ff453a" };
+        return { label: t("Max"), level: 0.92, tone: "text-[#ff453a]", color: "#ff453a", dot: "#ff453a" };
       case "custom":
-        return { label: t("Custom"), level: 0.8, tone: "text-[#bf5af2]", dot: "#bf5af2" };
+        return { label: t("Custom"), level: 0.8, tone: "text-[#bf5af2]", color: "#bf5af2", dot: "#bf5af2" };
       default:
-        return { label: t("Ausgeglichen"), level: 0.6, tone: "text-label", dot: "var(--color-label)" };
+        return { label: t("Ausgeglichen"), level: 0.6, tone: "text-label", color: "var(--color-label)", dot: "var(--color-label)" };
     }
   };
   const current = look(mode);
@@ -433,7 +433,7 @@ function PowerTile() {
         bareIcon
         onClick={() => select(next.mode)}
         onHold={() => setMenuOpen(true)}
-        holdMs={160}
+        holdMs={1}
         onContextMenu={(e) => {
           e.preventDefault();
           void systemControls.openUri("ms-settings:powersleep");
