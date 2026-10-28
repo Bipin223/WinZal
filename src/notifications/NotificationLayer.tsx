@@ -38,7 +38,7 @@ function NotificationIcon({ item, size }: { item: AppNotification; size: number 
       <img
         src={winzalIcon}
         alt=""
-        className="shrink-0 rounded-[11px] border border-white/10 object-cover"
+        className="shrink-0 rounded-full border border-white/10 object-cover"
         style={{ width: size, height: size }}
       />
     );
@@ -46,7 +46,7 @@ function NotificationIcon({ item, size }: { item: AppNotification; size: number 
   const Icon = item.brand === "discord" ? DiscordLogo : ICONS[item.kind];
   return (
     <span
-      className="relative grid shrink-0 place-items-center overflow-hidden rounded-[13px] text-white"
+      className="relative grid shrink-0 place-items-center overflow-hidden rounded-full text-white"
       style={{
         width: size,
         height: size,
