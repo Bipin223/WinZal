@@ -17,8 +17,6 @@ import { systemControls } from "../platform/services";
 import { settings } from "../settings/store";
 import { t } from "../i18n";
 import { Switch } from "../ui/controls";
-import { BoldIcon } from "../ui/BoldIcon";
-import { IconButton } from "../ui/IconButton";
 import { SelectedDot } from "../ui/SelectedDot";
 import { closeFlyout, flyout, type FlyoutKind } from "./flyout";
 import {
@@ -83,7 +81,7 @@ function Header({
 }) {
   return (
     <div className="flex items-center gap-2.5 px-3 pt-3 pb-2">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-[12px] border border-[var(--control-border)] bg-[var(--control-fill)] text-label">{icon}</span>
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-fill-1 text-label">{icon}</span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-footnote font-semibold text-label">{title}</span>
         <span className="block truncate text-caption text-label-3">{detail}</span>
@@ -95,14 +93,15 @@ function Header({
 
 function ScanButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
   return (
-    <IconButton label={t("Scan again")} onClick={onClick} disabled={loading} size="xs">
-      <BoldIcon
-        icon={ArrowClockwise}
-        size={16}
-        tone="label-2"
-        className={loading ? "animate-spin" : undefined}
-      />
-    </IconButton>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={loading}
+      aria-label={t("Scan again")}
+      className="pressable flex size-6 shrink-0 items-center justify-center rounded-[7px] text-label-3 hover:text-label disabled:opacity-40"
+    >
+      <ArrowClockwise size={12} weight="bold" className={loading ? "animate-spin" : undefined} />
+    </button>
   );
 }
 
@@ -123,10 +122,10 @@ function SettingsLink({ label, uri }: { label: string; uri: string }) {
         closeFlyout();
         void systemControls.openUri(uri);
       }}
-      className="pressable mx-2 mt-1 mb-2 flex h-9 shrink-0 items-center justify-between rounded-[10px] border border-[var(--control-border)] bg-[var(--control-fill)] px-3 text-[11px] font-medium text-label-2 transition-colors duration-150 hover:bg-[var(--control-fill-hover)] hover:text-label"
+      className="pressable mx-2 mt-1 mb-2 flex h-7 shrink-0 items-center justify-between rounded-[8px] px-2 text-caption text-label-3 transition-colors duration-150 hover:bg-fill-1 hover:text-label-2"
     >
       {label}
-      <CaretRight size={12} weight="bold" />
+      <CaretRight size={10} weight="bold" />
     </button>
   );
 }
@@ -138,13 +137,7 @@ function WifiFlyout() {
   return (
     <div className="flex max-h-[336px] flex-col">
       <Header
-        icon={
-          enabled ? (
-            <BoldIcon icon={WifiHigh} size={22} active tone="label" />
-          ) : (
-            <BoldIcon icon={WifiSlash} size={22} tone="label-2" />
-          )
-        }
+        icon={enabled ? <WifiHigh size={19} weight="bold" /> : <WifiSlash size={19} weight="bold" />}
         title={t("WLAN")}
         detail={busy ? t("Wird umgeschaltetâ€¦") : enabled ? net?.name || t("An") : t("Aus")}
       >
@@ -171,11 +164,11 @@ function WifiFlyout() {
                 }`}
               >
                 <span className="flex w-3.5 shrink-0 justify-center text-label-3">
-                  <BoldIcon icon={WifiHigh} size={16} active={current} tone={current ? "accent" : "label-2"} />
+                  <WifiHigh size={13} weight={current ? "fill" : "bold"} />
                 </span>
                 <span className="min-w-0 flex-1 truncate text-caption text-label">{network.ssid}</span>
                 {current && <SelectedDot />}
-                {network.secured && <Lock size={11} weight="bold" className="shrink-0 text-label-3" />}
+                {network.secured && <Lock size={9} weight="bold" className="shrink-0 text-label-4" />}
                 <span className="w-7 shrink-0 text-right text-[9px] tabular text-label-4">{network.signal}%</span>
                 {connecting === network.ssid && <span className="size-2 shrink-0 animate-pulse rounded-full bg-green" />}
               </button>
@@ -198,7 +191,7 @@ function BluetoothFlyout() {
   return (
     <div className="flex max-h-[336px] flex-col">
       <Header
-        icon={<BoldIcon icon={Bluetooth} size={22} active tone="label" />}
+        icon={<Bluetooth size={19} weight="bold" />}
         title="Bluetooth"
         detail={busy ? t("Wird umgeschaltetâ€¦") : !bt?.available ? t("Einstellungen") : enabled ? t("An") : t("Aus")}
       >
@@ -234,7 +227,7 @@ function BluetoothFlyout() {
                   }`}
                 >
                   <span className="flex w-3.5 shrink-0 justify-center text-label-3">
-                    <BoldIcon icon={Bluetooth} size={15} active={device.connected} tone={device.connected ? "accent" : "label-2"} />
+                    <Bluetooth size={12} weight={device.connected ? "fill" : "bold"} />
                   </span>
                   <span className="min-w-0 flex-1 truncate text-caption text-label">{device.name}</span>
                   {device.connected ? <SelectedDot /> : <span className="shrink-0 text-[9px] text-label-4">{t("Paired")}</span>}
@@ -292,7 +285,7 @@ function SessionsFlyout() {
 
   return (
     <div className="flex max-h-[336px] flex-col">
-      <Header icon={<BoldIcon icon={MusicNoteSimple} size={22} active tone="label" />} title={t("Audio sessions")} detail={t("Playing on this PC")}>
+      <Header icon={<MusicNoteSimple size={18} weight="fill" />} title={t("Audio sessions")} detail={t("Playing on this PC")}>
         <ScanButton loading={loading} onClick={() => void load(true)} />
       </Header>
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -306,9 +299,9 @@ function SessionsFlyout() {
                 type="button"
                 onClick={() => toggle(session)}
                 aria-label={session.isPlaying ? t("Pause") : t("Abspielen")}
-                className="pressable ml-1 flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-[var(--control-border)] bg-[var(--control-fill)] text-label-2 hover:bg-[var(--control-fill-hover)] hover:text-label"
+                className="pressable ml-1 flex size-7 shrink-0 items-center justify-center rounded-[7px] text-label-2 hover:bg-fill-2 hover:text-label"
               >
-                {session.isPlaying ? <Pause size={16} weight="fill" /> : <Play size={16} weight="fill" />}
+                {session.isPlaying ? <Pause size={12} weight="fill" /> : <Play size={12} weight="fill" />}
               </button>
               <button
                 type="button"

@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { content } from "../design/motion";
 import { createStore } from "../lib/store";
-import { IconButton } from "../ui/IconButton";
 
 /*
  * A tool's actions on the right of the header (next to the pin), e.g. "Clear"
@@ -31,14 +30,16 @@ export function HeaderActions({ children }: { children: ReactNode }) {
 /** Round icon button for the header, same size as the pin. */
 export function HeaderButton(props: { label: string; onClick: () => void; active?: boolean; disabled?: boolean; children: ReactNode }) {
   return (
-    <IconButton
-      label={props.label}
+    <button
+      aria-label={props.label}
+      title={props.label}
       onClick={props.onClick}
-      active={props.active}
       disabled={props.disabled}
-      size="sm"
+      className={`pressable pressable-fill flex size-7 items-center justify-center rounded-full disabled:opacity-30 ${
+        props.active ? "bg-fill-3 text-label" : "text-label-3 hover:text-label-2"
+      }`}
     >
       {props.children}
-    </IconButton>
+    </button>
   );
 }

@@ -65,13 +65,6 @@
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
-
-  /* SF Symbols-style controls: 20–22px icon in a 32–36px box, 40px hit. */
-  --control-fill: rgb(255 255 255 / 0.07);
-  --control-fill-hover: rgb(255 255 255 / 0.11);
-  --control-border: rgb(255 255 255 / 0.1);
-  --control-border-strong: rgb(255 255 255 / 0.16);
-  --icon-stroke: 2.5;
 }
 
 /* The accent comes from the cover at runtime (--accent on the notch container).
@@ -101,10 +94,6 @@
   --color-orange: #ff9500;
   --color-yellow: #e5a800;
   --color-link: #007aff;
-  --control-fill: rgb(0 0 0 / 0.05);
-  --control-fill-hover: rgb(0 0 0 / 0.08);
-  --control-border: rgb(0 0 0 / 0.1);
-  --control-border-strong: rgb(0 0 0 / 0.16);
 }
 
 /* The island's own surface decides text and panel contrast, so custom island
@@ -126,10 +115,6 @@
   --color-orange: #ff9f0a;
   --color-yellow: #ffd60a;
   --color-link: #419cff;
-  --control-fill: rgb(255 255 255 / 0.07);
-  --control-fill-hover: rgb(255 255 255 / 0.11);
-  --control-border: rgb(255 255 255 / 0.1);
-  --control-border-strong: rgb(255 255 255 / 0.16);
 }
 
 :root [data-surface="light"] {
