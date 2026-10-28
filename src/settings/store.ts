@@ -16,7 +16,7 @@ export type TypeRole = "caption" | "footnote" | "body" | "title" | "display";
 export type TypeAxis = { size: number; weight: number };
 
 /** Lyric entrance effects; `word` is the retained original. */
-export type UiFont = "inter" | "poppins" | "onest" | "coolvetica" | "system" | "mono";
+export type UiFont = "inter" | "onest" | "system" | "mono";
 
 export type LyricAnimation =
   | "word"
@@ -380,7 +380,7 @@ settings.set((s) => {
       uiFont: (() => {
         const stored = s.appearance as { uiFont?: string; lyricsFont?: string } | undefined;
         const value = stored?.uiFont ?? stored?.lyricsFont;
-        const valid: UiFont[] = ["inter", "poppins", "onest", "coolvetica", "system", "mono"];
+        const valid: UiFont[] = ["inter", "onest", "system", "mono"];
         return valid.includes(value as UiFont) ? (value as UiFont) : "inter";
       })(),
       // Old bold/regular choice became two continuous weight sliders.

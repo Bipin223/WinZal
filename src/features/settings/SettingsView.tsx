@@ -658,9 +658,7 @@ function Typography() {
           onChange={(uiFont) => updateSettings((cur) => ({ appearance: { ...cur.appearance, uiFont } }))}
           options={[
             { value: "inter", label: "Inter" },
-            { value: "poppins", label: "Poppins" },
             { value: "onest", label: "Onest" },
-            { value: "coolvetica", label: "Coolvetica" },
             { value: "system", label: "System" },
             { value: "mono", label: "Mono" },
           ]}
