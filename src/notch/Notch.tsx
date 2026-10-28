@@ -20,6 +20,8 @@ import { closeFlyout, flyout } from "./flyout";
 import { notchOpenRequest } from "./openRequest";
 import { chargingPulse, useChargingWatch } from "./useChargingWatch";
 import { BatteryMeter } from "../ui/BatteryMeter";
+import { BoldIcon } from "../ui/BoldIcon";
+import { IconButton } from "../ui/IconButton";
 import { NotificationLayer } from "../notifications/NotificationLayer";
 import { notifications } from "../notifications/store";
 import { DOCK_HEIGHT, HEADER_HEIGHT, geometry, openGeometry, type NotchGeometry } from "./geometry";
@@ -644,24 +646,24 @@ function Header({ title, onDragStart, onSilent }: { title: string; onDragStart: 
           active={silent}
           onClick={onSilent}
         >
-          <Ghost size={14} weight={silent ? "fill" : "bold"} />
+          <BoldIcon icon={Ghost} size={20} active={silent} tone={silent ? "accent" : "label-2"} />
         </HeaderButton>
         <HeaderButton
           label={liquidGlass ? t("Liquid Glass off") : t("Liquid Glass")}
           active={liquidGlass}
           onClick={toggleLiquidGlass}
         >
-          <Drop size={14} weight={liquidGlass ? "fill" : "bold"} />
+          <BoldIcon icon={Drop} size={20} active={liquidGlass} tone={liquidGlass ? "accent" : "label-2"} />
         </HeaderButton>
         <HeaderButton
           label={focus ? t("Nicht stören ausschalten") : t("Nicht stören")}
           active={focus}
           onClick={() => setFocusMode(!focus)}
         >
-          <MoonStars size={14} weight={focus ? "fill" : "bold"} />
+          <BoldIcon icon={MoonStars} size={20} active={focus} tone={focus ? "accent" : "label-2"} />
         </HeaderButton>
         <HeaderButton label={isPinned ? t("Lösen") : t("Offen halten")} active={isPinned} onClick={togglePin}>
-          <PushPin size={14} weight={isPinned ? "fill" : "bold"} />
+          <BoldIcon icon={PushPin} size={20} active={isPinned} tone={isPinned ? "accent" : "label-2"} />
         </HeaderButton>
       </div>
     </div>
@@ -696,35 +698,21 @@ function Dock({ tabs, activeId }: { tabs: NotchTab[]; activeId: string }) {
 }
 
 function DockButton(props: { label: string; icon: NotchTab["icon"]; active: boolean; onClick: () => void; badge?: boolean }) {
-  const I = props.icon;
   return (
-    <button
-      aria-label={props.label}
-      title={props.label}
+    <IconButton
+      label={props.label}
       onClick={props.onClick}
-      className={`pressable relative flex h-8 w-8 items-center justify-center rounded-[10px] ${
-        props.active ? "text-label" : "text-label-3 hover:text-label-2"
-      }`}
+      active={props.active}
+      badge={props.badge}
+      size="md"
     >
-      {props.active && <motion.span layoutId="dock-pill" className="absolute inset-0 rounded-[10px] bg-fill-2" transition={springs.snappy} />}
-      <I
-        size={16}
-        weight={props.active ? "fill" : "bold"}
-        className="relative"
+      <BoldIcon
+        icon={props.icon}
+        size={20}
+        active={props.active}
+        tone={props.active ? "accent" : "label-3"}
       />
-      {/* Badge dot (e.g. update available) at the icon's top right. */}
-      <AnimatePresence>
-        {props.badge && (
-          <motion.span
-            className="absolute top-1 right-1 size-[7px] rounded-full bg-link ring-2 ring-notch"
-            initial={{ opacity: 0, transform: "scale(0.9)" }}
-            animate={{ opacity: 1, transform: "scale(1)" }}
-            exit={{ opacity: 0, transform: "scale(0.9)" }}
-            transition={springs.snappy}
-          />
-        )}
-      </AnimatePresence>
-    </button>
+    </IconButton>
   );
 }
 

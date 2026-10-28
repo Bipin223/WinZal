@@ -62,11 +62,11 @@ export function notify(input: Omit<AppNotification, "id" | "createdAt" | "durati
 
 export function previewIsland() {
   return notify({
-    kind: "message",
-    app: "Messages",
-    title: "Bipin",
-    body: "Bro, lunch at 1?",
-    color: "#34c759",
+    kind: "info",
+    app: "WinZal",
+    title: "Response ready",
+    body: "The notch is ready when you are.",
+    color: "#5fe9e3",
   });
 }
 

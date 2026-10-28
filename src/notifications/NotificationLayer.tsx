@@ -14,6 +14,7 @@ import { content, springs } from "../design/motion";
 import { setNotificationVisible } from "../platform/native";
 import { openNotificationApp } from "../platform/services";
 import { DiscordLogo } from "../ui/brands";
+import winzalIcon from "../assets/winzal-icon.png";
 import { dismissNotification, notifications, type AppNotification } from "./store";
 import { requestNotchOpen } from "../notch/openRequest";
 
@@ -32,6 +33,16 @@ function hasProgress(item: AppNotification) {
 }
 
 function NotificationIcon({ item, size }: { item: AppNotification; size: number }) {
+  if (item.app === "WinZal") {
+    return (
+      <img
+        src={winzalIcon}
+        alt=""
+        className="shrink-0 rounded-[11px] border border-white/10 object-cover"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
   const Icon = item.brand === "discord" ? DiscordLogo : ICONS[item.kind];
   return (
     <span
@@ -71,9 +82,9 @@ function IslandNotification({ item }: { item: AppNotification }) {
     <div className="pointer-events-none fixed top-0 left-1/2 z-[120] -translate-x-1/2 pt-[2px]">
       <motion.div
         data-notification-hit
-        className="pointer-events-auto relative overflow-hidden border border-white/10 bg-[#0b0c10] shadow-[0_24px_60px_-20px_rgb(0_0_0/0.9),0_2px_10px_rgb(0_0_0/0.45)]"
+        className="pointer-events-auto relative overflow-hidden rounded-full border border-white/15 bg-white/[0.07] shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_24px_60px_-20px_rgb(0_0_0/0.9),0_2px_10px_rgb(0_0_0/0.45)] backdrop-blur-2xl backdrop-saturate-150"
         initial={{ width: 124, height: 24, borderRadius: 15, opacity: 0 }}
-        animate={{ width: 352, height: 76, borderRadius: 26, opacity: 1 }}
+        animate={{ width: 352, height: 86, borderRadius: 43, opacity: 1 }}
         exit={{ width: 124, height: 24, borderRadius: 15, opacity: 0, transition: springs.close }}
         transition={springs.open}
         drag
@@ -113,8 +124,10 @@ function IslandNotification({ item }: { item: AppNotification }) {
           }
         }}
       >
+        <span aria-hidden className="pointer-events-none absolute inset-0 bg-black/55" />
+        <span aria-hidden className="pointer-events-none absolute inset-x-10 top-0 h-px bg-white/30" />
         <motion.div
-          className="flex h-full items-center gap-3 px-4"
+          className="relative flex h-full items-center gap-3 px-4"
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0, transition: { ...content.enter, delay: 0.06 } }}
         >
@@ -123,14 +136,13 @@ function IslandNotification({ item }: { item: AppNotification }) {
             animate={{ scale: 1, rotate: 0, opacity: 1 }}
             transition={springs.peek}
           >
-            <NotificationIcon item={item} size={40} />
+            <NotificationIcon item={item} size={38} />
           </motion.div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-[9px] font-semibold tracking-[0.16em] text-white/45 uppercase">{item.app}</div>
             <div className="mt-0.5 truncate text-[13.5px] leading-[17px] font-semibold text-white">{item.title}</div>
-            <div className="truncate text-[11.5px] leading-[15px] text-white/60">{item.body}</div>
           </div>
-          <span className="self-start pt-0.5 text-[10px] text-white/35">now</span>
+          <span className="self-start pt-4 text-[10px] text-white/35">now</span>
         </motion.div>
         {hasProgress(item) && (
           <motion.span

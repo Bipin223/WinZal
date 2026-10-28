@@ -1,4 +1,4 @@
-import { motion } from "motion/react";
+﻿import { motion } from "motion/react";
 import type { IconWeight } from "@phosphor-icons/react";
 
 type Props = { size?: number; weight?: IconWeight; className?: string };
@@ -18,7 +18,7 @@ export function WifiOnIcon({ size = 22, className }: Props) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={3}
+      strokeWidth={2.5}
       strokeLinecap="round"
       className={className}
     >
@@ -38,7 +38,7 @@ export function WifiOffIcon({ size = 22, className }: Props) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={3}
+      strokeWidth={2.5}
       strokeLinecap="round"
       className={className}
     >
@@ -68,7 +68,7 @@ export function BluetoothOnIcon({ size = 22, className }: Props) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={3.2}
+      strokeWidth={2.5}
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
@@ -88,7 +88,7 @@ export function BluetoothOffIcon({ size = 22, className }: Props) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={3.2}
+      strokeWidth={2.5}
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
@@ -122,3 +122,4 @@ export function BatteryIcon({ size = 17, className, level = 0.82 }: Props & { le
     </svg>
   );
 }
+

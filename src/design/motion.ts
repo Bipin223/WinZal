@@ -46,6 +46,10 @@ export const springs = {
   get snappy() {
     return spring(0.24, 0.12);
   },
+  /** SF Symbols controls: 0.95 press / 1.04 hover, no visible bounce. */
+  get press() {
+    return spring(0.26, 0.1);
+  },
   /** Apple Music lyric line: soft scale/slide, never overshoots. Fixed. */
   get lyrics() {
     return spring(0.46, 0);

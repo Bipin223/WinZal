@@ -37,8 +37,10 @@ export function ActivitySwitch({
             event.stopPropagation();
             onSwitch();
           }}
-          whileTap={{ scale: 0.9 }}
-          className="pressable pointer-events-auto absolute flex size-8 items-center justify-center overflow-hidden rounded-full bg-notch text-label ring-1 ring-white/10"
+          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.04 }}
+          transition={springs.press}
+          className="pressable pointer-events-auto absolute flex size-9 items-center justify-center overflow-hidden rounded-full border border-[var(--control-border)] bg-notch text-label after:absolute after:-inset-1 after:content-['']"
           style={{
             left: "calc(100% + 10px)",
             top: 0,
@@ -54,12 +56,12 @@ export function ActivitySwitch({
         >
           {kind === "music" ? (
             np?.artwork ? (
-              <img src={np.artwork} alt="" draggable={false} className="size-6 rounded-full object-cover" />
+              <img src={np.artwork} alt="" draggable={false} className="size-7 rounded-full object-cover" />
             ) : (
-              <MusicNotesSimple size={15} weight="fill" />
+              <MusicNotesSimple size={19} weight="fill" />
             )
           ) : (
-            <DiscordLogo size={15} />
+            <DiscordLogo size={19} />
           )}
         </motion.button>
       )}
