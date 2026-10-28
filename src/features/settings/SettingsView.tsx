@@ -1233,11 +1233,11 @@ function WindowsToastsRow({ enabled }: { enabled: boolean }) {
     <Row label={t("Windows toasts")}>
       <div className="flex items-center gap-1.5">
         <span className={`text-caption ${enabled && status === "allowed" ? "text-green" : "text-label-3"}`}>{label}</span>
-        {enabled && status === "denied" ? (
+        {enabled && (status === "denied" || status === "unavailable") ? (
           <Button onClick={() => void invoke("open_uri", { uri: "ms-settings:privacy-notifications" })}>
             {t("Open settings")}
           </Button>
-        ) : enabled && status !== "allowed" && status !== "unavailable" ? (
+        ) : enabled && status !== "allowed" ? (
           <Button onClick={() => void enable()} disabled={busy}>
             {t("Enable")}
           </Button>

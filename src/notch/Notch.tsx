@@ -275,17 +275,20 @@ export function Notch() {
     const onDown = (e: PointerEvent) => {
       const target = e.target;
       const inNotch = !!hitRef.current?.contains(target as Node);
+      // Flyouts and notification cards are their own hit surfaces. Clicking them
+      // must never close them or the notch behind them.
+      if (
+        target instanceof Element &&
+        target.closest("[data-flyout-hit], [data-notification-hit]")
+      ) {
+        return;
+      }
       // A button that owns a flyout must receive the click itself; closing the
       // panel here first made "click again to close" close and instantly reopen.
       if (target instanceof Element && target.closest("[data-flyout-toggle]")) return;
-      // The attached panel lives outside the notch: clicks in it must reach its
-      // controls. A click anywhere on the notch itself now closes the panel but
-      // keeps the notch open; a click outside both closes both.
-      const inPanel = !inNotch && target instanceof Element && !!target.closest("[data-flyout-hit]");
-      if (inPanel) return;
       if (inNotch) {
         if (target instanceof Element && target.closest("[data-edge-drag]")) return;
-        if (flyout.get().kind !== null) closeFlyout();
+        // Clicking inside the expanded notch leaves an attached panel open.
         return;
       }
       if (flyout.get().kind !== null) closeFlyout();

@@ -1,5 +1,23 @@
 [
   {
+    "version": "1.7.10",
+    "date": "2026-10-28",
+    "items": [
+      {
+        "de": "Angeheftete Panels bleiben offen, wenn man hinein oder auf die geöffnete Notch klickt; nur ein Klick außerhalb schließt sie",
+        "en": "Attached panels stay open when you click inside them or on the expanded notch; only a click outside closes them"
+      },
+      {
+        "de": "Langes Halten von WLAN, Bluetooth oder Power löst beim Loslassen keinen Klick mehr aus — der Schalter bleibt unverändert",
+        "en": "Long-holding Wi-Fi, Bluetooth or Power no longer fires a click on release — the tile state stays unchanged"
+      },
+      {
+        "de": "NSIS-/Installationsversionen setzen eine explizite App-ID, damit Windows-Benachrichtigungen zugelassen werden können; bei Verweigerung führt ein Knopf direkt zu den Windows-Einstellungen",
+        "en": "NSIS/installed builds set an explicit app ID so Windows notification access can be granted; if it is denied, a button opens the Windows settings directly"
+      }
+    ]
+  },
+  {
     "version": "1.7.9",
     "date": "2026-10-28",
     "items": [

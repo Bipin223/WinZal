@@ -112,12 +112,18 @@ function ToggleTile(props: {
       setHoldProgress(1);
       props.onHold?.();
       window.setTimeout(() => setHoldProgress(0), 160);
-      // If the pointer leaves before the release click, do not swallow the next
-      // real tap on this tile later. Only the click that follows the release
-      // needs to be ignored, so keep this short.
-      window.setTimeout(() => {
-        holdFired.current = false;
-      }, 400);
+      // Keep the guard until the pointer is actually released. A fixed timer
+      // expired while the button was still held, so a long press released later
+      // fired a normal click (turning Wi-Fi/Bluetooth off).
+      const clearOnRelease = () => {
+        window.removeEventListener("pointerup", clearOnRelease);
+        window.removeEventListener("pointercancel", clearOnRelease);
+        window.setTimeout(() => {
+          holdFired.current = false;
+        }, 120);
+      };
+      window.addEventListener("pointerup", clearOnRelease, { once: true });
+      window.addEventListener("pointercancel", clearOnRelease, { once: true });
     }, holdMs);
   };
 

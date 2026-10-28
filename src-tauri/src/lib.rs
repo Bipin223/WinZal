@@ -138,6 +138,20 @@ fn set_gpu_preference(mode: String) -> Result<(), String> {
 }
 
 pub fn run() {
+    // The NSIS build has no package identity. Without an explicit AUMID the
+    // Windows notification listener can report "unavailable", so installed
+    // users never see other apps' toasts. The MSIX package already supplies one.
+    let packaged = std::env::current_exe()
+        .map(|path| path.to_string_lossy().to_ascii_lowercase().contains("\\windowsapps\\"))
+        .unwrap_or(false);
+    if !packaged {
+        unsafe {
+            let _ = windows::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID(
+                windows::core::w!("app.winzal"),
+            );
+        }
+    }
+
     let shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::Space);
     let presentation = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyP);
     let silent = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyS);
