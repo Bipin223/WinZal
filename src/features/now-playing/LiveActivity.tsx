@@ -268,7 +268,7 @@ function LyricLine({
   const nextSize = Math.max(8, size - 3);
   return (
       <div className="relative z-10 flex min-w-0 max-w-full flex-col items-center justify-center">
-        <div className="w-full overflow-hidden py-[1px]">
+        <div className="w-full py-[2px]" style={{ overflowX: "clip", overflowY: "visible" }}>
           <LyricText
             className="text-label"
             resetKey={`${index}-${animation}-${inline}-${size}-${weight}`}
@@ -360,8 +360,9 @@ function LyricText({
       ref={box}
       data-fade-text
       className={`block max-w-full ${className}`}
-      // The text bay clips, not this inner box: that lets the 150 px spotlight
-      // spill past the word while the marquee still stops at the bay edge.
+      // The text bay clips horizontally only, not this inner box: the marquee
+      // still stops at the bay edge, while Devanagari matras can spill above
+      // and below without being cut.
       style={style}
     >
       <motion.span
