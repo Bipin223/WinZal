@@ -141,6 +141,7 @@ function IslandNotification({ item }: { item: AppNotification }) {
           <div className="min-w-0 flex-1">
             <div className="truncate text-[9px] font-semibold tracking-[0.16em] text-white/45 uppercase">{item.app}</div>
             <div className="mt-0.5 truncate text-[13.5px] leading-[17px] font-semibold text-white">{item.title}</div>
+            <div className="truncate text-[10.5px] leading-[13px] text-white/55">{item.body}</div>
           </div>
           <span className="self-start pt-4 text-[10px] text-white/35">now</span>
         </motion.div>
