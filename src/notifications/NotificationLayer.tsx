@@ -77,6 +77,7 @@ export function NotificationLayer() {
 
 function IslandNotification({ item }: { item: AppNotification }) {
   const dragged = useRef(false);
+  const height = item.body ? 98 : 86;
 
   return (
     <div className="pointer-events-none fixed top-0 left-1/2 z-[120] -translate-x-1/2 pt-[2px]">
@@ -84,7 +85,7 @@ function IslandNotification({ item }: { item: AppNotification }) {
         data-notification-hit
         className="pointer-events-auto relative overflow-hidden rounded-full border border-white/15 bg-white/[0.07] shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_24px_60px_-20px_rgb(0_0_0/0.9),0_2px_10px_rgb(0_0_0/0.45)] backdrop-blur-2xl backdrop-saturate-150"
         initial={{ width: 124, height: 24, borderRadius: 15, opacity: 0 }}
-        animate={{ width: 352, height: 86, borderRadius: 43, opacity: 1 }}
+        animate={{ width: 352, height, borderRadius: height / 2, opacity: 1 }}
         exit={{ width: 124, height: 24, borderRadius: 15, opacity: 0, transition: springs.close }}
         transition={springs.open}
         drag
@@ -141,7 +142,9 @@ function IslandNotification({ item }: { item: AppNotification }) {
           <div className="min-w-0 flex-1">
             <div className="truncate text-[9px] font-semibold tracking-[0.16em] text-white/45 uppercase">{item.app}</div>
             <div className="mt-0.5 truncate text-[13.5px] leading-[17px] font-semibold text-white">{item.title}</div>
-            <div className="truncate text-[10.5px] leading-[13px] text-white/55">{item.body}</div>
+            {item.body && (
+              <div className="line-clamp-2 text-[10.5px] leading-[13px] text-white/55">{item.body}</div>
+            )}
           </div>
           <span className="self-start pt-4 text-[10px] text-white/35">now</span>
         </motion.div>
