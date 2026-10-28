@@ -85,7 +85,7 @@ function IslandNotification({ item }: { item: AppNotification }) {
         data-notification-hit
         className="pointer-events-auto relative overflow-hidden rounded-full border border-white/15 bg-white/[0.07] shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_24px_60px_-20px_rgb(0_0_0/0.9),0_2px_10px_rgb(0_0_0/0.45)] backdrop-blur-2xl backdrop-saturate-150"
         initial={{ width: 124, height: 24, borderRadius: 15, opacity: 0 }}
-        animate={{ width: 288, height, borderRadius: height / 2, opacity: 1 }}
+        animate={{ width: 336, height, borderRadius: height / 2, opacity: 1 }}
         exit={{ width: 124, height: 24, borderRadius: 15, opacity: 0, transition: springs.close }}
         transition={{ type: "spring", visualDuration: 0.38, bounce: 0 }}
         drag
@@ -129,7 +129,8 @@ function IslandNotification({ item }: { item: AppNotification }) {
         <span aria-hidden className="pointer-events-none absolute inset-0 bg-black/55" />
         <span aria-hidden className="pointer-events-none absolute inset-x-10 top-0 h-px bg-white/30" />
         <motion.div
-          className="relative flex h-full items-center gap-3 px-4"
+          className="relative flex h-full items-center gap-2.5 px-3"
+          style={{ minWidth: 334 }}
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0, transition: { ...content.enter, delay: 0.06 } }}
         >
