@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.7.11",
+    "date": "2026-10-29",
+    "items": [
+      {
+        "de": "Klick auf die geöffnete Notch schließt das angeheftete Panel, die Notch bleibt offen; ein Klick in das Panel selbst lässt es offen, außerhalb schließt beides",
+        "en": "Clicking the expanded notch closes the attached panel while keeping the notch open; clicking inside the panel leaves it open, outside closes both"
+      }
+    ]
+  },
+  {
     "version": "1.7.10",
     "date": "2026-10-28",
     "items": [

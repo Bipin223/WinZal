@@ -288,7 +288,10 @@ export function Notch() {
       if (target instanceof Element && target.closest("[data-flyout-toggle]")) return;
       if (inNotch) {
         if (target instanceof Element && target.closest("[data-edge-drag]")) return;
-        // Clicking inside the expanded notch leaves an attached panel open.
+        // Clicking the expanded notch closes the attached panel but keeps the
+        // notch open. The panel itself is excluded above, so clicking inside it
+        // never closes it.
+        if (flyout.get().kind !== null) closeFlyout();
         return;
       }
       if (flyout.get().kind !== null) closeFlyout();
