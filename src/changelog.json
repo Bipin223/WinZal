@@ -1,5 +1,32 @@
 [
   {
+    "version": "1.7.12",
+    "date": "2026-10-30",
+    "items": [
+      {
+        "en": "Liquid Glass material with Glass intensity, manual opacity and Dynamic adaptation; the music, Discord and timer satellites use the same liquid surface"
+      },
+      {
+        "en": "System volume sits below the app rows as the last row; the mixer header keeps the output picker"
+      },
+      {
+        "en": "Hide the notch from OBS and screen captures; the notch stays usable to you and Ctrl+Alt+H toggles it"
+      },
+      {
+        "en": "Long notifications grow horizontally to fit their text while keeping the compact height"
+      },
+      {
+        "en": "Readable text scrim and shadows when Dynamic adaptation makes the glass very clear"
+      },
+      {
+        "en": "Corners option removed; rounded corners are permanent"
+      },
+      {
+        "en": "Master volume controls the real Windows endpoint; per-app mixer rows stay fully visible"
+      }
+    ]
+  },
+  {
     "version": "1.7.11",
     "date": "2026-10-29",
     "items": [
