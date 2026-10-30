@@ -107,10 +107,11 @@ export function Notch() {
   // Silent mode is the only ghost; game transparency reuses the Glass alpha (0.62).
   const ghostOpacity = silent && status !== "open" ? (appearance.ghostSolid ? 1 : 0.28) : 1;
   const liquidLevel = Math.min(100, Math.max(0, appearance.liquidIntensity)) / 100;
-  // Dynamic mode unlocks the extra-clear low end; off keeps the previous floor.
+  // Dynamic mode adds its brightness shift and readability layer. Manual mode
+  // is pure opacity: 0% is fully clear, 100% is fully solid.
   const liquidBase = appearance.liquidDynamic
     ? 0.04 + 0.76 * Math.pow(liquidLevel, 0.72)
-    : 0.25 + 0.55 * liquidLevel;
+    : liquidLevel;
   const liquidAlpha = appearance.liquidDynamic
     ? Math.min(0.86, Math.max(0.03, liquidBase + (backdropLum - 0.5) * 0.22))
     : liquidBase;

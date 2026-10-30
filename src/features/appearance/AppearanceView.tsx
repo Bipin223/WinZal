@@ -350,7 +350,9 @@ export function AppearanceView({ mode = "appearance", extra }: { mode?: "appeara
             />
           </div>
           <div className="text-caption text-label-3">
-            {t("Adapts the glass and adds contrast when needed.")}
+            {a.liquidDynamic
+              ? t("Adapts the glass and adds contrast when needed.")
+              : t("Manual opacity. 0% is fully clear, 100% fully solid.")}
           </div>
         </Section>
       )}
