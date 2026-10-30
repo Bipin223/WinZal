@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { ArrowCounterClockwise, Plus } from "@phosphor-icons/react";
 import { springs } from "../../design/motion";
 import { settings, updateSettings, type Settings } from "../../settings/store";
-import { Slider, Switch } from "../../ui/controls";
+import { Segmented, Slider, Switch } from "../../ui/controls";
 import { SelectedDot } from "../../ui/SelectedDot";
 import { ColorPickerPanel } from "../../ui/ColorPicker";
 import { t } from "../../i18n";
@@ -48,6 +48,7 @@ const DEFAULTS: Appearance = {
   lyricsInPill: false,
   lyricsLayout: "inline",
   motion: 100,
+  motionStyle: "smooth",
   lyricsTextSize: 12,
   lyricsOffset: 0,
   lyricsTrackOffsets: {},
@@ -69,6 +70,7 @@ const DEFAULTS: Appearance = {
 export function AppearanceView({ mode = "appearance", extra }: { mode?: "appearance" | "notch"; extra?: ReactNode }) {
   const a = settings.use().appearance;
   const display = settings.use().display;
+  const units = settings.use().units;
   const line = display.idleStyle === "line";
   const now = useMinute();
   const previewSeconds = useSecond(a.clockStyle === "split" || a.clockStyle === "scatter");
@@ -236,11 +238,20 @@ export function AppearanceView({ mode = "appearance", extra }: { mode?: "appeara
             </div>
           </Section>
 
-          <Section label={t("Equalization Accent")}>
-            <Swatches value={a.accent} colors={ACCENTS} onChange={(accent) => set({ accent })} />
-          </Section>
-
           <Section label={t("Clock faces")}>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <span className="text-caption font-medium text-label-2">{t("Time format")}</span>
+              <Segmented
+                id="clock-format"
+                size="sm"
+                value={units.clock}
+                onChange={(clock) => updateSettings((p) => ({ units: { ...p.units, clock } }))}
+                options={[
+                  { value: "24", label: t("24 h") },
+                  { value: "12", label: t("12 h") },
+                ]}
+              />
+            </div>
             <div className="mb-2 flex h-20 items-center justify-center rounded-[10px] bg-fill-2 px-2">
               <div className="h-20 w-72 overflow-hidden rounded-[14px] bg-black">
                 <ClockFace style={a.clockStyle} now={now} seconds={previewSeconds} scale={0.43} />
@@ -356,12 +367,8 @@ export function AppearanceView({ mode = "appearance", extra }: { mode?: "appeara
           </div>
         </Section>
       )}
-      <Section label={t("Interaction")}>
-        <ToggleRow
-          label={t("Drag animation")}
-          checked={a.dragAnimation}
-          onChange={(dragAnimation) => set({ dragAnimation })}
-        />
+      <Section label={t("Accent")}>
+        <Swatches value={a.accent} colors={ACCENTS} onChange={(accent) => set({ accent })} />
       </Section>
       {extra}
       <button

@@ -213,11 +213,19 @@ export function Notch() {
   // in the floating island (otherwise the whole lyrics option would do nothing there).
   const lyricsPill = appearance.lyricsInPill && shownLive === "media";
   const pillLive = floating ? (clockWeather && !lyricsPill ? null : shownLive) : shownLive;
+  const prevLive = useRef<string | null>(pillLive);
+  const liveEnded = prevLive.current !== null && !pillLive;
+  useEffect(() => {
+    prevLive.current = pillLive;
+  });
   const clockPill = !chargingView && clockWeather && !pillLive;
   // Measure the real clock row in the parent so date/day/weather toggles and
   // face changes resize the pill immediately, without a store subscription race.
   useLayoutEffect(() => {
-    if (!clockPill || status === "open") return;
+    if (!clockWeather || idleLine || chargingView || status === "open") {
+      setMeasuredClockWidth(0);
+      return;
+    }
     const el = clockRow.current;
     if (!el) {
       setMeasuredClockWidth(0);
@@ -227,11 +235,8 @@ export function Notch() {
     const ro = new ResizeObserver(report);
     ro.observe(el);
     report();
-    return () => {
-      ro.disconnect();
-      setMeasuredClockWidth(0);
-    };
-  }, [clockPill, status]);
+    return () => ro.disconnect();
+  }, [clockWeather, clockPill, chargingView, idleLine, status]);
   // Screen recording gets its own chip at the right end of the closed pill.
   const { recording, since } = useRecording();
   const showRecording = recording && !idleLine && status !== "open";
@@ -340,7 +345,7 @@ export function Notch() {
     appearance.material === "liquid" && appearance.liquidDynamic
       ? Math.max(0, 1 - Math.min(100, appearance.liquidIntensity) / 45) * 0.3
       : 0;
-  const transition = useTransitionFor(status, displayShape, lyricTarget > 0 || callTitleExtra > 0);
+  const transition = useTransitionFor(status, displayShape, lyricTarget > 0 || callTitleExtra > 0, liveEnded);
 
   // Click outside closes (in the browser the fake desktop, in Tauri the window blur).
   const hitRef = useRef<HTMLDivElement>(null);
@@ -512,9 +517,9 @@ export function Notch() {
           scrimLight={surfaceLight}
         >
           <LiveRightInset.Provider value={rightInset}>
-            <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} callExtra={callTitleExtra} widthExtra={lyricsPill ? 0 : appearance.islandWidth} height={lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight} systemWidth={systemWidth} />
+            <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} callExtra={callTitleExtra} widthExtra={lyricsPill ? 0 : appearance.islandWidth} height={lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight} systemWidth={systemWidth} restWidth={displayShape.w} />
           </LiveRightInset.Provider>
-          {!chargingView && clockWeather && !idleLine && status !== "open" && !pillLive && <ClosedClock rowRef={clockRow} />}
+          {!chargingView && clockWeather && !idleLine && status !== "open" && <ClosedClock rowRef={clockRow} visible={!pillLive} />}
           <AnimatePresence>
             {chargingView && <ChargingPulse key="charging" percent={charge.percent} />}
           </AnimatePresence>
@@ -654,7 +659,7 @@ function ChargingPulse({ percent }: { percent: number }) {
 }
 
 /** Windows-island style: the selected clock face in the floating closed pill. */
-function ClosedClock({ rowRef }: { rowRef: RefObject<HTMLDivElement | null> }) {
+function ClosedClock({ rowRef, visible = true }: { rowRef: RefObject<HTMLDivElement | null>; visible?: boolean }) {
   const now = useMinute();
   const appearance = settings.use().appearance;
   const size = appearance.clockClosedSize;
@@ -668,7 +673,10 @@ function ClosedClock({ rowRef }: { rowRef: RefObject<HTMLDivElement | null> }) {
   // Stacked face keeps the side text centered against the block.
   const baseline = appearance.clockStyle !== "stacked";
   return (
-    <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-1">
+    <div
+      aria-hidden={!visible}
+      className={`pointer-events-none absolute inset-0 flex items-center justify-center px-1 ${visible ? "transition-opacity duration-300" : "opacity-0"}`}
+    >
       <div
         ref={rowRef}
         className={`flex w-max shrink-0 ${baseline ? "items-baseline" : "items-center"} gap-2 whitespace-nowrap`}
@@ -858,15 +866,22 @@ function shapeFor(status: NotchStatus, live: string | null, size: { w: number; h
 }
 
 /** Picks the spring for the transition (open ≠ close ≠ morph). */
-function useTransitionFor(status: NotchStatus, shape: NotchGeometry, smooth = false): Transition {
+function useTransitionFor(status: NotchStatus, shape: NotchGeometry, smooth = false, relax = false): Transition {
   const prev = useRef(status);
   const key = `${shape.w}x${shape.h}`;
   const prevKey = useRef(key);
+  const prevW = useRef(shape.w);
 
   let t: Transition;
   if (status === "open") t = prev.current === "open" ? springs.morph : springs.open;
   else if (status === "peek") t = springs.peek;
-  else t = prev.current === "open" ? springs.close : smooth ? springs.lyricWidth : springs.morph;
+  else t = prev.current === "open"
+    ? springs.close
+    : smooth
+      ? springs.lyricWidth
+      : relax && shape.w < prevW.current
+        ? springs.relax
+        : springs.morph;
 
   // Only switch when the shape actually changes, otherwise the running spring continues.
   const stable = useRef(t);
@@ -875,6 +890,7 @@ function useTransitionFor(status: NotchStatus, shape: NotchGeometry, smooth = fa
   useEffect(() => {
     prev.current = status;
     prevKey.current = key;
+    prevW.current = shape.w;
   });
 
   return stable.current;

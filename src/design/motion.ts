@@ -19,10 +19,19 @@ export function setMotionScale(value: number) {
   motionScale = Math.max(0, Math.min(1, value));
 }
 
+/** Global animation personality. Smooth is the original timing. */
+export type MotionStyle = "snappy" | "smooth" | "relaxed";
+let motionStyle: MotionStyle = "smooth";
+export function setMotionStyle(value: MotionStyle) {
+  motionStyle = value;
+}
+
 function spring(visualDuration: number, bounce: number): Transition {
   const factor = 0.25 + 0.75 * motionScale;
   if (reduceMotion || motionScale === 0) return { type: "spring", visualDuration: 0.001, bounce: 0 };
-  return { type: "spring", visualDuration: visualDuration * factor * slow, bounce };
+  const personality = motionStyle === "snappy" ? 0.78 : motionStyle === "relaxed" ? 1.35 : 1;
+  const bounceScale = motionStyle === "relaxed" ? 0.7 : 1;
+  return { type: "spring", visualDuration: visualDuration * factor * personality * slow, bounce: bounce * bounceScale };
 }
 
 export const springs = {
@@ -41,6 +50,10 @@ export const springs = {
   /** Shape change while open (tab switch, live activity). */
   get morph() {
     return spring(0.36, 0.14);
+  },
+  /** A live activity ending: long, calm, no bounce. */
+  get relax() {
+    return spring(0.65, 0);
   },
   /** Small elements inside (tab pill, toggles). */
   get snappy() {

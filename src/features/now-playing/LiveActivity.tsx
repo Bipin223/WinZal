@@ -61,7 +61,7 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
       className="absolute inset-0 flex items-center gap-2 px-[9px]"
       initial={{ opacity: 0, filter: "blur(4px)" }}
       animate={{ opacity: 1, filter: "blur(0px)", transition: content.enter }}
-      exit={{ opacity: 0, filter: "blur(4px)", transition: content.exit }}
+      exit={{ opacity: 0, filter: "blur(4px)", transition: { duration: 0.3, ease: [0.23, 1, 0.32, 1] } }}
     >
       {appearance.lyricsVisualizer && (
         <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>

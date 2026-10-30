@@ -40,8 +40,13 @@ pub struct DisplayState(Mutex<Config>);
 pub struct NotifyState(AtomicBool);
 
 #[tauri::command]
-pub fn notification_visible(active: bool, state: State<'_, NotifyState>) {
+pub fn notification_visible(active: bool, state: State<'_, NotifyState>, window: tauri::WebviewWindow) {
     state.0.store(active, Ordering::Relaxed);
+    if active {
+        // Wake the WebView immediately even if a fullscreen app hid the notch.
+        let _ = window.show();
+        let _ = window.set_always_on_top(true);
+    }
 }
 
 #[derive(Clone, Default, Deserialize)]
@@ -200,6 +205,11 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
                     // Let the click-through state be set again after show() (the poll caches the old one).
                     app.state::<HitState>().refresh();
                 }
+            }
+            // A notification must stay above fullscreen media, not just the
+            // currently focused window. Reapply while it is visible.
+            if notify && !hidden {
+                let _ = window.set_always_on_top(true);
             }
             // New foreground window: reapply "on top" in case it covered us.
             if !hidden && foreground != last_foreground {

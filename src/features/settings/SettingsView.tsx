@@ -4,6 +4,7 @@ import {
   ArrowClockwise,
   ArrowsInLineHorizontal,
   DotsSixVertical,
+  GameController,
   Keyboard,
   Lightning,
   Lightbulb,
@@ -11,6 +12,7 @@ import {
   MusicNotesSimple,
   Palette,
   Play,
+  ShieldCheck,
   SlidersHorizontal,
   SquaresFour,
   Stop,
@@ -53,7 +55,7 @@ import { privacy, togglePresentation, usePresenting } from "../privacy/store";
 import { previewDiscord, previewIsland, previewTimer } from "../../notifications/store";
 import { locale, t, tBackend } from "../../i18n";
 
-type PageId = "general" | "notch" | "appearance" | "performance" | "music" | "tools" | "timer" | "ai" | "discord" | "tips" | "about";
+type PageId = "general" | "notch" | "appearance" | "performance" | "music" | "gaming" | "privacy" | "tools" | "timer" | "ai" | "discord" | "tips" | "about";
 
 const pages: { id: PageId; label: string; icon: Icon }[] = [
   { id: "general", label: "General", icon: SlidersHorizontal },
@@ -61,6 +63,8 @@ const pages: { id: PageId; label: string; icon: Icon }[] = [
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "performance", label: "Performance", icon: Lightning },
   { id: "music", label: "Music", icon: MusicNotesSimple },
+  { id: "gaming", label: "Gaming", icon: GameController },
+  { id: "privacy", label: "Privacy", icon: ShieldCheck },
   { id: "tools", label: "Tools", icon: SquaresFour },
   { id: "timer", label: "Timer", icon: Timer },
   { id: "ai", label: "AI", icon: ChatBubbleIcon as unknown as Icon },
@@ -72,8 +76,9 @@ const pages: { id: PageId; label: string; icon: Icon }[] = [
 /** Deep links from other tools (`navigate("settings", "<section>")`) Ã¢â€ â€™ page holding that section. */
 const sectionPage: Record<string, PageId> = {
   weather: "general",
-  updates: "general",
-  display: "appearance",
+  updates: "about",
+  display: "notch",
+  behavior: "notch",
   appearance: "appearance",
   notch: "notch",
   performance: "performance",
@@ -81,7 +86,9 @@ const sectionPage: Record<string, PageId> = {
   fps: "performance",
   music: "music",
   lyrics: "music",
-  presentation: "appearance",
+  gaming: "gaming",
+  presentation: "privacy",
+  privacy: "privacy",
   alarm: "timer",
   ask: "ai",
   discord: "discord",
@@ -126,7 +133,7 @@ export function SettingsView() {
 
   return (
     <div className="flex h-full gap-3 px-4 pt-1 pb-3">
-      <nav className="flex w-[136px] shrink-0 flex-col gap-0.5">
+      <nav className="flex w-[136px] shrink-0 flex-col gap-0.5 overflow-y-auto pr-0.5 [scrollbar-width:none]">
         {pages.map((p) => {
           const active = p.id === page;
           return (
@@ -161,29 +168,25 @@ export function SettingsView() {
                 <General />
                 <NotificationsDemo />
                 <Weather />
-                <Updates />
               </>
             )}
-            {page === "notch" && <AppearanceView mode="notch" />}
-            {page === "appearance" && (
-              <AppearanceView
-                mode="appearance"
-                extra={
-                  <>
-                    <Display />
-                    <Typography />
-                    <Presentation />
-                  </>
-                }
-              />
-            )}
-            {page === "performance" && (
+            {page === "notch" && (
               <>
-                <Performance />
-                <GamingSettings />
+                <NotchWindow />
+                <NotchBehavior />
+                <AppearanceView mode="notch" />
               </>
             )}
+            {page === "appearance" && <AppearanceView mode="appearance" extra={<Typography />} />}
+            {page === "performance" && <Performance />}
             {page === "music" && <MusicSettings />}
+            {page === "gaming" && <GamingSettings />}
+            {page === "privacy" && (
+              <>
+                <Presentation />
+                <Privacy />
+              </>
+            )}
             {page === "tools" && (
               <>
                 <Tools />
@@ -198,7 +201,12 @@ export function SettingsView() {
             )}
             {page === "discord" && <Discord />}
             {page === "tips" && <TipsView />}
-            {page === "about" && <AboutView />}
+            {page === "about" && (
+              <>
+                <AboutView />
+                <Updates />
+              </>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -454,22 +462,11 @@ function General() {
   }, []);
 
   return (
-    <Group>
-      <Row label={t("Clock")}>
-        <Segmented
-          id="clock-format"
-          size="sm"
-          value={s.units.clock}
-          onChange={(clock) => updateSettings((p) => ({ units: { ...p.units, clock } }))}
-          options={[
-            { value: "24", label: t("24 h") },
-            { value: "12", label: t("12 h") },
-          ]}
-        />
-      </Row>
-      <Row label={t("Open")}>
-        <Segmented
-          id="open-mode"
+    <>
+      <Group title={t("Opening")}>
+        <Row label={t("Open")}>
+          <Segmented
+            id="open-mode"
           size="sm"
           value={s.openMode}
           onChange={(openMode) => updateSettings({ openMode })}
@@ -498,8 +495,10 @@ function General() {
           </motion.div>
         )}
       </AnimatePresence>
-      <Row label={t("Start with Windows")}>
-        {auto !== null && (
+      </Group>
+      <Group title={t("Startup")}>
+        <Row label={t("Start with Windows")}>
+          {auto !== null && (
           <Switch
             label={t("Start with Windows")}
             checked={auto}
@@ -519,18 +518,15 @@ function General() {
         </span>
       </Row>
 
-    </Group>
+      </Group>
+    </>
   );
 }
 
-/** Where and when the notch shows up. */
-function Display() {
+/** Where the notch shows up. */
+function NotchWindow() {
   const s = settings.use();
   const d = s.display;
-  const focus = focusMode.use();
-  useEffect(() => {
-    void refreshFocusMode();
-  }, []);
   const [monitors, setMonitors] = useState<MonitorInfo[]>([]);
   useEffect(() => {
     void display.monitors().then(setMonitors);
@@ -552,7 +548,7 @@ function Display() {
   const label = (m: MonitorInfo, i: number) => `${m.primary ? t("Main display") : t("Display {n}", { n: i + 1 })} · ${m.width}×${m.height}`;
 
   return (
-    <Group title={t("Display")} id="settings-display">
+    <Group title={t("Window")} id="settings-display">
       <Row label={t("Visibility")}>
         <Segmented
           id="display-visibility"
@@ -584,8 +580,18 @@ function Display() {
           </Button>
         </Row>
       )}
+    </Group>
+  );
+}
+
+/** Closed-notch behaviour. */
+function NotchBehavior() {
+  const s = settings.use();
+  const silent = silentMode.use();
+  return (
+    <Group title={t("Behavior")} id="settings-behavior">
       <Row label={t("Silent mode")}>
-        <Switch label={t("Silent mode")} checked={silentMode.use()} onChange={setSilentMode} />
+        <Switch label={t("Silent mode")} checked={silent} onChange={setSilentMode} />
       </Row>
       <Row label={t("Ghost style")}>
         <Segmented
@@ -603,6 +609,26 @@ function Display() {
           ]}
         />
       </Row>
+      <Row label={t("Drag animation")}>
+        <Switch
+          label={t("Drag animation")}
+          checked={s.appearance.dragAnimation}
+          onChange={(dragAnimation) => updateSettings((cur) => ({ appearance: { ...cur.appearance, dragAnimation } }))}
+        />
+      </Row>
+    </Group>
+  );
+}
+
+/** Privacy indicators and capture behaviour. */
+function Privacy() {
+  const s = settings.use();
+  const focus = focusMode.use();
+  useEffect(() => {
+    void refreshFocusMode();
+  }, []);
+  return (
+    <Group title={t("Privacy")} id="settings-privacy">
       <Row label={t("Do not disturb")}>
         <Switch label={t("Do not disturb")} checked={focus} onChange={setFocusMode} />
       </Row>
@@ -853,6 +879,19 @@ function Performance() {
   return (
     <>
       <Group title={t("Motion")} id="settings-motion">
+        <Row label={t("Animation")}>
+          <Segmented
+            id="motion-style"
+            size="sm"
+            value={a.motionStyle}
+            onChange={(motionStyle) => updateSettings({ appearance: { ...a, motionStyle: motionStyle as Settings["appearance"]["motionStyle"] } })}
+            options={[
+              { value: "snappy", label: t("Snappy") },
+              { value: "smooth", label: t("Smooth") },
+              { value: "relaxed", label: t("Relaxed") },
+            ]}
+          />
+        </Row>
         <div className="px-3 pt-2 pb-3">
           <div
             className="flex h-16 items-center justify-center rounded-[10px] bg-fill-2"
@@ -870,7 +909,14 @@ function Performance() {
               transition={
                 !hoverMotion || a.motion === 0
                   ? { duration: 0 }
-                  : { duration: 2.4 - (a.motion / 100) * 1.2, repeat: Infinity, repeatType: "reverse", ease: [0.23, 1, 0.32, 1] }
+                  : {
+                      duration:
+                        (2.4 - (a.motion / 100) * 1.2) *
+                        (a.motionStyle === "snappy" ? 0.78 : a.motionStyle === "relaxed" ? 1.35 : 1),
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      ease: [0.23, 1, 0.32, 1],
+                    }
               }
               style={{ borderRadius: 999 }}
             />

@@ -1,4 +1,5 @@
 ﻿import { createStore } from "../lib/store";
+import type { MotionStyle } from "../design/motion";
 import type { AlarmDuration, AlarmSound } from "../lib/sound";
 import { isClockStyle, type ClockStyle } from "../notch/clockStyles";
 
@@ -145,6 +146,8 @@ export interface Settings {
     lyricsLayout: "inline" | "lines";
     /** Global motion intensity, 0 = off, 100 = full. */
     motion: number;
+    /** Global animation personality; smooth matches the original timing. */
+    motionStyle: MotionStyle;
     /** Continuous lyric font size in px; the pill and visualizer grow with it. */
     lyricsTextSize: number;
     /** Global seconds added to lyric timestamps (+ = lines appear later). */
@@ -274,6 +277,7 @@ const defaults: Settings = {
     lyricsInPill: false,
     lyricsLayout: "inline",
     motion: 100,
+    motionStyle: "smooth",
     lyricsTextSize: 12,
     lyricsOffset: 0,
     lyricsTrackOffsets: {},
@@ -289,12 +293,12 @@ const defaults: Settings = {
     lyricsGlowStyle: "aurora",
     lyricsAnimation: "word",
     gpuAcceleration: false,
-    gpuPreference: "dgpu",
+    gpuPreference: "igpu",
   },
   discord: { clientId: "", presence: true, appName: "Bipin Rizal's WinZal app", statusLine: "title" },
   alarm: { sound: "chime", volume: 0.7, duration: 5 },
   units: regionUnits(),
-  presentation: { manual: false, auto: true, hideCapture: true },
+  presentation: { manual: false, auto: true, hideCapture: false },
   updates: { auto: true, install: true },
 };
 
@@ -448,6 +452,10 @@ settings.set((s) => {
       motion: (() => {
         const stored = (s.appearance as { motion?: number } | undefined)?.motion;
         return typeof stored === "number" ? Math.min(100, Math.max(0, stored)) : 100;
+      })(),
+      motionStyle: (() => {
+        const stored = (s.appearance as { motionStyle?: string } | undefined)?.motionStyle;
+        return stored === "snappy" || stored === "relaxed" ? stored : "smooth";
       })(),
       // The experimental RGB accent was removed; fall back to auto.
       accent: s.appearance?.accent === "rgb" ? defaults.appearance.accent : s.appearance?.accent ?? defaults.appearance.accent,

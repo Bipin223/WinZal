@@ -10,7 +10,7 @@ import { startDropListener } from "./platform/drop";
 import { systemControls, type PowerMode } from "./platform/services";
 import { clipboard } from "./platform/clipboard";
 import { settings } from "./settings/store";
-import { setMotionScale } from "./design/motion";
+import { setMotionScale, setMotionStyle } from "./design/motion";
 import { applyTypography } from "./features/appearance/typography";
 import { uiFontFamily } from "./ui/font";
 import { applyDisplay } from "./notch/drag";
@@ -169,6 +169,7 @@ function Root() {
   const s = settings.use();
   const motion = s.appearance.motion;
   setMotionScale(motion / 100);
+  setMotionStyle(s.appearance.motionStyle);
   const uiFamily = uiFontFamily(s.appearance.uiFont);
   useLayoutEffect(() => applyTypography(s.typography), [s.typography]);
   useLayoutEffect(() => {
