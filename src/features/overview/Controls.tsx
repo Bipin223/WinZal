@@ -258,8 +258,8 @@ function FocusTile() {
 
   return (
     <ToggleTile
-      label={t("Nicht stören")}
-      state={active ? t("An") : t("Aus")}
+      label={t("Do not disturb")}
+      state={active ? t("On") : t("Off")}
       active={active}
       onIcon={Moon}
       offIcon={Moon}
@@ -267,7 +267,7 @@ function FocusTile() {
       bareIcon
       iconSize={22}
       onClick={() => setFocusMode(!active)}
-      title={t("Nicht stören")}
+      title={t("Do not disturb")}
     />
   );
 }
@@ -279,12 +279,12 @@ function FocusTile() {
 function WifiTile() {
   const { net, busy, error } = useWifiAmbient();
   const enabled = !!(net?.enabled ?? net?.connected);
-  const state = busy ? "." : enabled ? (net?.connected ? net.name || t("Verbunden") : t("An")) : t("Aus");
+  const state = busy ? "." : enabled ? (net?.connected ? net.name || t("Connected") : t("On")) : t("Off");
 
   return (
     <div className="relative min-w-0">
       <ToggleTile
-        label={t("WLAN")}
+        label={t("Wi-Fi")}
         state={state}
         active={enabled}
         onIcon={WifiOnIcon}
@@ -310,7 +310,7 @@ function WifiTile() {
 function BluetoothTile() {
   const { bt, busy, error } = useBluetoothAmbient();
   const active = !!bt?.on;
-  const state = busy ? "." : bt?.available ? (active ? t("An") : t("Aus")) : t("Einstellungen");
+  const state = busy ? "." : bt?.available ? (active ? t("On") : t("Off")) : t("Settings");
 
   return (
     <div className="relative min-w-0">
@@ -367,13 +367,13 @@ function PowerTile() {
   const look = (m: PowerMode) => {
     switch (m) {
       case "saver":
-        return { label: t("Sparmodus"), level: 0.28, tone: "text-[#0a84ff]", color: "#0a84ff", dot: "#0a84ff" };
+        return { label: t("Saver"), level: 0.28, tone: "text-[#0a84ff]", color: "#0a84ff", dot: "#0a84ff" };
       case "max":
         return { label: t("Max"), level: 0.92, tone: "text-[#ff453a]", color: "#ff453a", dot: "#ff453a" };
       case "custom":
         return { label: t("Custom"), level: 0.8, tone: "text-[#bf5af2]", color: "#bf5af2", dot: "#bf5af2" };
       default:
-        return { label: t("Ausgeglichen"), level: 0.6, tone: "text-label", color: "var(--color-label)", dot: "var(--color-label)" };
+        return { label: t("Balanced"), level: 0.6, tone: "text-label", color: "var(--color-label)", dot: "var(--color-label)" };
     }
   };
   const current = look(mode);
@@ -487,7 +487,7 @@ function GlimTile() {
 
   const active = !!glim?.on;
   const supported = !!glim?.supported;
-  const state = supported ? (active ? t("An") : t("Aus")) : t("Nicht verfügbar");
+  const state = supported ? (active ? t("On") : t("Off")) : t("Not available");
 
   return (
     <ToggleTile
@@ -517,7 +517,7 @@ function GlimTile() {
         e.preventDefault();
         void systemControls.openUri("ms-settings:nightlight");
       }}
-      title={t("Glim: warmes Bildschirmlicht")}
+      title={t("Glim: warm screen light")}
     />
   );
 }
@@ -548,7 +548,7 @@ function VolumeTile() {
   return (
     <div className="flex h-10 min-w-0 items-center gap-1.5 rounded-[12px] bg-fill-1 px-1.5">
       <button
-        aria-label={vol?.muted ? t("Stummschaltung aufheben") : t("Stumm")}
+        aria-label={vol?.muted ? t("Unmute") : t("Mute")}
         disabled={!vol}
         onClick={() => vol && void systemControls.setVolume({ muted: !vol.muted }).then(setVol)}
         className={`pressable flex size-6 shrink-0 items-center justify-center rounded-full ${
@@ -561,7 +561,7 @@ function VolumeTile() {
         ref={track}
         role="slider"
         tabIndex={0}
-        aria-label={t("Lautstärke")}
+        aria-label={t("Volume")}
         aria-valuenow={Math.round(level * 100)}
         aria-valuemin={0}
         aria-valuemax={100}
@@ -648,7 +648,7 @@ function BrightnessTile() {
         ref={track}
         role="slider"
         tabIndex={supported ? 0 : -1}
-        aria-label={t("Helligkeit")}
+        aria-label={t("Brightness")}
         aria-valuenow={Math.round(level * 100)}
         aria-valuemin={0}
         aria-valuemax={100}
@@ -721,10 +721,10 @@ export function SystemRow() {
 type PowerAction = "lock" | "sleep" | "restart" | "shutdown";
 
 const POWER_ACTIONS: { id: PowerAction; label: string; icon: Icon; weight: IconWeight }[] = [
-  { id: "lock", label: "Sperren", icon: Lock, weight: "fill" },
-  { id: "sleep", label: "Schlafen", icon: Moon, weight: "fill" },
-  { id: "restart", label: "Neu starten", icon: ArrowClockwise, weight: "bold" },
-  { id: "shutdown", label: "Herunterfahren", icon: Power, weight: "bold" },
+  { id: "lock", label: "Lock", icon: Lock, weight: "fill" },
+  { id: "sleep", label: "Sleep", icon: Moon, weight: "fill" },
+  { id: "restart", label: "Restart", icon: ArrowClockwise, weight: "bold" },
+  { id: "shutdown", label: "Shut down", icon: Power, weight: "bold" },
 ];
 
 /** Minimal, icon-only power actions for the header's centre. */
@@ -765,7 +765,7 @@ export function PowerActions() {
             className={`relative flex size-6 items-center justify-center rounded-full ${
               armed ? "text-red" : "text-label-2 hover:text-label"
             }`}
-            title={armed ? t("Sicher?") : t(label)}
+            title={armed ? t("Sure?") : t(label)}
             aria-label={t(label)}
           >
             <Icon size={14} weight={weight} />

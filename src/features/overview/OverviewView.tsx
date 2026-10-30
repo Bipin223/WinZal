@@ -39,7 +39,7 @@ export function OverviewView() {
       <HeaderActions>
         <BatteryIndicator />
         <HeaderButton
-          label={presenting ? t("Präsentationsmodus beenden") : t("Präsentationsmodus")}
+          label={presenting ? t("End presentation mode") : t("Presentation mode")}
           active={presenting}
           onClick={togglePresentation}
         >
@@ -107,7 +107,7 @@ function Header() {
           <PowerActions />
         </div>
       </div>
-      <button onClick={() => navigate("weather")} className="pressable flex flex-col items-end text-right" title={t("Wetter öffnen")}>
+      <button onClick={() => navigate("weather")} className="pressable flex flex-col items-end text-right" title={t("Open weather")}>
         <AnimatePresence mode="popLayout" initial={false}>
           {weather && forecast && forecast !== "error" ? (
             <motion.div
@@ -130,7 +130,7 @@ function Header() {
           )}
         </AnimatePresence>
         <div className="mt-1 max-w-[220px] truncate text-footnote text-label-3">
-          {place ? `${place.name}${weather ? ` · ${weather.text}` : ""}` : t("Ort wird erkannt …")}
+          {place ? `${place.name}${weather ? ` · ${weather.text}` : ""}` : t("Detecting location …")}
         </div>
       </button>
     </div>
@@ -151,8 +151,8 @@ function Activity() {
       key: "timer",
       tab: "timer",
       icon: <Timer size={18} weight="bold" className={tm.mode === "focus" ? "text-orange" : "text-green"} />,
-      title: tm.finished ? t(tm.mode === "focus" ? "Fokus abgelaufen" : "Pause abgelaufen") : t(tm.mode === "focus" ? "Fokus" : "Pause"),
-      detail: tm.finished ? t("Zum Schließen öffnen") : t("noch {time}", { time: formatClock(remaining) }),
+      title: tm.finished ? t(tm.mode === "focus" ? "Focus finished" : "Break finished") : t(tm.mode === "focus" ? "Focus" : "Pause"),
+      detail: tm.finished ? t("Open to dismiss") : t("{time} left", { time: formatClock(remaining) }),
     };
   } else if (call) {
     item = {
@@ -160,7 +160,7 @@ function Activity() {
       tab: "discord",
       icon: <DiscordLogo size={18} weight="fill" className="text-label" />,
       title: call.channelName,
-      detail: [call.guildName, t(call.members.length === 1 ? "{n} Person" : "{n} Personen", { n: call.members.length })].filter(Boolean).join(" · "),
+      detail: [call.guildName, t(call.members.length === 1 ? "{n} person" : "{n} people", { n: call.members.length })].filter(Boolean).join(" · "),
       trailing: <Equalizer playing={call.members.some((m) => m.speaking)} tint="bg-green" />,
     };
   } else if (np) {
@@ -213,7 +213,7 @@ function Activity() {
             animate={{ opacity: 1, transition: content.enter }}
             exit={{ opacity: 0, transition: content.exit }}
           >
-            {t("Gerade läuft nichts")}
+            {t("Nothing playing")}
           </motion.div>
         )}
       </AnimatePresence>

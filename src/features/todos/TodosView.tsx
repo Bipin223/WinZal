@@ -45,15 +45,15 @@ export function TodosView() {
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder={t("Neue Aufgabe")}
+          placeholder={t("New task")}
           className="min-w-0 flex-1 bg-transparent text-body text-label outline-none placeholder:text-label-4"
         />
-        <span className="tabular text-caption text-label-3">{t("{n} offen", { n: open })}</span>
+        <span className="tabular text-caption text-label-3">{t("{n} open", { n: open })}</span>
       </form>
 
       <div className="-mx-1 mt-1.5 flex-1 overflow-y-auto px-1 [scrollbar-width:none]">
         {items.length === 0 && (
-          <div className="flex h-full items-center justify-center text-body text-label-3">{t("Alles erledigt")}</div>
+          <div className="flex h-full items-center justify-center text-body text-label-3">{t("All done")}</div>
         )}
         <AnimatePresence initial={false}>
           {sorted.map((todo) => (
@@ -67,7 +67,7 @@ export function TodosView() {
               className="group flex items-center gap-2.5 overflow-hidden rounded-[10px] px-2 hover:bg-fill-1"
             >
               <button
-                aria-label={todo.done ? t("Als offen markieren") : t("Erledigt")}
+                aria-label={todo.done ? t("Mark as open") : t("Done")}
                 onClick={() => patch(todo.id, { done: !todo.done })}
                 className={`pressable flex size-[18px] shrink-0 items-center justify-center rounded-full border-[1.5px] ${
                   todo.done ? "border-green bg-green text-black" : "border-label-3"
@@ -95,7 +95,7 @@ export function TodosView() {
                 {todo.text}
               </span>
               <button
-                aria-label={t("Markieren")}
+                aria-label={t("Star")}
                 onClick={() => patch(todo.id, { starred: !todo.starred })}
                 className={`pressable flex size-6 items-center justify-center ${
                   todo.starred ? "text-yellow" : "text-label-4 opacity-0 group-hover:opacity-100"
@@ -104,7 +104,7 @@ export function TodosView() {
                 <Star size={14} weight={todo.starred ? "fill" : "bold"} />
               </button>
               <button
-                aria-label={t("Löschen")}
+                aria-label={t("Delete")}
                 onClick={() => remove(todo.id)}
                 className="pressable flex size-6 items-center justify-center text-label-4 opacity-0 group-hover:opacity-100 hover:text-label-2"
               >

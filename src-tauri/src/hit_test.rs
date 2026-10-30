@@ -108,6 +108,9 @@ const POLL: Duration = Duration::from_millis(16);
 /// the next poll near the notch is fast again.
 const POLL_FAR: Duration = Duration::from_millis(50);
 const FAR: f64 = 160.0;
+/// Leaving ghost mode: this many clicks on the notch, each at most `CLICK_GAP` apart.
+const EXIT_CLICKS: u32 = 3;
+const CLICK_GAP: Duration = Duration::from_millis(450);
 
 pub fn spawn(app: AppHandle, window: WebviewWindow) {
     thread::spawn(move || {
@@ -129,12 +132,6 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
             let state = app.state::<HitState>();
             if state.refresh.swap(false, Ordering::Relaxed) {
                 last_ignore = None;
-            }
-            // The elevated helper can see clicks while an elevated game owns the
-            // mouse. It publishes a one-shot wake flag; consume it for a ghosted notch.
-            if state.silent.load(Ordering::Relaxed) && crate::fps::take_wake() {
-                state.silent.store(false, Ordering::Relaxed);
-                let _ = window.emit("notch://silent-exit", ());
             }
             let (Ok(cursor), Ok(origin), Ok(inner)) = (
                 window.cursor_position(),
@@ -177,33 +174,43 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
             }
             was_down = dragging;
 
-            let inside = if drag_active { rect.grown() } else { rect }.contains(x, y);
-            let mut silent = state.silent.load(Ordering::Relaxed);
-            // Ghost mode is click-through by definition, so use a forgiving wake
-            // zone: near the edges of a wide gaming pill still counts.
-            if silent && rect.grown().contains(x, y) && pressed {
-                let now = Instant::now();
-                clicks = if now.duration_since(last_click) <= Duration::from_millis(1500) { clicks + 1 } else { 1 };
-                last_click = now;
-                if clicks >= 3 {
-                    clicks = 0;
-                    silent = false;
-                    state.silent.store(false, Ordering::Relaxed);
-                    let _ = window.emit("notch://silent-exit", ());
+            // Ghost mode: fully click-through, no hover. Only button edges on
+            // the notch count; three quick clicks exit, like the original
+            // focus/passthrough mode. Nothing else can reopen it.
+            if state.silent.load(Ordering::Relaxed) {
+                if pressed && rect.contains(x, y) {
+                    let now = Instant::now();
+                    clicks = if now.duration_since(last_click) <= CLICK_GAP { clicks + 1 } else { 1 };
+                    last_click = now;
+                    if clicks >= EXIT_CLICKS {
+                        clicks = 0;
+                        state.silent.store(false, Ordering::Relaxed);
+                        let _ = window.emit("notch://silent-exit", ());
+                    }
                 }
-            } else if !silent {
-                clicks = 0;
+                if last_ignore != Some(true) {
+                    let _ = window.set_ignore_cursor_events(true);
+                    last_ignore = Some(true);
+                }
+                if last_inside != Some(false) {
+                    let _ = window.emit("notch://hover", false);
+                    last_inside = Some(false);
+                }
+                continue;
             }
-            let ignore = silent || (!inside && !*state.pinned.lock().unwrap());
+
+            clicks = 0;
+            let inside = if drag_active { rect.grown() } else { rect }.contains(x, y);
+            let ignore = !inside && !*state.pinned.lock().unwrap();
 
             // Only call on change: every call goes through the event loop.
             if last_ignore != Some(ignore) {
                 let _ = window.set_ignore_cursor_events(ignore);
                 last_ignore = Some(ignore);
             }
-            if last_inside != Some(inside && !silent) {
-                let _ = window.emit("notch://hover", inside && !silent);
-                last_inside = Some(inside && !silent);
+            if last_inside != Some(inside) {
+                let _ = window.emit("notch://hover", inside);
+                last_inside = Some(inside);
             }
         }
     });

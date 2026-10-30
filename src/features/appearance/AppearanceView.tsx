@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { ArrowCounterClockwise, Plus } from "@phosphor-icons/react";
 import { springs } from "../../design/motion";
@@ -12,7 +12,6 @@ import { ClockStylePicker } from "../../notch/ClockStylePicker";
 import { formatTimeParts } from "../../lib/format";
 import { useMinute } from "../../lib/useMinute";
 import { useSecond } from "../../lib/useSecond";
-import { DARK_SURFACE, LIGHT_SURFACE, useThemeLight } from "./theme";
 
 type Appearance = Settings["appearance"];
 
@@ -66,31 +65,17 @@ const DEFAULTS: Appearance = {
   gpuPreference: "auto",
 };
 
-function fillWithAlpha(hex: string, alpha: number): string {
-  if (alpha >= 1) return hex;
-  const match = /^#?([0-9a-f]{6})$/i.exec(hex);
-  if (!match) return hex;
-  const n = parseInt(match[1], 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
-}
-
-export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | "notch" }) {
+export function AppearanceView({ mode = "appearance", extra }: { mode?: "appearance" | "notch"; extra?: ReactNode }) {
   const a = settings.use().appearance;
   const display = settings.use().display;
   const line = display.idleStyle === "line";
   const now = useMinute();
   const previewSeconds = useSecond(a.clockStyle === "split" || a.clockStyle === "scatter");
   const previewTime = formatTimeParts(now);
-  const themeLight = useThemeLight();
   const set = (patch: Partial<Appearance>) => updateSettings({ appearance: { ...a, ...patch } });
-
-  const alpha = a.material === "glass" ? 0.62 : a.material === "dark" ? 0.82 : 1;
-  const previewFill = fillWithAlpha(a.theme === "custom" ? a.themeColor : themeLight ? LIGHT_SURFACE : DARK_SURFACE, alpha);
-  const accent = a.accent === "auto" ? "#0a84ff" : a.accent;
 
   return (
     <div className="flex flex-col gap-1.5 pb-2">
-      {mode === "appearance" && <Preview fill={previewFill} accent={accent} corners={a.corners} islandStyle={a.style} />}
       {mode === "notch" && (
         <>
           <Section label={t("Closed pill")}>
@@ -243,18 +228,6 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
             )}
           </Section>
 
-          <Section label={t("Clock accent")}>
-            <ToggleRow
-              label={t("Accent first digit")}
-              checked={a.clockAccentFirstDigit}
-              onChange={(clockAccentFirstDigit) => set({ clockAccentFirstDigit })}
-            />
-            <div className="mt-2">
-              <div className="mb-1 text-caption font-medium text-label-2">{t("Color")}</div>
-              <Swatches value={a.clockAccent} colors={CLOCK_ACCENTS} onChange={(clockAccent) => set({ clockAccent })} />
-            </div>
-          </Section>
-
           <Section label={t("Style")}>
             <div className="grid grid-cols-2 gap-1.5">
               <StyleCard active={a.style === "dynamic"} label={t("Dynamic Island")} onClick={() => set({ style: "dynamic" })} />
@@ -275,6 +248,18 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
             <div className="mb-2">
               <div className="mb-1 text-caption font-medium text-label-2">{t("Clock style")}</div>
               <ClockStylePicker value={a.clockStyle} onChange={(clockStyle) => set({ clockStyle })} />
+            </div>
+            <div className="mb-2 mt-3 border-t border-separator pt-2">
+              <div className="mb-1.5 text-footnote font-medium text-label-2">{t("Clock accent")}</div>
+              <ToggleRow
+                label={t("Accent first digit")}
+                checked={a.clockAccentFirstDigit}
+                onChange={(clockAccentFirstDigit) => set({ clockAccentFirstDigit })}
+              />
+              <div className="mt-2">
+                <div className="mb-1 text-caption font-medium text-label-2">{t("Color")}</div>
+                <Swatches value={a.clockAccent} colors={CLOCK_ACCENTS} onChange={(clockAccent) => set({ clockAccent })} />
+              </div>
             </div>
             {a.clockStyle === "split" && (
               <div className="mb-2">
@@ -314,7 +299,7 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
         <>
       <Section label={t("Theme")}>
         <Choice
-          label={t("Modus")}
+          label={t("Mode")}
           value={a.theme}
           options={[
             ["dark", t("Dark")],
@@ -336,20 +321,20 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
             label={t("Material")}
             value={a.material}
             options={[
-              ["solid", t("Fest")],
-              ["dark", t("Dunkles Glas")],
-              ["glass", t("Glas")],
+              ["solid", t("Solid")],
+              ["dark", t("Dark glass")],
+              ["glass", t("Glass")],
             ]}
             onChange={(material) => set({ material: material as Appearance["material"] })}
           />
         </div>
         <div className="rounded-[12px] bg-fill-1 p-2">
           <Choice
-            label={t("Ecken")}
+            label={t("Corners")}
             value={a.corners}
             options={[
-              ["rounded", t("Rund")],
-              ["squared", t("Eckig")],
+              ["rounded", t("Rounded")],
+              ["squared", t("Squared")],
             ]}
             onChange={(corners) => set({ corners: corners as Appearance["corners"] })}
           />
@@ -362,6 +347,7 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
           onChange={(dragAnimation) => set({ dragAnimation })}
         />
       </Section>
+      {extra}
       <button
         onClick={() =>
           updateSettings({
@@ -407,51 +393,10 @@ export function AppearanceView({ mode = "appearance" }: { mode?: "appearance" | 
         className="pressable flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-[10px] bg-fill-1 text-caption text-label-2 hover:text-label"
       >
         <ArrowCounterClockwise size={12} weight="bold" />
-        {t("Zurücksetzen")}
+        {t("Reset")}
       </button>
         </>
       )}
-    </div>
-  );
-}
-
-function Preview({
-  fill,
-  accent,
-  corners,
-  islandStyle,
-}: {
-  fill: string;
-  accent: string;
-  corners: Appearance["corners"];
-  islandStyle: Appearance["style"];
-}) {
-  const floating = islandStyle === "windows";
-  return (
-    <div className="relative flex h-[82px] shrink-0 items-center justify-center overflow-hidden rounded-[14px] bg-fill-1">
-      <motion.div
-        animate={{ backgroundColor: fill }}
-        transition={springs.morph}
-        className={`relative flex h-10 w-36 items-center justify-between px-2.5 ${
-          floating ? "mt-4 rounded-[15px]" : corners === "squared" ? "mt-3 rounded-[7px]" : "mt-3 rounded-b-[15px]"
-        }`}
-        style={{
-          boxShadow: floating ? "0 8px 22px rgb(0 0 0 / 0.55)" : undefined,
-        }}
-      >
-        <span className="text-[10px] font-semibold text-label">9:44</span>
-        <div className="flex items-end gap-[2px]" style={{ color: accent }}>
-          {[3, 6, 9, 7, 4].map((h, i) => (
-            <motion.span
-              key={i}
-              className="w-[2px] rounded-full bg-current"
-              animate={{ height: [h, h + 3, h] }}
-              transition={{ repeat: Infinity, duration: 1.25, delay: i * 0.11, ease: "easeInOut" }}
-              style={{ height: h }}
-            />
-          ))}
-        </div>
-      </motion.div>
     </div>
   );
 }
@@ -536,7 +481,7 @@ export function Swatches({ value, colors, onChange }: { value: string; colors: s
         );
       })}
       <label
-        title={t("Eigene Farbe")}
+        title={t("Custom color")}
         className={`relative size-5 shrink-0 cursor-pointer overflow-hidden rounded-full ring-2 transition-colors ${
           custom ? "ring-label" : "ring-transparent"
         }`}
@@ -548,7 +493,7 @@ export function Swatches({ value, colors, onChange }: { value: string; colors: s
       >
         <input
           type="color"
-          aria-label={t("Eigene Farbe")}
+          aria-label={t("Custom color")}
           value={/^#[0-9a-f]{6}$/i.test(value) ? value : "#ffffff"}
           onChange={(event) => onChange(event.target.value)}
           className="absolute inset-0 size-full cursor-pointer opacity-0"

@@ -119,17 +119,17 @@ export function PinEntry(props: {
 
       <div className="flex h-4 items-center text-caption">
         {locked ? (
-          <span className="tabular text-orange">{t("Zu viele Versuche · wieder in {s}", { s: clock(wait) })}</span>
+          <span className="tabular text-orange">{t("Too many tries · again in {s}", { s: clock(wait) })}</span>
         ) : error ? (
           <span className="text-red">{error}</span>
         ) : (
-          <span className="text-label-4">{t("Ziffern eintippen")}</span>
+          <span className="text-label-4">{t("Type the digits")}</span>
         )}
       </div>
 
       {props.onCancel && (
         <button onClick={props.onCancel} className="pressable text-caption text-label-3 hover:text-label-2">
-          {t("Abbrechen")}
+          {t("Cancel")}
         </button>
       )}
     </motion.div>
@@ -143,7 +143,7 @@ function clock(secs: number): string {
 /** Unlock error from Rust → what the PIN entry shows. */
 export function unlockResult(code: string): PinResult {
   const [kind, n] = code.split(":");
-  if (kind === "wrong") return Number(n) === 1 ? t("Falscher PIN · noch 1 Versuch") : t("Falscher PIN · noch {n} Versuche", { n });
+  if (kind === "wrong") return Number(n) === 1 ? t("Wrong PIN · 1 try left") : t("Wrong PIN · {n} tries left", { n });
   if (kind === "lockout") return { lockedFor: Number(n) };
-  return t("Tresor nicht lesbar");
+  return t("Vault can't be read");
 }

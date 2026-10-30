@@ -48,15 +48,15 @@ export function VaultSettings() {
   if (!status) return null;
   if (!status.hasPin) {
     return (
-      <Group title={t("Tresor")} id="settings-vault">
-        <Row label={t("Passwörter & 2FA")}>
+      <Group title={t("Vault")} id="settings-vault">
+        <Row label={t("Passwords & 2FA")}>
           <Button
             onClick={() => {
               updateSettings((s) => ({ tools: s.tools.map((x) => (x.id === "vault" ? { ...x, enabled: true } : x)) }));
               navigate("vault");
             }}
           >
-            {t("Einrichten")}
+            {t("Set up")}
           </Button>
         </Row>
       </Group>
@@ -79,7 +79,7 @@ export function VaultSettings() {
       <PinEntry
         key="unlock"
         compact
-        title={t("Aktuellen PIN eingeben")}
+        title={t("Enter current PIN")}
         lockedFor={status.lockedFor}
         onCancel={() => setFlow(null)}
         onSubmit={async (pin) => {
@@ -95,19 +95,19 @@ export function VaultSettings() {
         }}
       />
     ) : flow?.step === "new" ? (
-      <PinEntry key="new" compact title={t("Neuer PIN")} onCancel={() => setFlow(null)} onSubmit={async (pin) => (setFlow({ step: "confirm", first: pin }), null)} />
+      <PinEntry key="new" compact title={t("New PIN")} onCancel={() => setFlow(null)} onSubmit={async (pin) => (setFlow({ step: "confirm", first: pin }), null)} />
     ) : flow?.step === "confirm" ? (
       <PinEntry
         key="confirm"
         compact
-        title={t("Neuen PIN bestätigen")}
+        title={t("Confirm new PIN")}
         onCancel={() => setFlow(null)}
         onSubmit={async (pin) => {
-          if (pin !== flow.first) return t("PINs stimmen nicht überein");
+          if (pin !== flow.first) return t("PINs don't match");
           setFlow(null);
           await run(async () => {
             await vault.changePin(pin);
-            setNotice(t("PIN geändert"));
+            setNotice(t("PIN changed"));
           });
           return null;
         }}
@@ -115,7 +115,7 @@ export function VaultSettings() {
     ) : null;
 
   return (
-    <Group title={t("Tresor")} id="settings-vault">
+    <Group title={t("Vault")} id="settings-vault">
       {helloSupported && (
         <Row
           label={t("Windows Hello")}
@@ -125,20 +125,20 @@ export function VaultSettings() {
       )}
       {!status.hello && (
         <>
-          <Row label={t("PIN für Passwörter")}>
-            <Switch label={t("PIN für Passwörter")} checked={status.pinPasswords} onChange={(on) => void run(() => vault.options(on, status.pinTotp))} />
+          <Row label={t("PIN for passwords")}>
+            <Switch label={t("PIN for passwords")} checked={status.pinPasswords} onChange={(on) => void run(() => vault.options(on, status.pinTotp))} />
           </Row>
-          <Row label={t("PIN für 2FA-Codes")}>
-            <Switch label={t("PIN für 2FA-Codes")} checked={status.pinTotp} onChange={(on) => void run(() => vault.options(status.pinPasswords, on))} />
+          <Row label={t("PIN for 2FA codes")}>
+            <Switch label={t("PIN for 2FA codes")} checked={status.pinTotp} onChange={(on) => void run(() => vault.options(status.pinPasswords, on))} />
           </Row>
-          <Row label={t("PIN ändern")} status={notice ?? undefined}>
-            <Button onClick={() => setFlow({ step: "unlock", then: async () => setFlow({ step: "new" }) })}>{t("Ändern")}</Button>
+          <Row label={t("Change PIN")} status={notice ?? undefined}>
+            <Button onClick={() => setFlow({ step: "unlock", then: async () => setFlow({ step: "new" }) })}>{t("Change")}</Button>
           </Row>
         </>
       )}
-      <Row label={t("Tresor zurücksetzen")}>
+      <Row label={t("Reset vault")}>
         <Button onClick={() => (confirmReset ? void vault.reset().then(refreshVault) : setConfirmReset(true))}>
-          <span className={confirmReset ? "text-red" : undefined}>{confirmReset ? t("Wirklich alles löschen?") : t("Zurücksetzen")}</span>
+          <span className={confirmReset ? "text-red" : undefined}>{confirmReset ? t("Really delete everything?") : t("Reset")}</span>
         </Button>
       </Row>
       <AnimatePresence initial={false}>

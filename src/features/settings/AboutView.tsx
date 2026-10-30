@@ -30,11 +30,11 @@ export function AboutView() {
           />
           <div className="mt-3 text-[22px] leading-7 font-semibold tracking-[-0.02em] text-label">Bipin Rizal</div>
           <p className="mt-3 max-w-[380px] text-caption leading-[17px] text-label-2">
-            {t("Enthusiast, neugieriger Lerner, Designer & Entwickler.")}
+            {t("Enthusiast, learner, designer & developer.")}
           </p>
           <div className="mt-4 flex items-center gap-2">
             <LinkButton icon={GithubLogo} label="GitHub" onClick={() => open("https://github.com/Bipin223")} />
-            <LinkButton icon={Globe} label={t("Webseite")} onClick={() => open("https://bipin-rijal.vercel.app")} />
+            <LinkButton icon={Globe} label={t("Website")} onClick={() => open("https://bipin-rijal.vercel.app")} />
           </div>
         </div>
       </div>

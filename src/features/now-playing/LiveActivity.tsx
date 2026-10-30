@@ -75,8 +75,8 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
             event.stopPropagation();
             void media.openSource();
           }}
-          aria-label={t("App öffnen")}
-          title={t("App öffnen")}
+          aria-label={t("Open app")}
+          title={t("Open app")}
           className="group/cover pressable relative flex size-5 shrink-0 items-center justify-center rounded-[5px]"
         >
           <LiveArtwork artwork={np.artwork} />
@@ -105,7 +105,7 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
             <motion.div
               key={appearance.lyricsInPill && status === "instrumental" ? "instrumental" : np.title || "music"}
               data-fade-text
-              className="max-w-full overflow-hidden whitespace-nowrap text-[11px] leading-none font-semibold text-label"
+              className="max-w-full whitespace-nowrap text-[11px] leading-[15px] font-semibold text-label"
               initial={{ opacity: 0, transform: "translateY(3px)", filter: "blur(3px)" }}
               animate={{ opacity: 1, transform: "translateY(0px)", filter: "blur(0px)", transition: content.enter }}
               exit={{ opacity: 0, transform: "translateY(-3px)", filter: "blur(3px)", transition: content.exit }}
@@ -304,8 +304,8 @@ function LyricLine({
         {!inline && next && (
           <span
             data-fade-text
-            className="max-w-full truncate text-label-4"
-            style={{ fontSize: `${nextSize}px`, fontWeight: Math.max(100, weight - 100), lineHeight: `${Math.max(9, size - 2)}px` }}
+            className="block max-w-full whitespace-nowrap text-label-4"
+            style={{ fontSize: `${nextSize}px`, fontWeight: Math.max(100, weight - 100), lineHeight: `${Math.max(12, size + 1)}px` }}
           >
             {next}
           </span>

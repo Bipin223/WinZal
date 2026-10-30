@@ -49,16 +49,16 @@ export function HelloPrompt(props: { onUnlocked: () => Promise<void>; onCancel: 
         </div>
       )}
       <div>
-        <div className="text-body font-medium text-label">{t("Mit Windows Hello entsperren")}</div>
+        <div className="text-body font-medium text-label">{t("Unlock with Windows Hello")}</div>
         <div className="mt-0.5 h-4 text-caption">
-          {error ? <span className="text-red">{error}</span> : <span className="text-label-3">{t("Gesicht, Finger oder Windows-PIN bestätigen")}</span>}
+          {error ? <span className="text-red">{error}</span> : <span className="text-label-3">{t("Confirm with face, finger or Windows PIN")}</span>}
         </div>
       </div>
       <div className="flex gap-2">
-        <Button onClick={props.onCancel}>{t("Abbrechen")}</Button>
+        <Button onClick={props.onCancel}>{t("Cancel")}</Button>
         {!waiting && (
           <Button primary onClick={() => void unlock()}>
-            {t("Erneut versuchen")}
+            {t("Try again")}
           </Button>
         )}
       </div>

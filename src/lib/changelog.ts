@@ -1,5 +1,4 @@
 import bundled from "../changelog.json";
-import { lang } from "../i18n";
 import { firstRun } from "../settings/store";
 import type { ChangelogEntry } from "../platform/services";
 import { createStore } from "./store";
@@ -32,7 +31,7 @@ export function between(entries: ChangelogEntry[], from: string | null, to: stri
 }
 
 export function itemText(item: ChangelogEntry["items"][number]): string {
-  return lang() === "en" ? item.en : item.de;
+  return item.en;
 }
 
 /**

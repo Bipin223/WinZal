@@ -19,22 +19,22 @@ interface Unit {
 
 const units: Record<Category, Unit[]> = {
   length: [
-    { id: "mm", label: "Millimeter", factor: 0.001 },
-    { id: "cm", label: "Zentimeter", factor: 0.01 },
-    { id: "m", label: "Meter", factor: 1 },
-    { id: "km", label: "Kilometer", factor: 1000 },
-    { id: "in", label: "Zoll", factor: 0.0254 },
-    { id: "ft", label: "Fu├ƒ", factor: 0.3048 },
+    { id: "mm", label: "Millimetre", factor: 0.001 },
+    { id: "cm", label: "Centimetre", factor: 0.01 },
+    { id: "m", label: "Metre", factor: 1 },
+    { id: "km", label: "Kilometre", factor: 1000 },
+    { id: "in", label: "Inch", factor: 0.0254 },
+    { id: "ft", label: "Foot", factor: 0.3048 },
     { id: "yd", label: "Yard", factor: 0.9144 },
-    { id: "mi", label: "Meile", factor: 1609.344 },
+    { id: "mi", label: "Mile", factor: 1609.344 },
   ],
   mass: [
-    { id: "mg", label: "Milligramm", factor: 1e-6 },
-    { id: "g", label: "Gramm", factor: 0.001 },
-    { id: "kg", label: "Kilogramm", factor: 1 },
+    { id: "mg", label: "Milligram", factor: 1e-6 },
+    { id: "g", label: "Gram", factor: 0.001 },
+    { id: "kg", label: "Kilogram", factor: 1 },
     { id: "t", label: "Tonne", factor: 1000 },
-    { id: "oz", label: "Unze", factor: 0.028349523125 },
-    { id: "lb", label: "Pfund (lb)", factor: 0.45359237 },
+    { id: "oz", label: "Ounce", factor: 0.028349523125 },
+    { id: "lb", label: "Pound (lb)", factor: 0.45359237 },
   ],
   temp: [
     { id: "c", label: "Celsius" },
@@ -42,19 +42,19 @@ const units: Record<Category, Unit[]> = {
     { id: "k", label: "Kelvin" },
   ],
   volume: [
-    { id: "ml", label: "Milliliter", factor: 0.001 },
-    { id: "l", label: "Liter", factor: 1 },
-    { id: "m3", label: "Kubikmeter", factor: 1000 },
-    { id: "tsp", label: "Teel├╢ffel (US)", factor: 0.00492892 },
-    { id: "cup", label: "Tasse (US)", factor: 0.2365882365 },
+    { id: "ml", label: "Millilitre", factor: 0.001 },
+    { id: "l", label: "Litre", factor: 1 },
+    { id: "m3", label: "Cubic metre", factor: 1000 },
+    { id: "tsp", label: "Teaspoon (US)", factor: 0.00492892 },
+    { id: "cup", label: "Cup (US)", factor: 0.2365882365 },
     { id: "floz", label: "fl oz (US)", factor: 0.0295735295625 },
-    { id: "gal", label: "Gallone (US)", factor: 3.785411784 },
+    { id: "gal", label: "Gallon (US)", factor: 3.785411784 },
   ],
   speed: [
     { id: "ms", label: "m/s", factor: 1 },
     { id: "kmh", label: "km/h", factor: 1 / 3.6 },
     { id: "mph", label: "mph", factor: 0.44704 },
-    { id: "kn", label: "Knoten", factor: 0.514444 },
+    { id: "kn", label: "Knot", factor: 0.514444 },
   ],
 };
 
@@ -107,11 +107,11 @@ export function UnitsPanel() {
           setPair(defaults[c]);
         }}
         options={[
-          { value: "length", label: t("L├ñnge") },
-          { value: "mass", label: t("Gewicht") },
-          { value: "temp", label: t("Temperatur") },
-          { value: "volume", label: t("Volumen") },
-          { value: "speed", label: t("Tempo") },
+          { value: "length", label: t("Length") },
+          { value: "mass", label: t("Weight") },
+          { value: "temp", label: t("Temperature") },
+          { value: "volume", label: t("Volume") },
+          { value: "speed", label: t("Speed") },
         ]}
       />
       <div className="flex items-center gap-2">
@@ -125,7 +125,7 @@ export function UnitsPanel() {
           <Select value={from} options={options} onChange={(v) => setPair([v, to])} width="w-full" />
         </div>
         <button
-          aria-label={t("Tauschen")}
+          aria-label={t("Swap")}
           onClick={() => setPair([to, from])}
           className="pressable pressable-fill flex size-8 shrink-0 items-center justify-center rounded-full bg-fill-2 text-label-2"
         >

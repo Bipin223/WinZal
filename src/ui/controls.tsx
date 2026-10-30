@@ -168,7 +168,7 @@ export function TextField(props: {
       />
       {props.secret && props.value && (
         <button
-          aria-label={reveal ? t("Verbergen") : t("Anzeigen")}
+          aria-label={reveal ? t("Hide") : t("Show")}
           onClick={() => setReveal((r) => !r)}
           className="text-label-3 hover:text-label-2"
         >
@@ -265,7 +265,7 @@ export function Empty(props: {
 /** Hidden content (presentation mode): soft bars where the text would be. */
 export function Redacted({ lines = 2, className = "" }: { lines?: number; className?: string }) {
   return (
-    <div role="img" aria-label={t("Ausgeblendet")} className={`flex flex-col gap-1.5 ${className}`}>
+    <div role="img" aria-label={t("Hidden")} className={`flex flex-col gap-1.5 ${className}`}>
       {Array.from({ length: lines }, (_, i) => (
         <span key={i} className="h-2 rounded-full bg-fill-2" style={{ width: i === lines - 1 && lines > 1 ? "55%" : "100%" }} />
       ))}

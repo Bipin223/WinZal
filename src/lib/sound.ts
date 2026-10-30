@@ -8,11 +8,11 @@ export type AlarmDuration = 0 | 5 | 15 | 30 | -1;
 
 export const alarmSounds: { value: AlarmSound; label: string }[] = [
   { value: "chime", label: "Gong" },
-  { value: "bell", label: "Glocke" },
-  { value: "digital", label: "Digitalwecker" },
+  { value: "bell", label: "Bell" },
+  { value: "digital", label: "Digital alarm" },
   { value: "radar", label: "Radar" },
   { value: "marimba", label: "Marimba" },
-  { value: "soft", label: "Sanft" },
+  { value: "soft", label: "Gentle" },
 ];
 
 interface Note {

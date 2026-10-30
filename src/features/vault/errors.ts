@@ -4,27 +4,27 @@ import { t } from "../../i18n";
 export function errorText(code: string): string {
   switch (code) {
     case "missing":
-      return t("Name und Passwort fehlen");
+      return t("Name and password are missing");
     case "secret":
-      return t("Schlüssel ungültig");
+      return t("Invalid key");
     case "not-otp":
-      return t("Kein 2FA-QR-Code");
+      return t("Not a 2FA QR code");
     case "no-image":
-      return t("Kein Bild in der Zwischenablage");
+      return t("No image in the clipboard");
     case "no-qr":
-      return t("Kein QR-Code erkannt");
+      return t("No QR code found");
     case "no-scan":
-      return t("Erst QR-Code einfügen oder Schlüssel eingeben");
+      return t("Paste a QR code or enter the key first");
     case "clipboard":
-      return t("Zwischenablage belegt, nochmal versuchen");
+      return t("Clipboard busy, try again");
     case "hello-cancel":
-      return t("Abgebrochen");
+      return t("Cancelled");
     case "hello-failed":
-      return t("Windows Hello hat nicht geklappt");
+      return t("Windows Hello didn't work");
     case "hello-missing":
-      return t("Windows-Hello-Schlüssel fehlt");
+      return t("Windows Hello key is missing");
     case "unreadable":
-      return t("Tresor nicht lesbar");
+      return t("Vault can't be read");
     default:
       return code;
   }

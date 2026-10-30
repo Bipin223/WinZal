@@ -311,7 +311,6 @@ pub fn run() {
             vault::vault_hello_unlock,
             vault::vault_hello_enable,
             vault::vault_hello_disable,
-            set_language,
             autostart_get,
             autostart_set,
         ])
@@ -450,15 +449,11 @@ fn enable_autostart_once(app: &AppHandle) {
     }
 }
 
-/// Tray items whose text or check state changes at runtime.
+/// Tray items whose check state changes at runtime.
 struct Tray {
-    open: MenuItem<tauri::Wry>,
-    settings: MenuItem<tauri::Wry>,
     focus: CheckMenuItem<tauri::Wry>,
     silent: CheckMenuItem<tauri::Wry>,
     presentation: CheckMenuItem<tauri::Wry>,
-    autostart: CheckMenuItem<tauri::Wry>,
-    quit: MenuItem<tauri::Wry>,
 }
 
 #[derive(Default)]
@@ -466,7 +461,7 @@ struct TrayItems(Mutex<Option<Tray>>);
 
 /// English-only tray menu. Open (shortcut right-aligned via tab, like Windows
 /// menus), settings, focus mode, silent, presentation, autostart, quit.
-fn tray_texts(_lang: &str) -> [String; 7] {
+fn tray_texts() -> [String; 7] {
     [
         format!("Open WinZal\t{SHORTCUT_LABEL}"),
         "Settings…".into(),
@@ -478,19 +473,6 @@ fn tray_texts(_lang: &str) -> [String; 7] {
     ]
 }
 
-#[tauri::command]
-fn set_language(lang: String, state: State<'_, TrayItems>) {
-    if let Some(tray) = state.0.lock().unwrap().as_ref() {
-        let [a, b, c, d, e, f, g] = tray_texts(&lang);
-        let _ = tray.open.set_text(a);
-        let _ = tray.settings.set_text(b);
-        let _ = tray.focus.set_text(c);
-        let _ = tray.silent.set_text(d);
-        let _ = tray.presentation.set_text(e);
-        let _ = tray.autostart.set_text(f);
-        let _ = tray.quit.set_text(g);
-    }
-}
 
 /// The frontend owns focus mode; the tray check only mirrors it.
 #[tauri::command]
@@ -539,7 +521,7 @@ fn dark_menus() {
 fn build_tray(app: &App) -> tauri::Result<()> {
     dark_menus();
     let enabled = app.autolaunch().is_enabled().unwrap_or(false);
-    let [open_text, settings_text, focus_text, silent_text, presentation_text, autostart_text, quit_text] = tray_texts("en");
+    let [open_text, settings_text, focus_text, silent_text, presentation_text, autostart_text, quit_text] = tray_texts();
     let open = MenuItem::with_id(app, "open", open_text, true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", settings_text, true, None::<&str>)?;
     // The real state follows right after start (the frontend calls tray_focus).
@@ -549,13 +531,9 @@ fn build_tray(app: &App) -> tauri::Result<()> {
     let autostart = CheckMenuItem::with_id(app, "autostart", autostart_text, true, enabled, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", quit_text, true, None::<&str>)?;
     *app.state::<TrayItems>().0.lock().unwrap() = Some(Tray {
-        open: open.clone(),
-        settings: settings.clone(),
         focus: focus.clone(),
         silent: silent.clone(),
         presentation: presentation.clone(),
-        autostart: autostart.clone(),
-        quit: quit.clone(),
     });
     let menu = Menu::with_items(
         app,

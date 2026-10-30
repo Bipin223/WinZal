@@ -49,23 +49,23 @@ export function MusicSettings() {
 
   return (
     <>
-      <Group title={t("Wiedergabe")} id="settings-music">
+      <Group title={t("Now Playing")} id="settings-music">
         <Row
-          label={t("Musik in der geschlossenen Notch")}
+          label={t("Music in the closed notch")}
         >
           <Switch
-            label={t("Musik in der geschlossenen Notch")}
+            label={t("Music in the closed notch")}
             checked={a.musicInPill}
             onChange={(musicInPill) => set({ musicInPill })}
           />
         </Row>
       </Group>
-      <Group title={t("Songtext")} id="settings-lyrics">
+      <Group title={t("Lyrics")} id="settings-lyrics">
         <Row
-          label={t("Songtext in der geschlossenen Pille")}
+          label={t("Lyrics in the closed pill")}
         >
           <Switch
-            label={t("Songtext in der geschlossenen Pille")}
+            label={t("Lyrics in the closed pill")}
             checked={a.lyricsInPill}
             onChange={(lyricsInPill) => set({ lyricsInPill })}
           />
@@ -75,22 +75,22 @@ export function MusicSettings() {
             <div className="px-3 pt-3">
               <LyricsPillPreview />
             </div>
-            <Row label={t("Zeilen-Layout")}>
+            <Row label={t("Line layout")}>
               <Segmented
                 id="lyrics-layout"
                 size="sm"
                 value={a.lyricsLayout}
                 onChange={(lyricsLayout) => set({ lyricsLayout })}
                 options={[
-                  { value: "inline", label: t("In einer Zeile") },
-                  { value: "lines", label: t("Zeile für Zeile") },
+                  { value: "inline", label: t("In line") },
+                  { value: "lines", label: t("Line by line") },
                 ]}
               />
             </Row>
-            <Row label={t("Textgröße")}>
+            <Row label={t("Text size")}>
               <div className="flex w-44 items-center gap-2">
                 <Slider
-                  label={t("Textgröße")}
+                  label={t("Text size")}
                   value={a.lyricsTextSize}
                   min={10}
                   max={15}
@@ -185,8 +185,8 @@ export function MusicSettings() {
                 <span className="tabular w-11 shrink-0 text-right text-caption text-label-3">{a.lyricsPillHeight} px</span>
               </div>
             </Row>
-            <Row label={t("Visualisierung")}>
-              <Switch label={t("Visualisierung")} checked={a.lyricsVisualizer} onChange={(lyricsVisualizer) => set({ lyricsVisualizer })} />
+            <Row label={t("Visualization")}>
+              <Switch label={t("Visualization")} checked={a.lyricsVisualizer} onChange={(lyricsVisualizer) => set({ lyricsVisualizer })} />
             </Row>
             {a.lyricsVisualizer && (
               <div className="px-3 pb-3">

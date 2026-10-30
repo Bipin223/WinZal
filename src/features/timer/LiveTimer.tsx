@@ -41,7 +41,7 @@ export function LiveTimer() {
       </LiveEdge>
       <LiveEdge side="right">
         <span className="tabular text-footnote font-semibold">
-          {s.finished ? t("Abgelaufen") : formatClock(remaining)}
+          {s.finished ? t("Done") : formatClock(remaining)}
         </span>
       </LiveEdge>
     </motion.div>

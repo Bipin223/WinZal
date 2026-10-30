@@ -42,7 +42,7 @@ export function SystemView() {
           tick={tick}
           icon={GpuIcon}
           label="GPU"
-          detail={gpuDetail || t("Nicht verfügbar")}
+          detail={gpuDetail || t("Not available")}
           values={h.gpu}
           max={100}
           value={s.gpu === null ? "–" : `${Math.round(s.gpu)} %`}

@@ -272,11 +272,6 @@ fn helper_log(message: &str) {
     }
 }
 
-/// Did the elevated helper see a triple-click? Consumed once by the notch.
-pub(crate) fn take_wake() -> bool {
-    shared().is_some_and(|shared| unsafe { (*shared).wake.swap(0, Ordering::Relaxed) != 0 })
-}
-
 fn helper_alive(shared: *mut FpsShared) -> bool {
     let heartbeat = unsafe { (*shared).heartbeat.load(Ordering::Relaxed) };
     heartbeat != 0 && unsafe { GetTickCount64() }.saturating_sub(heartbeat) < 5000

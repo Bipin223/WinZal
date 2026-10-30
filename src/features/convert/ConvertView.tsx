@@ -61,8 +61,8 @@ export function ConvertView() {
           value={mode}
           onChange={setMode}
           options={[
-            { value: "files", label: t("Dateien") },
-            { value: "units", label: t("Einheiten") },
+            { value: "files", label: t("Files") },
+            { value: "units", label: t("Units") },
           ]}
         />
       </HeaderActions>
@@ -152,7 +152,7 @@ function FilesPanel() {
         transition={springs.snappy}
       >
         <UploadSimple size={22} weight="bold" className={dragging ? "text-label" : "text-label-3"} />
-        <span className="text-body text-label-2">{dragging ? t("Loslassen zum Umwandeln") : t("Bilder, Audio, Video, Dokumente oder Tabellen hierher ziehen")}</span>
+        <span className="text-body text-label-2">{dragging ? t("Release to convert") : t("Drag images, audio, video, documents or spreadsheets here")}</span>
         <PasteHint nothing={nothing} />
       </motion.div>
     );
@@ -172,7 +172,7 @@ function FilesPanel() {
             <div key={f.path} className="flex h-8 items-center gap-2.5 border-b border-separator px-3 last:border-0">
               <I size={15} weight="duotone" className={`shrink-0 ${skipped ? "text-label-4" : "text-label-2"}`} />
               <span className={`min-w-0 flex-1 truncate text-footnote transition-colors duration-150 ${skipped ? "text-label-3" : "text-label"}`}>{f.name}</span>
-              {skipped && <span className="text-caption text-label-4">{t("schon {f}", { f: target?.toUpperCase() ?? "" })}</span>}
+              {skipped && <span className="text-caption text-label-4">{t("already {f}", { f: target?.toUpperCase() ?? "" })}</span>}
               <span className="tabular text-caption text-label-3">{formatBytes(f.size)}</span>
               <span className="flex w-4 justify-center">
                 {busy && !r && !skipped && (
@@ -202,23 +202,23 @@ function FilesPanel() {
             exit={{ opacity: 0, transition: content.exit }}
           >
             <span className="min-w-0 flex-1 truncate text-footnote text-label-2">
-              {done.length > 0 && t(done.length === 1 ? "{n} Datei umgewandelt" : "{n} Dateien umgewandelt", { n: done.length })}
-              {failed.length > 0 && <span className="text-red">{done.length ? " ┬╖ " : ""}{t("{n} fehlgeschlagen", { n: failed.length })} ΓÇô {tBackend(failed[0].error!)}</span>}
+              {done.length > 0 && t(done.length === 1 ? "{n} file converted" : "{n} files converted", { n: done.length })}
+              {failed.length > 0 && <span className="text-red">{done.length ? " ┬╖ " : ""}{t("{n} failed", { n: failed.length })} ΓÇô {tBackend(failed[0].error!)}</span>}
             </span>
             {done[0]?.output && (
               <Button icon={FolderOpen} onClick={() => revealFile(done[0].output!)}>
-                {t("Anzeigen")}
+                {t("Show")}
               </Button>
             )}
-            <Button onClick={reset}>{t("Neu")}</Button>
+            <Button onClick={reset}>{t("New")}</Button>
           </motion.div>
         ) : (
           <motion.div key="options" className="flex flex-col gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: content.enter }} exit={{ opacity: 0, transition: content.exit }}>
             {!kind ? (
-              <div className="text-caption text-label-3">{t("Gemischte oder unbekannte Dateiarten ΓÇô bitte nur eine Art auf einmal (z. B. nur Bilder oder nur Dokumente).")}</div>
+              <div className="text-caption text-label-3">{t("Mixed or unknown file types – use one type at a time (e.g. only images or only documents).")}</div>
             ) : needsFfmpeg && !ffmpeg ? (
               <div className="text-caption text-label-3">
-                {t("F├╝r Audio/Video wird ffmpeg gebraucht:")} <span className="font-mono text-label-2">winget install Gyan.FFmpeg</span>
+                {t("Audio/video needs ffmpeg:")} <span className="font-mono text-label-2">winget install Gyan.FFmpeg</span>
               </div>
             ) : (
               <div className="flex items-center gap-1">
@@ -242,17 +242,17 @@ function FilesPanel() {
               )}
               {showQuality && (
                 <div className="flex flex-1 items-center gap-2">
-                  <span className="text-caption text-label-3">{t("Qualit├ñt")}</span>
-                  <Slider label={t("Qualit├ñt")} value={quality} min={30} max={100} step={5} onChange={setQuality} />
+                  <span className="text-caption text-label-3">{t("Quality")}</span>
+                  <Slider label={t("Quality")} value={quality} min={30} max={100} step={5} onChange={setQuality} />
                   <span className="tabular w-7 text-right text-caption text-label-2">{quality}</span>
                 </div>
               )}
               <div className="ml-auto flex gap-1.5">
-                <button aria-label={t("Leeren")} onClick={reset} className="pressable pressable-fill flex size-7 items-center justify-center rounded-full text-label-3">
+                <button aria-label={t("Clear")} onClick={reset} className="pressable pressable-fill flex size-7 items-center justify-center rounded-full text-label-3">
                   <X size={12} weight="bold" />
                 </button>
                 <Button primary disabled={!target || busy || pending.length === 0 || (needsFfmpeg && !ffmpeg)} onClick={() => void run()}>
-                  {busy ? t("Wandle um ΓÇª") : pending.length > 1 ? t("{n} umwandeln", { n: pending.length }) : t("Umwandeln")}
+                  {busy ? t("Converting …") : pending.length > 1 ? t("Convert {n}", { n: pending.length }) : t("Convert")}
                 </Button>
               </div>
             </div>
@@ -268,7 +268,7 @@ function FilesPanel() {
             exit={{ opacity: 0 }}
             transition={fade}
           >
-            {t("Loslassen, um diese Dateien zu ersetzen")}
+            {t("Release to replace these files")}
           </motion.div>
         )}
       </AnimatePresence>

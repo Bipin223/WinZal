@@ -56,9 +56,9 @@ export function VaultView() {
         >
           <Empty
             icon={EyeSlash}
-            title={t("Im Präsentationsmodus ausgeblendet")}
-            text={t("Der Tresor bleibt gesperrt, bis der Präsentationsmodus endet.")}
-            action={<Button onClick={togglePresentation}>{t("Präsentationsmodus beenden")}</Button>}
+            title={t("Hidden in presentation mode")}
+            text={t("Vault stays locked until presentation ends.")}
+            action={<Button onClick={togglePresentation}>{t("End presentation mode")}</Button>}
           />
         </motion.div>
       ) : (
@@ -155,7 +155,7 @@ function VaultContent() {
     key = "pin";
     body = (
       <PinEntry
-        title={t("PIN eingeben")}
+        title={t("Enter PIN")}
         lockedFor={status.lockedFor}
         onCancel={() => setPrompt(null)}
         onSubmit={async (pin) => {
@@ -179,11 +179,11 @@ function VaultContent() {
           <LockSimple size={20} weight="bold" />
         </div>
         <div>
-          <div className="text-body font-medium text-label">{t("Tresor gesperrt")}</div>
-          <div className="mt-0.5 text-caption text-label-3">{t("Mit Windows Hello entsperren, um Passwörter und Codes zu sehen.")}</div>
+          <div className="text-body font-medium text-label">{t("Vault locked")}</div>
+          <div className="mt-0.5 text-caption text-label-3">{t("Unlock with Windows Hello.")}</div>
         </div>
         <Button primary onClick={() => setHelloDismissed(false)}>
-          {t("Mit Windows Hello entsperren")}
+          {t("Unlock with Windows Hello")}
         </Button>
       </div>
     );
@@ -233,7 +233,7 @@ function VaultContent() {
       {ready && key === "list" && (
         <HeaderActions>
           <HeaderButton
-            label={status.unlocked ? t("Sperren") : t("Entsperren")}
+            label={status.unlocked ? t("Lock") : t("Unlock")}
             active={status.unlocked}
             onClick={() =>
               status.unlocked
@@ -244,7 +244,7 @@ function VaultContent() {
             {status.unlocked ? <LockSimpleOpen size={14} weight="bold" /> : <LockSimple size={14} weight="bold" />}
           </HeaderButton>
           <HeaderButton
-            label={kind === "password" ? t("Passwort hinzufügen") : t("2FA hinzufügen")}
+            label={kind === "password" ? t("Add password") : t("Add 2FA")}
             onClick={() => setScreen(kind === "password" ? { kind: "password", item: null, password: "" } : { kind: "totp" })}
           >
             <Plus size={14} weight="bold" />
@@ -257,12 +257,12 @@ function VaultContent() {
             <Fingerprint size={14} weight="bold" />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-caption font-medium text-label">{t("Windows Hello schützt den Tresor")}</div>
+            <div className="truncate text-caption font-medium text-label">{t("Windows Hello protects the vault")}</div>
             <div className="truncate text-[9px] leading-[11px] text-label-3">
-              {t("Einträge mit Gesicht, Finger oder Windows-PIN versiegeln")}
+              {t("Seal entries with face, finger or Windows PIN")}
             </div>
           </div>
-          <Button onClick={() => void run(() => vault.helloEnable())}>{t("Aktivieren")}</Button>
+          <Button onClick={() => void run(() => vault.helloEnable())}>{t("Enable")}</Button>
         </div>
       )}
       <AnimatePresence mode="popLayout" initial={false}>
@@ -303,7 +303,7 @@ function Setup() {
     <PinEntry
       key="new"
       setup
-      title={t("Tresor einrichten")}
+      title={t("Set up the vault")}
       onSubmit={async (pin) => {
         setFirst(pin);
         return null;
@@ -313,10 +313,10 @@ function Setup() {
     <PinEntry
       key="confirm"
       setup
-      title={t("PIN bestätigen")}
+      title={t("Confirm PIN")}
       onCancel={() => setFirst(null)}
       onSubmit={async (pin) => {
-        if (pin !== first) return t("PINs stimmen nicht überein");
+        if (pin !== first) return t("PINs don't match");
         try {
           await vault.setup(pin);
         } catch (e) {
@@ -333,10 +333,10 @@ function Unreadable() {
   return (
     <Empty
       icon={WarningCircle}
-      title={t("Tresor nicht lesbar")}
-      text={t("Er gehört zu einem anderen Windows-Konto oder ist beschädigt.")}
+      title={t("Vault can't be read")}
+      text={t("Another Windows account or damaged.")}
       action={
-        <Button onClick={() => (confirm ? void vault.reset() : setConfirm(true))}>{confirm ? t("Wirklich alles löschen?") : t("Tresor zurücksetzen")}</Button>
+        <Button onClick={() => (confirm ? void vault.reset() : setConfirm(true))}>{confirm ? t("Really delete everything?") : t("Reset vault")}</Button>
       }
     />
   );
@@ -371,7 +371,7 @@ function List(props: {
           value={props.kind}
           onChange={props.setKind}
           options={[
-            { value: "password", label: <Count label={t("Passwörter")} n={counts.password} /> },
+            { value: "password", label: <Count label={t("Passwords")} n={counts.password} /> },
             { value: "totp", label: <Count label={t("2FA")} n={counts.totp} /> },
           ]}
         />
@@ -380,7 +380,7 @@ function List(props: {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("Suchen")}
+            placeholder={t("Search")}
             spellCheck={false}
             className="min-w-0 flex-1 bg-transparent text-footnote text-label outline-none placeholder:text-label-4"
           />
@@ -395,20 +395,20 @@ function List(props: {
           props.kind === "password" ? (
             <Empty
               icon={Key}
-              title={t("Noch keine Passwörter")}
-              text={t("Zugangsdaten bleiben verschlüsselt auf diesem PC.")}
-              action={<Button icon={Plus} onClick={props.onAdd}>{t("Passwort hinzufügen")}</Button>}
+              title={t("No passwords yet")}
+              text={t("Logins stay encrypted on this PC.")}
+              action={<Button icon={Plus} onClick={props.onAdd}>{t("Add password")}</Button>}
             />
           ) : (
             <Empty
               icon={QrCode}
-              title={t("Noch keine 2FA-Codes")}
-              text={t("QR-Code mit Strg+V einfügen oder den Schlüssel eintippen.")}
-              action={<Button icon={Plus} onClick={props.onAdd}>{t("2FA hinzufügen")}</Button>}
+              title={t("No 2FA codes yet")}
+              text={t("Paste a QR code with Ctrl+V or type the key.")}
+              action={<Button icon={Plus} onClick={props.onAdd}>{t("Add 2FA")}</Button>}
             />
           )
         ) : items.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-body text-label-3">{t("Nichts gefunden")}</div>
+          <div className="flex h-full items-center justify-center text-body text-label-3">{t("Nothing found")}</div>
         ) : props.kind === "password" ? (
           items.map((item, i) => <PasswordRow key={item.id} item={item} index={i} run={props.run} onEdit={() => props.onEdit(item)} />)
         ) : (
@@ -514,7 +514,7 @@ function PasswordRow(props: { item: VaultItem; index: number; run: (a: () => Pro
   const copy = (field: "username" | "password") =>
     void run(async () => {
       await vault.copy(item.id, field);
-      showFeedback(field === "username" ? t("Benutzername kopiert") : t("Passwort kopiert · wird in 30 s geleert"));
+      showFeedback(field === "username" ? t("Username copied") : t("Password copied · cleared in 30 s"));
     });
 
   return (
@@ -528,21 +528,21 @@ function PasswordRow(props: { item: VaultItem; index: number; run: (a: () => Pro
           ) : shown !== null ? (
             <span className="tabular tracking-wide text-label select-text">{shown}</span>
           ) : (
-            item.username || t("Kein Benutzername")
+            item.username || t("No username")
           )}
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100">
-        {item.username && <RowIcon label={t("Benutzername kopieren")} icon={User} onClick={() => copy("username")} />}
+        {item.username && <RowIcon label={t("Copy username")} icon={User} onClick={() => copy("username")} />}
         <RowIcon
-          label={shown !== null ? t("Verbergen") : t("Anzeigen")}
+          label={shown !== null ? t("Hide") : t("Show")}
           icon={shown !== null ? EyeSlash : Eye}
           active={shown !== null}
           onClick={() => (shown !== null ? setShown(null) : void run(async () => setShown(await vault.reveal(item.id))))}
         />
-        <RowIcon label={t("Bearbeiten")} icon={PencilSimple} onClick={props.onEdit} />
+        <RowIcon label={t("Edit")} icon={PencilSimple} onClick={props.onEdit} />
       </div>
-      <RowIcon label={t("Passwort kopieren")} icon={Key} onClick={() => copy("password")} />
+      <RowIcon label={t("Copy password")} icon={Key} onClick={() => copy("password")} />
     </Row>
   );
 }
@@ -606,11 +606,11 @@ function TotpRow(props: { item: VaultItem; index: number; code: string | null; l
   const copy = () =>
     void run(async () => {
       await vault.copy(item.id, "code");
-      showFeedback(t("Code kopiert"));
+      showFeedback(t("Code copied"));
     });
 
   return (
-    <Row index={props.index} onClick={copy} label={t("{name}: Code kopieren", { name: item.name })}>
+    <Row index={props.index} onClick={copy} label={t("{name}: copy code", { name: item.name })}>
       <Monogram name={item.name} />
       <div className="min-w-0 flex-1">
         <div className="truncate text-body text-label">{item.name}</div>
@@ -618,7 +618,7 @@ function TotpRow(props: { item: VaultItem; index: number; code: string | null; l
       </div>
       <div className="opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100">
         <RowIcon
-          label={confirm ? t("Wirklich löschen?") : t("Löschen")}
+          label={confirm ? t("Really delete?") : t("Delete")}
           icon={Trash}
           danger={confirm}
           onClick={() => (confirm ? void run(() => vault.remove(item.id)) : setConfirm(true))}

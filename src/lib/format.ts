@@ -1,7 +1,7 @@
 import { locale, t } from "../i18n";
 import { settings } from "../settings/store";
 
-/** Formatting in one place: numbers and times in the chosen language. */
+/** Formatting in one place: numbers and times in English. */
 
 const money = new Map<string, Intl.NumberFormat>();
 
@@ -43,21 +43,21 @@ export function formatBytes(bytes: number, digits = 1): string {
 /** "in 2 Std. 13 Min." / "in 3 T. 4 Std." */
 export function formatIn(ms: number): string {
   const min = Math.max(0, Math.round(ms / 60_000));
-  if (min < 1) return t("gleich");
-  if (min < 60) return t("in {m} Min.", { m: min });
+  if (min < 1) return t("now");
+  if (min < 60) return t("in {m} min", { m: min });
   const h = Math.floor(min / 60);
-  if (h < 24) return t("in {h} Std. {m} Min.", { h, m: min % 60 });
-  return t("in {d} T. {h} Std.", { d: Math.floor(h / 24), h: h % 24 });
+  if (h < 24) return t("in {h} h {m} min", { h, m: min % 60 });
+  return t("in {d} d {h} h", { d: Math.floor(h / 24), h: h % 24 });
 }
 
 /** "vor 5 Min." */
 export function formatAgo(ms: number): string {
   const min = Math.round(ms / 60_000);
-  if (min < 1) return t("gerade eben");
-  if (min < 60) return t("vor {m} Min.", { m: min });
+  if (min < 1) return t("just now");
+  if (min < 60) return t("{m} min ago", { m: min });
   const h = Math.floor(min / 60);
-  if (h < 24) return t("vor {h} Std.", { h });
-  return t("vor {d} T.", { d: Math.floor(h / 24) });
+  if (h < 24) return t("{h} h ago", { h });
+  return t("{d} d ago", { d: Math.floor(h / 24) });
 }
 
 /** Weather data comes in °C; shown in the unit from the settings. "22°" */

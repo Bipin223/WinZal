@@ -4,7 +4,6 @@
     "date": "2026-10-29",
     "items": [
       {
-        "de": "Klick auf die geöffnete Notch schließt das angeheftete Panel, die Notch bleibt offen; ein Klick in das Panel selbst lässt es offen, außerhalb schließt beides",
         "en": "Clicking the expanded notch closes the attached panel while keeping the notch open; clicking inside the panel leaves it open, outside closes both"
       }
     ]
@@ -14,15 +13,12 @@
     "date": "2026-10-28",
     "items": [
       {
-        "de": "Angeheftete Panels bleiben offen, wenn man hinein oder auf die geöffnete Notch klickt; nur ein Klick außerhalb schließt sie",
         "en": "Attached panels stay open when you click inside them or on the expanded notch; only a click outside closes them"
       },
       {
-        "de": "Langes Halten von WLAN, Bluetooth oder Power löst beim Loslassen keinen Klick mehr aus — der Schalter bleibt unverändert",
         "en": "Long-holding Wi-Fi, Bluetooth or Power no longer fires a click on release — the tile state stays unchanged"
       },
       {
-        "de": "NSIS-/Installationsversionen setzen eine explizite App-ID, damit Windows-Benachrichtigungen zugelassen werden können; bei Verweigerung führt ein Knopf direkt zu den Windows-Einstellungen",
         "en": "NSIS/installed builds set an explicit app ID so Windows notification access can be granted; if it is denied, a button opens the Windows settings directly"
       }
     ]
@@ -32,31 +28,24 @@
     "date": "2026-10-28",
     "items": [
       {
-        "de": "Kompakte Benachrichtigung als Liquid-Glass-Kapsel: echtes App-Symbol, App-Name, Titel und zweizeilige Nachricht; Klick öffnet die App, Wischen schließt sie, nach unten öffnet die Notch",
         "en": "Compact liquid-glass notification capsule: real app icon, app name, title and a two-line message; click opens the app, swipe dismisses, swipe down opens the notch"
       },
       {
-        "de": "Runde App-Symbole für alle Benachrichtigungen; durchscheinendes Glas ohne zusätzliche schwarze Rechteck-Ebene",
         "en": "Circular app icons for every notification; translucent glass without the extra black rectangular layer"
       },
       {
-        "de": "Hindi-/Devanagari-Songtexte werden oben und unten nicht mehr abgeschnitten",
         "en": "Hindi/Devanagari lyrics are no longer clipped at the top or bottom"
       },
       {
-        "de": "Globale UI-Schriftart in den Einstellungen: Inter, Onest, System oder Mono",
         "en": "Global UI font in Settings: Inter, Onest, System or Mono"
       },
       {
-        "de": "Horizontale Glas-Leiste für den Energiemodus; Akku-Bolt bei angeschlossenem Ladegerät, 1-Sekunden-Abgleich, Hinweis unter 20 % und ein einzelner Lade-Ton",
         "en": "Horizontal glass Power strip; battery bolt when the charger is connected, 1-second sync, low-battery alert under 20% and a single charge chime"
       },
       {
-        "de": "Audio-Sessions: Play/Pause links, Klick wechselt die Session im Now Playing, erneuter Klick auf den Pfeil schließt das Panel",
         "en": "Audio sessions: play/pause on the left, click switches the Now Playing session, clicking the caret again closes the panel"
       },
       {
-        "de": "Feste Form für alle Einstellungsseiten; Speicher wird erst nach 60 s geschlossenem Zustand freigegeben, nicht während die Notch offen ist",
         "en": "Fixed shape for every Settings page; memory is released only after 60 s closed, never while the notch is open"
       }
     ]
@@ -66,31 +55,24 @@
     "date": "2026-10-25",
     "items": [
       {
-        "de": "Fünf wählbare Zifferblätter (Stacked, Split, Scatter, Classic, Word); die geschlossene Pille wächst und schrumpft mit Uhrzeit, Datum, Tag und Wetter, ohne abzuschneiden",
         "en": "Five selectable clock faces (Stacked, Split, Scatter, Classic, Word); the closed pill grows and shrinks with time, date, day and weather without clipping"
       },
       {
-        "de": "Songtext-Labor: Word by Word (Standard) und Apple Music, plus sieben Effekte (Fill, Glitch, Liquid, Spotlight, Spark, Orbit, Ambient); drei Equalizer (Bars, Mirror, Ticks); vier Behind-Glows (Wave, Aurora, Bokeh, Leaves)",
         "en": "Lyric lab: Word by Word (default) and Apple Music, plus seven effects (Fill, Glitch, Liquid, Spotlight, Spark, Orbit, Ambient); three equalizers (Bars, Mirror, Ticks); four behind-glows (Wave, Aurora, Bokeh, Leaves)"
       },
       {
-        "de": "Zeilenwechsel mit 50 ms Vorlauf und kurzem Crossfade; Spotlight hält nur ein aktives Wort, Orbit und Ambient folgen dem Wort-Takt",
         "en": "Line changes with a 50 ms lead and a short crossfade; Spotlight keeps one active word, Orbit and Ambient follow the word clock"
       },
       {
-        "de": "Wortgenaue LRCLIB-Zeitangaben (lyricsfile lines[].words) steuern die Karaoke-Wörter, wenn vorhanden; reine Zeilen-LRCs nutzen die zeichengewichtete Schätzung",
         "en": "LRCLIB word-level timings (lyricsfile lines[].words) drive karaoke words when present; line-only LRCs use the character-weighted estimate"
       },
       {
-        "de": "Nacht-Himmel-Glow entfernt (der schwerste); Herbstblätter und Bokeh-Lichtlecks bleiben in der Pille",
         "en": "Night sky glow removed (the heaviest one); autumn leaves and bokeh light leaks stay in the pill"
       },
       {
-        "de": "Visualisierung nur noch in der geschlossenen Pille; der erweiterte Player zeichnet keine Hintergrund-Ebene mehr und spart so RAM; volle Pillenbreite immer an",
         "en": "Visualization stays in the closed pill only; the expanded player no longer draws a background layer, saving memory; full-pill glow always on"
       },
       {
-        "de": "„Custom power in games“ entfernt; Energiemodi bleiben manuell in der Notch",
         "en": "\"Custom power in games\" removed; power modes stay manual in the notch"
       }
     ]
@@ -100,23 +82,18 @@
     "date": "2026-10-25",
     "items": [
       {
-        "de": "Schrift-Einstellungen: Caption, Footnote, Body, Title und Display mit eigenen Größen- und Gewichts-Reglern, Live-Vorschau und Reset; 0 bedeutet Standard",
         "en": "Font settings: Caption, Footnote, Body, Title and Display each with size/weight sliders, live preview and reset; 0 means default"
       },
       {
-        "de": "Lyrics-Pille separat: Vorschau, Mindestbreite, Auto-Breite (standardmäßig an), Höhe und Gewicht; bessere LRCLIB-Treffer nach Dauer und „Instrumental“/„Music“-Status",
         "en": "Separate lyric pill: preview, minimum width, auto width (on by default), height and weight; better LRCLIB matching by duration plus Instrumental/Music states"
       },
       {
-        "de": "Gaming-Overlay: Live-Vorschau, FPS/CPU/Temperatur/GPU/RAM einzeln schaltbar, Text/Balken/Graph-Stil, dynamische Breite, Transparenz und Custom-Power im Spiel",
         "en": "Gaming overlay: live preview, FPS/CPU/temperature/GPU/RAM toggles, Text/Bars/Graph styles, dynamic width, transparency and custom power while gaming"
       },
       {
-        "de": "Silent Mode als Geist (klick-durchlässig, Triple-Klick weckt), Präsentations-Shortcut und Tray-Einträge, Motion-Intensität, FPS-Unlock und Performance-Seite",
         "en": "Silent mode as a ghost (click-through, triple-click wakes), presentation shortcut and tray items, motion intensity, FPS unlock and Performance page"
       },
       {
-        "de": "Feinere Kürzungen: keine Wetter-Einfärbung mehr, einheitliches Gewicht der geschlossenen Pille, überlappungsfreie Lyrik-Animationen, echter Discord-Icon und Vault-Hello-Fix",
         "en": "Polish: no weather tint, uniform closed-pill weight, overlap-free lyric animations, real Discord icon and vault Hello fix"
       }
     ]
@@ -126,11 +103,9 @@
     "date": "2026-10-25",
     "items": [
       {
-        "de": "Custom nutzt jetzt Lenovo-Profil 0xFF – den echten Vantage-Custom-Modus (lila) statt Performance + Lüftung; fällt das Modell auf 5 nicht zurück, wird Performance + aktive Kühlung verwendet. Die Auswahl bleibt nach Neustarts erhalten",
         "en": "Custom now uses Lenovo profile 0xFF – the real Vantage custom mode (purple) instead of performance + cooling; if the model rejects 5 it falls back to performance + active cooling. The selection survives restarts"
       },
       {
-        "de": "Notch und Display bleiben getrennte Seiten; die Einstellungen bleiben aufgeräumt",
         "en": "Notch and Display stay separate pages; Settings stays clean"
       }
     ]
@@ -140,15 +115,12 @@
     "date": "2026-10-25",
     "items": [
       {
-        "de": "Custom bleibt jetzt wirklich aktiv: WinZal merkt sich die Auswahl, setzt Lenovo-Leistung + aktive Kühlung und stellt sie nach App- oder PC-Neustarts wieder her – kein Zurückspringen auf Max mehr",
         "en": "Custom now really stays active: WinZal remembers the choice, applies Lenovo performance + active cooling and restores it after app or PC restarts – no snapping back to Max"
       },
       {
-        "de": "Notch und Display sind wieder getrennte Seiten: Notch = Idle-Stil und Größe, Display = Sichtbarkeit, Monitor/Position, DND, Gaming/FPS, Aufnahme-Punkte und Präsentationsmodus",
         "en": "Notch and Display are separate pages again: Notch = idle style and size, Display = visibility, monitor/position, DND, gaming/FPS, recording dots and presentation mode"
       },
       {
-        "de": "Weitere lange Hilfetexte in den Einstellungen entfernt; die Oberfläche bleibt ruhig und aufgeräumt",
         "en": "Removed more long helper texts from Settings; the UI stays calm and clean"
       }
     ]
@@ -158,27 +130,21 @@
     "date": "2026-10-25",
     "items": [
       {
-        "de": "FPS einmal freischalten reicht: Die App legt eine Windows-Anmeldeaufgabe an, die den Helfer nach jedem Neustart ohne weitere UAC-Abfrage startet – FPS, Temperaturen und Lüftermodi bleiben freigeschaltet",
         "en": "Unlock FPS once: the app creates a Windows logon task that starts the helper after every restart without another UAC prompt – FPS, temperatures and fan modes stay unlocked"
       },
       {
-        "de": "Custom-Power nutzt jetzt Lenovo's eigenen Custom-Lüftermodus (4) und startet den Helfer beim ersten Auswählen automatisch; bleibt der Modus auf dem Modell nicht verfügbar, wird Performance (3) verwendet",
         "en": "Custom power now uses Lenovo's own custom fan mode (4) and starts the helper automatically the first time you choose it; if the model does not expose it, Performance (3) is used"
       },
       {
-        "de": "Die FPS-Zeile zeigt nach einem Neustart wieder „Freigeschaltet“, sobald die Anmeldeaufgabe den Helfer gestartet hat",
         "en": "The FPS row shows “Unlocked” again after a restart once the logon task has started the helper"
       },
       {
-        "de": "WLAN verbindet gespeicherte Netze jetzt über dieselbe Windows-WLAN-API wie die Taskleiste; bei neuen Netzen gibt die Notch kurz den obersten Platz frei, damit der Windows-Passwortdialog bedienbar ist",
         "en": "Wi-Fi now connects saved networks through the same Windows WLAN API as the taskbar; for new networks the notch briefly gives up its topmost slot so the Windows password dialog is usable"
       },
       {
-        "de": "Custom ist jetzt ein reiner Lenovo-Modus: Er nutzt Lenovo-Thermalmodus 4 auf dem stabilen Windows-Balanced-Plan; der alte WinZal-Power-Plan wird nicht mehr erstellt und vom System entfernt",
         "en": "Custom is now a Lenovo-only mode: it uses Lenovo thermal mode 4 on the stable Windows Balanced plan; the old WinZal power plan is no longer created and is removed from the system"
       },
       {
-        "de": "Lange Hilfetexte in den Einstellungen entfernt (Discord-Entwickleranleitung, doppelte FPS-Hinweise, Update-/Speicher-Romane) für eine ruhigere, aufgeräumte Oberfläche",
         "en": "Removed long helper texts from Settings (Discord developer instructions, duplicate FPS notes, update/save paragraphs) for a calmer, cleaner UI"
       }
     ]
@@ -188,23 +154,18 @@
     "date": "2026-10-25",
     "items": [
       {
-        "de": "Line hat jetzt eigene Längen- und Dicken-Regler: beim Wechsel zwischen Notch und Line merkt sich jede Ansicht ihre eigene Größe, inklusive passender Vorschau",
         "en": "Line now has its own length and thickness sliders: switching between Notch and Line remembers each look's own size, with a matching preview"
       },
       {
-        "de": "Windows Hello erscheint jetzt über der Notch und nimmt Eingaben an; die Notch gibt während des Hello-Dialogs kurz den Always-on-top-Platz frei",
         "en": "Windows Hello now appears above the notch and accepts input; the notch temporarily gives up its always-on-top slot while the Hello dialog is open"
       },
       {
-        "de": "Custom-Power-Modus bleibt nach einem Neustart aktiv: Windows' Performance-Overlay setzt den eigenen Plan nicht mehr auf Balanced/Max zurück",
         "en": "Custom power mode now stays active after a restart: Windows' performance overlay no longer resets the custom plan to Balanced/Max"
       },
       {
-        "de": "Nach einem Neustart startet nur noch die aktuelle Version; alte portable Kopien werden entfernt, Autostart und Startmenü zeigen auf die neue Installation",
         "en": "After a restart only the current version starts; old portable copies are removed and autostart plus the Start menu point to the new installation"
       },
       {
-        "de": "Alte Fokus-Durchklick-Reste und ungenutzte Dateien entfernt; das Markenbild wurde verkleinert – weniger Ballast, ruhigere Animationen und ein kleineres Paket",
         "en": "Removed the old focus click-through leftovers and unused files; the brand image is compressed – less baggage, calmer animations and a smaller package"
       }
     ]
@@ -214,11 +175,9 @@
     "date": "2026-10-25",
     "items": [
       {
-        "de": "Notch und Appearance sind wieder getrennte Seiten: Notch enthält Idle-Stil, Länge/Breite, Sichtbarkeit, Nicht stören, Gaming/FPS und Präsentationsmodus; Appearance enthält Theme, Island-Stil, Akzente, Uhr, Material, Ecken, Interaktion und Performance",
         "en": "Notch and Appearance are separate pages again: Notch holds idle style, length/width, visibility, Do Not Disturb, gaming/FPS and presentation mode; Appearance holds theme, island style, accents, clock, material, corners, interaction and performance"
       },
       {
-        "de": "Alle Funktionen beider Seiten bleiben erhalten; der Appearance-Reset lässt die Notch-Größe jetzt unangetastet",
         "en": "All features from both pages are preserved; Appearance reset now leaves the notch size untouched"
       }
     ]
@@ -228,39 +187,30 @@
     "date": "2026-10-25",
     "items": [
       {
-        "de": "Windows „Nicht stören“ ist jetzt echt: Mond-Button, Notch-Dreifachklick, Übersicht, Einstellungen und Tray schalten den systemweiten Modus (PriorityOnly/Unrestricted)",
         "en": "Windows Do Not Disturb is now real: the moon button, triple-clicking the notch, Overview, Settings and the tray switch the system-wide mode (PriorityOnly/Unrestricted)"
       },
       {
-        "de": "Neue Notch-Seite bündelt Idle-Stil, Länge und Breite mit Live-Vorschau, Theme, Material, Ecken, Sichtbarkeit und Interaktion an einem Ort",
         "en": "New Notch page gathers idle style, length and width with a live preview, theme, material, corners, visibility and interaction in one place"
       },
       {
-        "de": "Zwischenablage-Karten im neuen Glas-Layout: kleinere, transparente Buttons für Kopieren, Anheften und Entfernen, Bildvorschau in der Mitte und eine große Ask-AI-Pille; angeheftete Einträge bleiben beim Leeren erhalten",
         "en": "Clipboard cards in the new glass layout: smaller transparent buttons for copy, pin and remove, an image preview in the middle and a large Ask AI pill; pinned entries survive clearing"
       },
       {
-        "de": "Shelf übernimmt das Clipboard-Layout: Kopieren oben links, Explorer und Entfernen oben rechts, Bildvorschau in der Mitte und die große Ask-AI-Pille; das neue Chat-Icon ersetzt den alten Funkel-Stern überall, wo AI vorkommt",
         "en": "Shelf adopts the clipboard layout: copy top-left, Explorer and remove top-right, image preview in the middle and the large Ask AI pill; the new chat icon replaces the old sparkle everywhere AI appears"
       },
       {
-        "de": "Kopieren zeigt statt des grünen Punkts eine animierte Häkchen-Pop-Animation mit kurzem Ring; alle Karten-Buttons federn beim Hover sanft",
         "en": "Copy now shows an animated check-pop with a short ring instead of the green dot; all card buttons spring smoothly on hover"
       },
       {
-        "de": "Lyric-Pille in Kompakt, Normal oder Lang; der Wechsel läuft mit einem weichen Width-Spring ohne Ruckeln, Wort-für-Wort-Lyrics bekommen einen sanften Bounce",
         "en": "Lyric pill in Compact, Normal or Long; width changes run on a smooth width spring without jitter, and word-by-word lyrics get a gentle bounce"
       },
       {
-        "de": "Die Uhr betont im geschlossenen Modus und in der Übersicht beide Stundenstellen gleich groß und fett (12 statt 1 + 2)",
         "en": "The clock emphasizes both hour digits at the same size and weight in the closed notch and in Overview (12 instead of 1 + 2)"
       },
       {
-        "de": "FPS-Freischaltung merkt sich den laufenden Helper; die Einstellung zeigt nach dem Öffnen nicht mehr fälschlich „gesperrt“",
         "en": "FPS unlock remembers a running helper; Settings no longer shows it as locked after reopening"
       },
       {
-        "de": "„Verbindungen“ heißt jetzt „Discord“; Hover-Hilfetexte am Power-Menü sind entfernt",
         "en": "Connections is now called Discord; removed hover helper texts from the power menu"
       }
     ]
@@ -270,11 +220,9 @@
     "date": "2026-10-24",
     "items": [
       {
-        "de": "Custom-Theme zeigt nur noch den funktionierenden Farbwähler; die fertigen Theme-Karten und die zusätzliche Farbreihe sind entfernt",
         "en": "Custom theme now shows only the working color picker; the ready-made theme cards and extra color row are removed"
       },
       {
-        "de": "Farbwähler reagiert jetzt zuverlässig auf Ziehen in Fläche und Hue-Regler, auch in WebView2",
         "en": "The color picker now reliably follows dragging in the field and hue slider, including in WebView2"
       }
     ]
@@ -284,23 +232,18 @@
     "date": "2026-10-24",
     "items": [
       {
-        "de": "Wort-für-Wort-Songtext: weicherer Spring, stärkerer Blur und sanfte Skalierung von unten – deutlich flüssiger",
         "en": "Word-by-word lyrics: softer spring, stronger blur and a gentle scale from below for a much smoother rise"
       },
       {
-        "de": "Neuer In-App-Farbwähler für das Custom-Theme: HSV-Fläche, Hue-Regler, HEX- und RGB-Felder statt des Systemdialogs",
         "en": "New in-app color picker for the Custom theme: HSV field, hue slider, HEX and RGB fields instead of the system dialog"
       },
       {
-        "de": "Fertige Themes Mocha, Matcha, Monochrome und Soft Yellow; Monochrome und Soft Yellow auch in der Farbreihe",
         "en": "Ready-made Mocha, Matcha, Monochrome and Soft Yellow themes; Monochrome and Soft Yellow also in the color row"
       },
       {
-        "de": "Kopier-Bestätigungen zeigen jetzt grüne Punkte statt Häkchen",
         "en": "Copy confirmations now use green dots instead of checkmarks"
       },
       {
-        "de": "FPS-Pille: Live-Lastbalken füllt die Mitte; die CPU-Temperatur nutzt den echten Lenovo-Sensor, wenn der Helper läuft",
         "en": "FPS pill: live load bars fill the middle; CPU temperature uses the real Lenovo sensor when the helper is running"
       }
     ]
@@ -310,23 +253,18 @@
     "date": "2026-10-24",
     "items": [
       {
-        "de": "Neues Theme „Custom“: Eigene Inselfarbe über einen großen Farbwähler; Text, Menüs und Icons wechseln automatisch zwischen hell und dunkel",
         "en": "New “Custom” theme: pick any island color with a large color selector; text, menus and icons switch between light and dark automatically"
       },
       {
-        "de": "Die getrennten Farben für „Ruhende Notch“ und „Offene Notch“ sind entfernt; das Theme steuert jetzt beide",
         "en": "Removed the separate “Resting notch” and “Open notch” colors; the theme now controls both"
       },
       {
-        "de": "Die Einstellungen nutzen bei kurzen Seiten wie About weniger Leerraum",
         "en": "Settings use less empty space on short pages such as About"
       },
       {
-        "de": "Windows Hello entsperrt den Tresor jetzt automatisch beim Öffnen; Name, Benutzername und alle Einträge liegen bis zum Entsperren versiegelt",
         "en": "Windows Hello now unlocks the vault automatically on open; names, usernames and all entries stay sealed until unlocked"
       },
       {
-        "de": "Die CPU-Temperatur erscheint im FPS-Pill, mit ACPI-Fallback wenn Lenovo GameZone keine Sensoren liefert",
         "en": "CPU temperature appears in the FPS pill, with an ACPI fallback when Lenovo GameZone provides no sensors"
       }
     ]
@@ -336,11 +274,9 @@
     "date": "2026-10-24",
     "items": [
       {
-        "de": "Bilder lassen sich mit Strg+V direkt in den offenen AI-Chat einfügen; sie erscheinen als Anhang und gehen mit der nächsten Nachricht an das Modell",
         "en": "Paste images straight into the open AI chat with Ctrl+V; they appear as an attachment and go to the model with your next message"
       },
       {
-        "de": "Große Screenshots werden auf 1600 px verkleinert, damit Arbeitsspeicher und gespeicherte Chats klein bleiben",
         "en": "Large screenshots are scaled down to 1600 px to keep memory use and saved chats small"
       }
     ]
@@ -350,23 +286,18 @@
     "date": "2026-10-24",
     "items": [
       {
-        "de": "Ask-Aktionen sind größer und sitzen unten rechts: AI-Einstellungen, Chat-Verlauf und neuer Chat",
         "en": "Ask actions are larger and sit at the lower right: AI settings, chat history and new chat"
       },
       {
-        "de": "Der Verlauf ist besser lesbar; die Überschrift und die Zeitstempel haben mehr Kontrast",
         "en": "History is easier to read; the heading and timestamps have more contrast"
       },
       {
-        "de": "Equalization Accent und alle Farbfelder akzeptieren jetzt jede eigene Farbe über den Farbwähler",
         "en": "Equalization Accent and every color swatch now accept any custom color through the color picker"
       },
       {
-        "de": "Die Regler für Dock-Symbole und Subtext wurden entfernt; beide bleiben fest auf 100 %",
         "en": "The Dock icons and Subtext sliders were removed; both stay fixed at 100%"
       },
       {
-        "de": "Die vergrößerte erste Uhrziffer hat jetzt etwas Abstand zum Doppelpunkt",
         "en": "The enlarged first clock digit now has clear space before the colon"
       }
     ]
@@ -376,15 +307,12 @@
     "date": "2026-10-24",
     "items": [
       {
-        "de": "Die erste Ziffer der geschlossenen Uhr ist kräftiger und etwas größer",
         "en": "The first digit of the closed clock is bolder and slightly larger"
       },
       {
-        "de": "Chats speichern lässt sich in den Einstellungen und im Verlauf-Menü abschalten; neue Nachrichten bleiben dann nur im Arbeitsspeicher",
         "en": "Chat saving can be switched off in Settings and in the history menu; new turns then stay in memory only"
       },
       {
-        "de": "Vorhandene Chats bleiben beim Abschalten lesbar und können einzeln oder mit Bestätigung alle auf einmal gelöscht werden",
         "en": "Existing chats stay readable when saving is off and can be deleted one by one or all at once with confirmation"
       }
     ]
@@ -394,39 +322,30 @@
     "date": "2026-10-24",
     "items": [
       {
-        "de": "Ask speichert Unterhaltungen lokal – der Verlauf öffnet die letzte oder eine frühere Unterhaltung",
         "en": "Ask saves conversations locally — history reopens the latest chat or an earlier one"
       },
       {
-        "de": "Jede Unterhaltung liegt als kleine Datei auf der Platte; nur der offene Chat ist im Arbeitsspeicher",
         "en": "Each conversation is a small file on disk; only the open chat is kept in memory"
       },
       {
-        "de": "Signierte Updates werden im Hintergrund automatisch installiert; abschaltbar unter Einstellungen → Updates",
         "en": "Signed updates install automatically in the background; switch it off under Settings → Updates"
       },
       {
-        "de": "Stufenloser Songtext-Regler (10–15 px); Pille und Visualisierung wachsen mit",
         "en": "Continuous 10–15 px lyric slider; the pill and visualizer grow with it"
       },
       {
-        "de": "Fünf Visualizer mit Live-Vorschau: Wave, Pulse, Dots, Ripple und Aurora – im Akzent des Covers",
         "en": "Five visualizers with live previews: Wave, Pulse, Dots, Ripple and Aurora — in the cover accent"
       },
       {
-        "de": "Dark-, Light- und System-Theme für die gesamte Oberfläche",
         "en": "Dark, Light and System themes across the whole UI"
       },
       {
-        "de": "FPS-Overlay nur für Genshin Impact oder eine eigene .exe",
         "en": "FPS overlay only for Genshin Impact or a custom .exe"
       },
       {
-        "de": "Apple Music als Standard-Animation, plus Wort-für-Wort und Aufdecken mit Vorschau",
         "en": "Apple Music is the default animation, plus Word by word and Reveal with previews"
       },
       {
-        "de": "GPU- und RAM-Werte im Gaming-Pill klar getrennt",
         "en": "GPU and RAM values in the gaming pill are clearly separated"
       }
     ]
@@ -436,19 +355,15 @@
     "date": "2026-10-24",
     "items": [
       {
-        "de": "Songtexte weiten die geschlossene Pille, statt lesbare Zeilen auszublenden; sehr lange Zeilen scrollen langsam",
         "en": "Lyrics widen the closed pill instead of fading readable lines; very long lines scroll slowly"
       },
       {
-        "de": "Gaming und Musik: ein eigener runder Equalizer schwebt links neben der FPS-Pille",
         "en": "Gaming and music: a separate circular equalizer floats left of the FPS pill"
       },
       {
-        "de": "Energie-Menü mit Saver, Balanced, Max und violettem Custom; Max und Custom nur am Netzteil",
         "en": "Power menu with Saver, Balanced, Max and purple Custom; Max and Custom only while plugged in"
       },
       {
-        "de": "Signierte Updates direkt aus GitHub – nach einer einmaligen manuellen Installation von 1.6.1",
         "en": "Signed updates straight from GitHub — after a one-time manual install of 1.6.1"
       }
     ]
@@ -458,23 +373,18 @@
     "date": "2026-10-09",
     "items": [
       {
-        "de": "Deutlich weniger Arbeitsspeicher, wenn die Notch zu ist – etwa 80 statt 300 MB",
         "en": "Far less memory while the notch is closed – about 80 instead of 300 MB"
       },
       {
-        "de": "Ruhiger im Hintergrund: kaum noch Prozessorlast im Leerlauf",
         "en": "Quieter in the background: barely any processor use while idle"
       },
       {
-        "de": "Ausgeschaltete Tools wie Hardware oder Zwischenablage laufen nicht mehr im Hintergrund",
         "en": "Turned-off tools like Hardware or Clipboard no longer run in the background"
       },
       {
-        "de": "Dünne Linie statt Notch als normale Ansicht – ein abgelaufener Timer klappt trotzdem auf",
         "en": "A thin line instead of the notch as your everyday look – a finished timer still pops open"
       },
       {
-        "de": "Als Nächstes kommt Version 2.0.0 mit vielen neuen Inhalten: Die kleine Notch zeigt dann viel mehr – Downloads und Updates, App-Status, den Fortschritt von Claude Code und anderen AI-CLIs, Widgets und vieles mehr",
         "en": "Coming next: version 2.0.0 with lots of new things. The closed notch will show much more – downloads and updates, app status, progress of Claude Code and other AI CLIs, widgets and more",
         "highlight": true
       }
@@ -485,39 +395,30 @@
     "date": "2026-10-07",
     "items": [
       {
-        "de": "Lautstärke pro App im Player – wie der Windows-Mixer",
         "en": "Volume per app in the player – like the Windows mixer"
       },
       {
-        "de": "Klick auf Cover oder Titel öffnet die App, die gerade spielt",
         "en": "Click the cover or title to open the app that's playing"
       },
       {
-        "de": "Temperatur in °C oder °F, Uhrzeit in 24 oder 12 Stunden",
         "en": "Temperature in °C or °F, clock in 24 or 12 hours"
       },
       {
-        "de": "Präsentationsmodus: blendet Zwischenablage, Kontostände und Tresor beim Bildschirmteilen aus",
         "en": "Presentation mode: hides clipboard, balances and vault while you share your screen"
       },
       {
-        "de": "Neuerungen direkt hier – auch von übersprungenen Versionen",
         "en": "What's new, right here – including versions you skipped"
       },
       {
-        "de": "Fokus-Modus als dünne Linie am Rand – und an/aus direkt im Tray-Menü",
         "en": "Focus mode as a thin line at the edge – and on/off right from the tray menu"
       },
       {
-        "de": "Klicks direkt unter der Notch gehen nicht mehr verloren",
         "en": "Clicks right below the notch no longer get lost"
       },
       {
-        "de": "Bilder in der Zwischenablage brauchen deutlich weniger Arbeitsspeicher",
         "en": "Clipboard images use far less memory"
       },
       {
-        "de": "Cover wechseln weich statt hart, in der kleinen Notch und im Player",
         "en": "Covers change smoothly, in the closed notch and in the player"
       }
     ]
@@ -527,15 +428,12 @@
     "date": "2026-10-05",
     "items": [
       {
-        "de": "Album-Cover aus Spotifast werden angezeigt",
         "en": "Album covers from Spotifast show up"
       },
       {
-        "de": "Flüssigere Animationen beim Öffnen und Schließen",
         "en": "Smoother animations when opening and closing"
       },
       {
-        "de": "Discord-Anleitung um den Redirect http://localhost ergänzt",
         "en": "Discord guide now includes the http://localhost redirect"
       }
     ]
@@ -545,11 +443,9 @@
     "date": "2026-10-05",
     "items": [
       {
-        "de": "Tresor mit Windows Hello entsperren – Gesicht, Finger oder Windows-PIN",
         "en": "Unlock the vault with Windows Hello – face, fingerprint or Windows PIN"
       },
       {
-        "de": "Zusätzlich AES-256-verschlüsselt über den Sicherheitschip (TPM)",
         "en": "Additionally AES-256 encrypted via the security chip (TPM)"
       }
     ]
@@ -559,15 +455,12 @@
     "date": "2026-10-05",
     "items": [
       {
-        "de": "Neu: Tresor für Passwörter und 2FA-Codes, verschlüsselt auf deinem PC",
         "en": "New: vault for passwords and 2FA codes, encrypted on your PC"
       },
       {
-        "de": "2FA hinzufügen per Screenshot vom QR-Code und Strg + V",
         "en": "Add 2FA with a screenshot of the QR code and Ctrl + V"
       },
       {
-        "de": "Kopierte Passwörter landen in keinem Verlauf und sind nach 30 s weg",
         "en": "Copied passwords stay out of every history and clear after 30 s"
       }
     ]
@@ -577,7 +470,6 @@
     "date": "2026-10-05",
     "items": [
       {
-        "de": "Erste Version",
         "en": "First release"
       }
     ]

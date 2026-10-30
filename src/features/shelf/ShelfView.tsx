@@ -97,7 +97,7 @@ export function ShelfView() {
           transition={springs.snappy}
         >
           <Tray size={22} weight="bold" className={dragging ? "text-label" : "text-label-3"} />
-          <span className="text-body text-label-2">{dragging ? t("Loslassen zum Ablegen") : t("Dateien hierher ziehen")}</span>
+          <span className="text-body text-label-2">{dragging ? t("Release to drop") : t("Drag files here")}</span>
           <PasteHint nothing={nothing} />
         </motion.div>
       </div>
@@ -108,21 +108,21 @@ export function ShelfView() {
     <div className="relative flex h-full flex-col px-4 pt-1 pb-2">
       <HeaderActions>
         <span className="tabular mr-1 text-caption text-label-3">
-          {items.length} {items.length === 1 ? t("Datei") : t("Dateien")}
+          {items.length} {items.length === 1 ? t("file") : t("Files")}
         </span>
         {items.some((i) => i.kind !== "other") && (
           <HeaderButton
-            label={t("Umwandeln")}
+            label={t("Convert")}
             onClick={() => convertItems(items.filter((i) => i.kind !== "other").map((i) => i.path))}
           >
             <ArrowsLeftRight size={14} weight="bold" />
           </HeaderButton>
         )}
-        <HeaderButton label={copied === "all" ? t("Kopiert") : t("Alle kopieren")} onClick={() => void copyAll(items.map((i) => i.path), "all")}>
+        <HeaderButton label={copied === "all" ? t("Copied") : t("Copy all")} onClick={() => void copyAll(items.map((i) => i.path), "all")}>
           {copied === "all" ? <CopyCheck size={14} /> : <Copy size={14} weight="bold" />}
         </HeaderButton>
         <HeaderButton
-          label={t("Ablage leeren")}
+          label={t("Clear shelf")}
           onClick={() => {
             closePreview();
             shelf.set([]);
@@ -177,7 +177,7 @@ export function ShelfView() {
             exit={{ opacity: 0 }}
             transition={fade}
           >
-            {t("Loslassen zum Ablegen")}
+            {t("Release to drop")}
           </motion.div>
         )}
       </AnimatePresence>
@@ -220,8 +220,8 @@ function Card({ item, copied, onCopy, onPreview, onRemove, onConvert }: { item: 
     <div className="group relative flex size-full flex-col overflow-hidden rounded-[14px] bg-fill-1">
       <button
         onClick={() => void openFile(item.path)}
-        aria-label={t("{name} öffnen", { name: item.name })}
-        title={t("{name} öffnen", { name: item.name })}
+        aria-label={t("Open {name}", { name: item.name })}
+        title={t("Open {name}", { name: item.name })}
         className="pressable relative flex min-h-0 flex-1 items-center justify-center overflow-hidden"
       >
         {preview ? (
@@ -235,7 +235,7 @@ function Card({ item, copied, onCopy, onPreview, onRemove, onConvert }: { item: 
         <span className="tabular text-caption text-label-3">{formatBytes(item.size, 0)}</span>
       </div>
       <CardButton
-        label={copied ? t("Kopiert") : t("Kopieren")}
+        label={copied ? t("Copied") : t("Copy")}
         icon={Copy}
         copied={copied}
         className="absolute top-2 left-2 opacity-0 group-hover:opacity-100"
@@ -243,16 +243,16 @@ function Card({ item, copied, onCopy, onPreview, onRemove, onConvert }: { item: 
       />
       {item.kind === "image" && (
         <CardButton
-          label={t("Vorschau")}
+          label={t("Preview")}
           icon={ArrowsOutSimple}
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100"
           onClick={onPreview}
         />
       )}
       <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-        {item.kind !== "other" && <CardButton label={t("Umwandeln")} icon={ArrowsLeftRight} onClick={onConvert} />}
-        <CardButton label={t("Im Explorer zeigen")} icon={FolderOpen} onClick={() => revealFile(item.path)} />
-        <CardButton label={t("Entfernen")} icon={X} onClick={onRemove} />
+        {item.kind !== "other" && <CardButton label={t("Convert")} icon={ArrowsLeftRight} onClick={onConvert} />}
+        <CardButton label={t("Show in Explorer")} icon={FolderOpen} onClick={() => revealFile(item.path)} />
+        <CardButton label={t("Remove")} icon={X} onClick={onRemove} />
       </div>
       <AskAIPill className="absolute inset-x-2 bottom-2 opacity-0 group-hover:opacity-100" onClick={() => void ask()} />
     </div>
@@ -264,7 +264,7 @@ export function PasteHint({ nothing }: { nothing: boolean }) {
   return (
     <button onClick={() => void pasteFiles()} className="pressable flex items-center gap-1 text-caption text-label-3 hover:text-label-2">
       <ClipboardText size={12} weight="bold" />
-      {nothing ? t("Keine Dateien in der Zwischenablage") : t("oder Strg+V zum Einfügen")}
+      {nothing ? t("No files on the clipboard") : t("or Ctrl+V to paste")}
     </button>
   );
 }

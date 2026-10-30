@@ -31,8 +31,8 @@ export function useChargingWatch() {
         notify({
           kind: "info",
           app: "WinZal",
-          title: t("Akku fast leer"),
-          body: t("Nur noch {n}%. Ladegerät anschließen.").replace("{n}", String(battery.percent)),
+          title: t("Battery low"),
+          body: t("Only {n}% left. Plug in a charger.").replace("{n}", String(battery.percent)),
           color: "#ff453a",
           duration: 7000,
         });

@@ -256,9 +256,18 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   clip-path: inset(100% 0 0 0);
+  /* Tight two-layer glow that follows the glyphs. One wide shadow merges
+     across words and reads as a white highlighter strip. */
+  text-shadow:
+    0 0 4px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 0 10px color-mix(in srgb, var(--accent) 12%, transparent);
 }
-.lab-fill-right { background: none; color: #f6fbff; text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 60%, transparent); }
-.lab-w.hot .lab-fill { filter: drop-shadow(0 0 7px color-mix(in srgb, var(--accent) 50%, transparent)); }
+.lab-fill-right { background: none; color: #f6fbff; }
+.lab-w.hot .lab-fill {
+  text-shadow:
+    0 0 5px color-mix(in srgb, var(--accent) 38%, transparent),
+    0 0 12px color-mix(in srgb, var(--accent) 16%, transparent);
+}
 .lab-ul {
   position: absolute;
   left: 6%;

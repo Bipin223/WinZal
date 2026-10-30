@@ -178,8 +178,6 @@ export interface Settings {
   /** Discord call in the notch (local RPC, on = Discord tool enabled). The client secret is stored with the secrets. */
   discord: { clientId: string; presence: boolean; appName: string; statusLine: "title" | "artist" | "app" };
   alarm: { sound: AlarmSound; volume: number; duration: AlarmDuration };
-  /** English or German UI. The original strings are German; en.json translates them. */
-  language: "en" | "de";
   /** Celsius by default; the clock still follows the Windows region. */
   units: { temp: "c" | "f"; clock: "24" | "12" };
   /**
@@ -290,7 +288,6 @@ const defaults: Settings = {
   },
   discord: { clientId: "", presence: true, appName: "Bipin Rizal's WinZal app", statusLine: "title" },
   alarm: { sound: "chime", volume: 0.7, duration: 5 },
-  language: "en",
   units: regionUnits(),
   presentation: { manual: false, auto: true },
   updates: { auto: true, install: true },
@@ -474,7 +471,6 @@ settings.set((s) => {
     },
     discord: { ...defaults.discord, ...s.discord },
     alarm: { ...defaults.alarm, ...s.alarm },
-    language: s.language === "de" ? "de" : "en",
     units: { ...defaults.units, ...s.units, temp: "c" },
     presentation: { ...defaults.presentation, ...s.presentation },
     updates: { ...defaults.updates, ...s.updates },

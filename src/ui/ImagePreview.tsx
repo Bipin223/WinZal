@@ -41,10 +41,10 @@ export function ImagePreviewPane({ preview, onCopy, onClose }: { preview: Loaded
           <ArrowsOutSimple size={11} weight="bold" /> {preview.width} × {preview.height}
         </span>
         <div className="flex gap-0.5">
-          <HeaderButton label={t("Kopieren")} onClick={onCopy}>
+          <HeaderButton label={t("Copy")} onClick={onCopy}>
             <Copy size={13} weight="bold" />
           </HeaderButton>
-          <HeaderButton label={t("Vorschau schließen")} onClick={onClose}>
+          <HeaderButton label={t("Close preview")} onClick={onClose}>
             <X size={13} weight="bold" />
           </HeaderButton>
         </div>

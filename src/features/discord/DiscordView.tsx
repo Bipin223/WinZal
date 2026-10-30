@@ -10,12 +10,12 @@ import { Button, Empty } from "../../ui/controls";
 import { discordState } from "./store";
 
 const statusText: Record<string, string> = {
-  off: "Discord ist aus",
-  "no-config": "Client-ID und Secret fehlen",
-  "no-client": "Discord läuft nicht",
-  connecting: "Verbinde mit Discord …",
-  authorizing: "In Discord bestätigen",
-  error: "Verbindung fehlgeschlagen",
+  off: "Discord is off",
+  "no-config": "Client ID and secret missing",
+  "no-client": "Discord isn't running",
+  connecting: "Connecting to Discord …",
+  authorizing: "Confirm in Discord",
+  error: "Connection failed",
 };
 
 /*
@@ -34,7 +34,7 @@ export function DiscordView() {
 
   const actions = (
     <HeaderActions>
-      <HeaderButton label={t("Discord einrichten")} onClick={() => navigate("settings", "discord")}>
+      <HeaderButton label={t("Set up Discord")} onClick={() => navigate("settings", "discord")}>
         <SlidersHorizontal size={14} weight="bold" />
       </HeaderButton>
     </HeaderActions>
@@ -47,15 +47,15 @@ export function DiscordView() {
         {actions}
         <Empty
           icon={DiscordLogo}
-          title={ready ? t("Kein Anruf") : t(statusText[s.status] ?? statusText.error)}
+          title={ready ? t("No call") : t(statusText[s.status] ?? statusText.error)}
           text={
             ready
-              ? t("Sobald du einem Sprachkanal beitrittst, erscheint er hier.")
+              ? t("Shows when you join a voice channel.")
               : s.status === "authorizing"
-                ? t("Discord fragt einmal nach, ob die Notch deinen Sprachstatus sehen darf.")
+                ? t("Discord asks once for voice status.")
                 : s.error ? tBackend(s.error) : undefined
           }
-          action={s.status === "no-config" ? <Button onClick={() => navigate("settings", "discord")}>{t("Einrichten")}</Button> : undefined}
+          action={s.status === "no-config" ? <Button onClick={() => navigate("settings", "discord")}>{t("Set up")}</Button> : undefined}
         />
       </>
     );
@@ -68,7 +68,7 @@ export function DiscordView() {
         <GuildIcon call={call} size={44} />
         <div className="min-w-0 flex-1">
           <div className="truncate text-title">{call.channelName}</div>
-          <div className="truncate text-footnote text-label-2">{call.guildName ?? t("Privater Anruf")}</div>
+          <div className="truncate text-footnote text-label-2">{call.guildName ?? t("Private call")}</div>
         </div>
       </motion.div>
 
@@ -76,18 +76,18 @@ export function DiscordView() {
         <Members call={call} />
         <div className="flex shrink-0 items-center gap-2.5">
           <RoundButton
-            label={call.mute ? t("Mikrofon an") : t("Stummschalten")}
+            label={call.mute ? t("Unmute") : t("Mute")}
             icon={call.mute ? MicrophoneSlash : Microphone}
             active={call.mute}
             onClick={() => discord.action("mute")}
           />
           <RoundButton
-            label={call.deaf ? t("Ton an") : t("Ton aus")}
+            label={call.deaf ? t("Undeafen") : t("Deafen")}
             icon={call.deaf ? SpeakerSimpleSlash : Headphones}
             active={call.deaf}
             onClick={() => discord.action("deafen")}
           />
-          <RoundButton label={t("Auflegen")} icon={PhoneDisconnect} danger onClick={() => discord.action("leave")} />
+          <RoundButton label={t("Hang up")} icon={PhoneDisconnect} danger onClick={() => discord.action("leave")} />
         </div>
       </div>
     </div>

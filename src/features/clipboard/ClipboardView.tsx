@@ -42,11 +42,11 @@ const kindIcon: Record<ClipItem["kind"], Icon> = {
 
 type Filter = "all" | "text" | "link" | "image" | "files";
 const filters: { value: Filter; label: string }[] = [
-  { value: "all", label: "Alle" },
+  { value: "all", label: "All" },
   { value: "text", label: "Text" },
   { value: "link", label: "Links" },
-  { value: "image", label: "Bilder" },
-  { value: "files", label: "Dateien" },
+  { value: "image", label: "Images" },
+  { value: "files", label: "Files" },
 ];
 
 /** Height of the card row; the image preview attaches below it. */
@@ -134,8 +134,8 @@ export function ClipboardView() {
   if (all.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-0.5 pb-2">
-        <span className="text-body text-label-2">{t("Noch nichts kopiert")}</span>
-        <span className="text-caption text-label-3">{t("Text, Links, Bilder und Dateien erscheinen hier")}</span>
+        <span className="text-body text-label-2">{t("Nothing copied yet")}</span>
+        <span className="text-caption text-label-3">{t("Text, links, images and files show up here")}</span>
       </div>
     );
   }
@@ -145,7 +145,7 @@ export function ClipboardView() {
       <HeaderActions>
         <Segmented id="clip-filter" size="sm" value={filter} onChange={setFilter} options={filters.map((f) => ({ ...f, label: t(f.label) }))} />
         <HeaderButton
-          label={t("Alle außer Pins löschen")}
+          label={t("Clear all except pins")}
           disabled={all.every((i) => i.pinned)}
           onClick={() => {
             setPreviewId(null);
@@ -161,7 +161,7 @@ export function ClipboardView() {
         className="flex shrink-0 gap-2 overflow-x-auto px-4 pt-1 [scrollbar-width:none]"
         style={{ height: ROW_H, maskImage: "linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 24px), transparent)" }}
       >
-        {items.length === 0 && <div className="flex w-full items-center justify-center text-body text-label-3">{t("Nichts in dieser Kategorie")}</div>}
+        {items.length === 0 && <div className="flex w-full items-center justify-center text-body text-label-3">{t("Nothing in this category")}</div>}
         <AnimatePresence initial={false} mode="popLayout">
           {items.map((item) => (
             <motion.div
@@ -182,12 +182,12 @@ export function ClipboardView() {
                 onClick={() => (item.thumbnail && !hidden ? setPreviewId((p) => (p === item.id ? null : item.id)) : void copy(item.id))}
               />
               <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                <CardButton label={t("Kopieren")} icon={Copy} copied={copied === item.id} onClick={() => void copy(item.id)} />
-                <CardButton label={t("Entfernen")} icon={X} onClick={() => clipboard.remove(item.id)} />
+                <CardButton label={t("Copy")} icon={Copy} copied={copied === item.id} onClick={() => void copy(item.id)} />
+                <CardButton label={t("Remove")} icon={X} onClick={() => clipboard.remove(item.id)} />
               </div>
               {!hidden && item.thumbnail && (
                 <CardButton
-                  label={t("Vorschau")}
+                  label={t("Preview")}
                   icon={ArrowsOutSimple}
                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100"
                   onClick={() => setPreviewId((p) => (p === item.id ? null : item.id))}
@@ -200,7 +200,7 @@ export function ClipboardView() {
                 />
               )}
               <CardButton
-                label={item.pinned ? t("Lösen") : t("Anheften")}
+                label={item.pinned ? t("Unpin") : t("Pin")}
                 icon={PushPin}
                 weight={item.pinned ? "fill" : "bold"}
                 active={item.pinned}
@@ -259,7 +259,7 @@ function Card(props: { item: ClipItem; now: number; hidden: boolean; copied: boo
   return (
     <button
       onClick={props.onClick}
-      title={hidden ? t("Ausgeblendet") : isImage ? t("Vorschau") : item.text}
+      title={hidden ? t("Hidden") : isImage ? t("Preview") : item.text}
       className={`pressable pressable-fill relative flex size-full flex-col justify-between overflow-hidden rounded-[14px] bg-fill-1 p-3 text-left ${
         props.selected ? "ring-2 ring-label ring-inset" : item.pinned ? "ring-1 ring-white/25 ring-inset" : ""
       }`}
@@ -294,7 +294,7 @@ function Card(props: { item: ClipItem; now: number; hidden: boolean; copied: boo
             exit={{ opacity: 0 }}
             transition={fade}
           >
-            <CopyCheck size={14} /> {t("Kopiert")}
+            <CopyCheck size={14} /> {t("Copied")}
           </motion.div>
         )}
       </AnimatePresence>
@@ -313,7 +313,7 @@ function Body({ item }: { item: ClipItem }) {
         <div className="relative min-w-0">
           {!item.thumbnail && <FileIcon size={26} weight="duotone" className="mb-1.5 text-label-2" />}
           <p className="line-clamp-2 text-footnote font-medium text-label [overflow-wrap:anywhere]">{names[0]}</p>
-          {names.length > 1 && <p className="text-caption text-label-3">{t("+{n} weitere", { n: names.length - 1 })}</p>}
+          {names.length > 1 && <p className="text-caption text-label-3">{t("+{n} more", { n: names.length - 1 })}</p>}
         </div>
       );
     }
@@ -374,8 +374,8 @@ function useNow(interval: number): number {
 
 function relative(time: number, now: number): string {
   const s = Math.max(0, (now - time) / 1000);
-  if (s < 60) return t("Jetzt");
-  if (s < 3600) return t("{n} Min.", { n: Math.floor(s / 60) });
-  if (s < 86_400) return t("{n} Std.", { n: Math.floor(s / 3600) });
-  return t("{n} T.", { n: Math.floor(s / 86_400) });
+  if (s < 60) return t("Now");
+  if (s < 3600) return t("{n} min", { n: Math.floor(s / 60) });
+  if (s < 86_400) return t("{n} h", { n: Math.floor(s / 3600) });
+  return t("{n} d", { n: Math.floor(s / 86_400) });
 }

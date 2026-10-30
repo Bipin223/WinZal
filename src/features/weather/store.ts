@@ -12,7 +12,7 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 import { settings, updateSettings } from "../../settings/store";
-import { lang, t } from "../../i18n";
+import { t } from "../../i18n";
 
 /*
  * Weather data via Open-Meteo (free, no key). Used by the weather tool and the
@@ -26,14 +26,14 @@ export interface Forecast {
 
 /** WMO weather codes -> icon + text. */
 export function describe(code: number, day = true): { icon: Icon; text: string } {
-  if (code === 0) return { icon: day ? Sun : Moon, text: t("Klar") };
-  if (code <= 2) return { icon: day ? CloudSun : CloudMoon, text: t(code === 1 ? "Überwiegend klar" : "Teils bewölkt") };
-  if (code === 3) return { icon: Cloud, text: t("Bedeckt") };
-  if (code <= 48) return { icon: CloudFog, text: t("Nebel") };
-  if (code <= 57) return { icon: CloudRain, text: t("Nieselregen") };
-  if (code <= 67 || (code >= 80 && code <= 82)) return { icon: CloudRain, text: t("Regen") };
-  if (code <= 77 || code === 85 || code === 86) return { icon: CloudSnow, text: t("Schnee") };
-  return { icon: CloudLightning, text: t("Gewitter") };
+  if (code === 0) return { icon: day ? Sun : Moon, text: t("Clear") };
+  if (code <= 2) return { icon: day ? CloudSun : CloudMoon, text: t(code === 1 ? "Mostly clear" : "Partly cloudy") };
+  if (code === 3) return { icon: Cloud, text: t("Overcast") };
+  if (code <= 48) return { icon: CloudFog, text: t("Fog") };
+  if (code <= 57) return { icon: CloudRain, text: t("Drizzle") };
+  if (code <= 67 || (code >= 80 && code <= 82)) return { icon: CloudRain, text: t("Rain") };
+  if (code <= 77 || code === 85 || code === 86) return { icon: CloudSnow, text: t("Snow") };
+  return { icon: CloudLightning, text: t("Thunderstorm") };
 }
 
 const cache = new Map<string, { at: number; data: Forecast }>();
@@ -76,7 +76,7 @@ export interface Place {
 
 /** Location search (Open-Meteo geocoding). */
 export async function searchPlaces(q: string): Promise<Place[]> {
-  const r = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=4&language=${lang()}`)).json();
+  const r = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=4&language=en`)).json();
   return (r.results ?? []).map((p: { name: string; admin1?: string; country?: string; latitude: number; longitude: number }) => ({
     name: p.name,
     detail: [p.admin1, p.country].filter(Boolean).join(", "),

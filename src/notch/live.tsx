@@ -44,7 +44,7 @@ export function useLiveActivity(): { id: string | null } {
  * sides (LiveEdge) follow the shape's edges by transform as it opens, closes or peeks.
  * Pinned to the edges by layout instead, they crept in pixel steps (issue #3).
  */
-export function LiveSlot({ id, recording = false, extra = 0, widthExtra = 0, height, systemWidth }: { id: string | null; recording?: boolean; extra?: number; widthExtra?: number; height?: number; systemWidth?: number }) {
+export function LiveSlot({ id, recording = false, extra = 0, callExtra = 0, widthExtra = 0, height, systemWidth }: { id: string | null; recording?: boolean; extra?: number; callExtra?: number; widthExtra?: number; height?: number; systemWidth?: number }) {
   const np = useNowPlaying();
   const call = useDiscordCall();
   // Keep the last size while an activity fades out (id is null when the notch opens).
@@ -53,7 +53,7 @@ export function LiveSlot({ id, recording = false, extra = 0, widthExtra = 0, hei
   const box = last.current === "system" ? { ...geometry.gaming, w: systemWidth ?? geometry.gaming.w } : geometry.live;
   // The recording chip and a long lyric line both live at the edges; give the
   // live content the same extra width as the shape so text can use it.
-  const width = box.w + (recording ? RECORDING_EXTRA : 0) + widthExtra + (last.current === "media" ? extra : 0);
+  const width = box.w + (recording ? RECORDING_EXTRA : 0) + widthExtra + (last.current === "media" ? extra : 0) + (last.current === "discord" ? callExtra : 0);
   const boxW = useRef(width);
   boxW.current = width;
   const spread = useTransform(useContext(ShapeWidth), (w) =>
@@ -62,7 +62,10 @@ export function LiveSlot({ id, recording = false, extra = 0, widthExtra = 0, hei
   // The content follows the same curve as the shape. Without this the live row
   // snapped to the new width while only the notch outline eased, which made
   // extension look like a jump. `morph` covers open/close and non-lyric sizes.
-  const widthTransition = last.current === "media" && extra > 0 ? springs.lyricWidth : springs.morph;
+  const widthTransition =
+    (last.current === "media" && extra > 0) || (last.current === "discord" && callExtra > 0)
+      ? springs.lyricWidth
+      : springs.morph;
   return (
     <LiveSpread.Provider value={spread}>
       <motion.div

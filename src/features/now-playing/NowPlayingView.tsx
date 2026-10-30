@@ -52,7 +52,7 @@ export function NowPlayingView() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => void media.openSource()}
-            title={source ? t("In {app} öffnen", { app: source }) : t("App öffnen")}
+            title={source ? t("Open in {app}", { app: source }) : t("Open app")}
             className="group/source pressable flex min-w-0 flex-1 items-center gap-3 rounded-[12px] text-left"
           >
             <Artwork np={np} />
@@ -345,10 +345,10 @@ function Progress({ np }: { np: NowPlaying }) {
 function Controls({ playing }: { playing: boolean }) {
   return (
     <div className="flex items-center justify-center gap-6">
-      <IconButton label={t("Zurück")} onClick={media.previous}>
+      <IconButton label={t("Previous")} onClick={media.previous}>
         <SkipBack size={20} weight="fill" />
       </IconButton>
-      <IconButton label={playing ? t("Pause") : t("Abspielen")} onClick={media.toggle}>
+      <IconButton label={playing ? t("Pause") : t("Play")} onClick={media.toggle}>
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.span
             key={playing ? "pause" : "play"}
@@ -362,7 +362,7 @@ function Controls({ playing }: { playing: boolean }) {
           </motion.span>
         </AnimatePresence>
       </IconButton>
-      <IconButton label={t("Weiter")} onClick={media.next}>
+      <IconButton label={t("Next")} onClick={media.next}>
         <SkipForward size={20} weight="fill" />
       </IconButton>
     </div>
@@ -383,7 +383,7 @@ function IconButton(props: { label: string; onClick: () => void; children: React
 
 function Empty() {
   return (
-    <div className="flex h-full items-center justify-center text-body text-label-3">{t("Gerade läuft nichts")}</div>
+    <div className="flex h-full items-center justify-center text-body text-label-3">{t("Nothing playing")}</div>
   );
 }
 

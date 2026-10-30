@@ -13,8 +13,8 @@ export interface ChatMessage {
 
 export const providerInfo: Record<AskProvider, { label: string; modelHint: string }> = {
   gemini: { label: "Gemini", modelHint: "z. B. gemini-3.5-flash" },
-  groq: { label: "Groq", modelHint: "z. B. llama-3.3-70b-versatile" },
-  custom: { label: "Custom", modelHint: "z. B. gpt-oss-120b" },
+  groq: { label: "Groq", modelHint: "e.g. llama-3.3-70b-versatile" },
+  custom: { label: "Custom", modelHint: "e.g. gpt-oss-120b" },
 };
 
 export const effortLevels: { value: AskEffort; label: string }[] = [

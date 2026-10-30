@@ -51,7 +51,7 @@ export function WeatherView() {
           </motion.div>
         ) : error ? (
           <motion.div key="error" className="flex h-full items-center justify-center text-body text-label-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={fade}>
-            {t("Wetter gerade nicht erreichbar")}
+            {t("Weather currently unavailable")}
           </motion.div>
         ) : !data || !place ? (
           <motion.div key="loading" className="flex flex-col gap-3" exit={{ opacity: 0, transition: content.exit }}>
@@ -66,7 +66,7 @@ export function WeatherView() {
                 const { icon: I, text } = describe(d.code);
                 return (
                   <div key={d.date} className={`flex flex-col items-center gap-1 rounded-[10px] py-1.5 ${i === 0 ? "bg-fill-1" : ""}`} title={text}>
-                    <span className="text-caption text-label-3">{i === 0 ? t("Heute") : weekday().format(new Date(`${d.date}T12:00:00`)).replace(".", "")}</span>
+                    <span className="text-caption text-label-3">{i === 0 ? t("Today") : weekday().format(new Date(`${d.date}T12:00:00`)).replace(".", "")}</span>
                     <I size={18} weight="fill" className="text-label-2" />
                     <span className="tabular text-caption font-semibold text-label">{formatTemp(d.max)}</span>
                     <span className="tabular -mt-1 text-caption text-label-3">{formatTemp(d.min)}</span>
@@ -89,13 +89,13 @@ function Current({ data, name, auto, onChangePlace }: { data: Forecast; name: st
       <I size={38} weight="fill" className="text-label" />
       <span className="tabular text-[34px] leading-none font-semibold tracking-[-0.03em]">{formatTemp(data.current.temp)}</span>
       <div className="min-w-0">
-        <button onClick={onChangePlace} className="flex items-center gap-1 text-footnote font-medium text-label hover:text-label-2" title={t("Ort ändern")}>
+        <button onClick={onChangePlace} className="flex items-center gap-1 text-footnote font-medium text-label hover:text-label-2" title={t("Change location")}>
           {auto ? <NavigationArrow size={11} weight="fill" /> : <MapPin size={11} weight="fill" />} {name}
         </button>
         <div className="text-caption text-label-3">{text}</div>
       </div>
       <div className="ml-auto flex flex-col items-end gap-0.5 text-caption text-label-3">
-        <span>{t("gefühlt {n}", { n: formatTemp(data.current.feels) })}</span>
+        <span>{t("feels like {n}", { n: formatTemp(data.current.feels) })}</span>
         <span className="flex items-center gap-1"><Wind size={11} weight="bold" /> {formatWind(data.current.wind)}</span>
         {today && today.rain > 0 && <span className="flex items-center gap-1"><Drop size={11} weight="fill" /> {today.rain} %</span>}
       </div>
@@ -132,12 +132,12 @@ export function PlaceSearch({ onDone, canCancel, compact = false }: { onDone: ()
           autoFocus
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={t("Ort suchen, z. B. Berlin")}
+          placeholder={t("Search location, e.g. Berlin")}
           className="min-w-0 flex-1 bg-transparent text-body text-label outline-none placeholder:text-label-4"
         />
         <button
-          title={t("Automatisch per IP")}
-          aria-label={t("Automatisch per IP")}
+          title={t("Automatic via IP")}
+          aria-label={t("Automatic via IP")}
           onClick={() => {
             setLocating(true);
             void detectPlace(true).then((ok) => {
@@ -157,7 +157,7 @@ export function PlaceSearch({ onDone, canCancel, compact = false }: { onDone: ()
         </button>
         {canCancel && (
           <button onClick={onDone} className="text-caption text-label-3 hover:text-label-2">
-            {t("Abbrechen")}
+            {t("Cancel")}
           </button>
         )}
       </div>
@@ -176,7 +176,7 @@ export function PlaceSearch({ onDone, canCancel, compact = false }: { onDone: ()
             <span className="truncate text-caption text-label-3">{p.detail}</span>
           </button>
         ))}
-        {!compact && query.trim().length < 2 && <span className="px-3 pt-2 text-caption text-label-3">{t("Für welchen Ort soll das Wetter angezeigt werden?")}</span>}
+        {!compact && query.trim().length < 2 && <span className="px-3 pt-2 text-caption text-label-3">{t("Which location should the weather show?")}</span>}
       </div>
     </div>
   );

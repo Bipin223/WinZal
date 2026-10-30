@@ -15,7 +15,7 @@ import {
 } from "./store";
 import { t } from "../../i18n";
 
-const modeLabel: Record<TimerMode, string> = { focus: "Fokus", break: "Pause" };
+const modeLabel: Record<TimerMode, string> = { focus: "Focus", break: "Pause" };
 
 /*
  *   [Focus | Break]               15  25  45  [37]  [✎]
@@ -54,7 +54,7 @@ function FinishedView() {
         ) : (
           <CheckCircle size={15} weight="fill" />
         )}
-        {t(s.mode === "focus" ? "Fokus abgelaufen" : "Pause abgelaufen")}
+        {t(s.mode === "focus" ? "Focus finished" : "Break finished")}
         <span className="font-medium text-label-3">· {formatClock(s.duration)}</span>
       </div>
       <div className="flex items-center gap-4">
@@ -76,11 +76,11 @@ function FinishedView() {
             transition={content.exit}
           >
             {ring ? (
-              <RoundButton label={t("Alarm stoppen")} onClick={timerActions.silence} tint={tint}>
+              <RoundButton label={t("Stop alarm")} onClick={timerActions.silence} tint={tint}>
                 <SpeakerSimpleSlash size={17} weight="fill" />
               </RoundButton>
             ) : (
-              <RoundButton label={t("Schließen")} onClick={timerActions.dismiss}>
+              <RoundButton label={t("Close")} onClick={timerActions.dismiss}>
                 <X size={16} weight="bold" />
               </RoundButton>
             )}
@@ -160,8 +160,8 @@ function SetupView() {
                 </button>
               ))}
               <button
-                aria-label={t("Eigene Zeit")}
-                title={t("Eigene Zeit (oder Mausrad über der Zeit)")}
+                aria-label={t("Custom time")}
+                title={t("Custom time (or scroll over the time)")}
                 onClick={() => setEditing(true)}
                 className="pressable pressable-fill flex size-6 items-center justify-center rounded-full text-label-3 hover:text-label-2"
               >
@@ -176,7 +176,7 @@ function SetupView() {
       <div className="flex items-center gap-4">
         <span
           ref={clockRef}
-          title={editable ? t("Mausrad: ±1 min, Shift: ±5 min") : undefined}
+          title={editable ? t("Scroll: ±1 min, Shift: ±5 min") : undefined}
           className="tabular text-[40px] leading-none font-semibold tracking-[-0.03em]"
           style={{ color: tint }}
         >
@@ -192,7 +192,7 @@ function SetupView() {
           />
         </div>
         <div className="flex gap-1.5">
-          <RoundButton label={t("Zurücksetzen")} onClick={timerActions.reset} disabled={editable}>
+          <RoundButton label={t("Reset")} onClick={timerActions.reset} disabled={editable}>
             <ArrowCounterClockwise size={16} weight="bold" />
           </RoundButton>
           <RoundButton
@@ -265,7 +265,7 @@ function MinutesInput(props: { initial: number; tint: string; onDone: (minutes: 
       </div>
       <button
         type="submit"
-        aria-label={t("Übernehmen")}
+        aria-label={t("Apply")}
         disabled={!valid}
         className="pressable flex size-6 items-center justify-center rounded-full disabled:opacity-30"
         style={{ color: props.tint, backgroundColor: `color-mix(in srgb, ${props.tint} 18%, transparent)` }}

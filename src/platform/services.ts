@@ -174,7 +174,7 @@ export interface ChangelogEntry {
   version: string;
   date: string;
   /** `highlight`: shown in bold and bright (e.g. an announcement). Older versions ignore it. */
-  items: { de: string; en: string; highlight?: boolean }[];
+  items: { en: string; highlight?: boolean }[];
 }
 
 /** In the browser, `?update` in the URL fakes an update for testing. */
@@ -224,7 +224,7 @@ export const updater = {
  */
 export async function fetchChangelog(version: string): Promise<ChangelogEntry[] | null> {
   if (!isNative) {
-    const mock = { de: "Beispiel: Neuerung aus der kommenden Version", en: "Example: something new in the upcoming version" };
+    const mock = { en: "Example: something new in the upcoming version" };
     return [{ version, date: new Date().toISOString().slice(0, 10), items: [mock, mock] }, ...bundledChangelog];
   }
   try {
@@ -460,8 +460,8 @@ export const mockDiscord = (() => {
       if (state.call) return set(null);
       set({
         channelId: "1",
-        channelName: showcase ? showcaseCall.channelName : "Zocken",
-        guildName: showcase ? showcaseCall.guildName : "Die Runde",
+        channelName: showcase ? showcaseCall.channelName : "Gaming",
+        guildName: showcase ? showcaseCall.guildName : "The Round",
         guildIcon: null,
         mute: false,
         deaf: false,
@@ -469,7 +469,7 @@ export const mockDiscord = (() => {
         members: showcase
           ? showcaseCall.members.map((m) => ({ id: m.id, name: m.name, avatar: avatar(m.avatar), speaking: false, muted: m.id === "3" }))
           : [
-              { id: "1", name: "Du", avatar: avatar(0), speaking: false, muted: false },
+              { id: "1", name: "You", avatar: avatar(0), speaking: false, muted: false },
               { id: "2", name: "Mara", avatar: avatar(1), speaking: false, muted: false },
               { id: "3", name: "Jonas", avatar: avatar(2), speaking: false, muted: true },
               { id: "4", name: "Lea", avatar: avatar(3), speaking: false, muted: false },

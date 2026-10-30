@@ -3,6 +3,7 @@ import { AnimatePresence, animate, motion, useMotionValue, type Transition } fro
 import { Drop, GearSix, Ghost, MoonStars, PushPin } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
 import { useNowPlaying } from "../platform/media";
+import { uiFontFamily } from "../ui/font";
 import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onSilentExit, onTrayOpen, setHitRect, setMemoryLow, setNotchHeight, setSilent } from "../platform/native";
 import { PrivacyDots } from "../features/privacy/PrivacyDots";
 import { FOCUS_CLICKS, focusMode, setFocusMode } from "./focus";
@@ -71,6 +72,9 @@ export function Notch() {
   const noteVisibleRef = useRef(false);
   noteVisibleRef.current = noteVisible;
   const handleEnter = useCallback(() => {
+    // A native hover emitted just before set_silent(true) must not schedule a
+    // delayed open; ghost mode wins until the user explicitly wakes it.
+    if (silentMode.get()) return;
     if (!noteVisibleRef.current) onPointerEnter();
   }, [onPointerEnter]);
   const gamingLive = useGamingLive();
@@ -78,6 +82,7 @@ export function Notch() {
   useChargingWatch();
   const measuredGamingWidth = gamingMeasured.use();
   const [measuredClockWidth, setMeasuredClockWidth] = useState(0);
+  const [callTitleWidth, setCallTitleWidth] = useState(0);
   const clockRow = useRef<HTMLDivElement>(null);
   const { tools: toolSettings, display: displaySettings, appearance, gaming } = settings.use();
   // Silent mode is the only ghost; game transparency reuses the Glass alpha (0.62).
@@ -88,16 +93,19 @@ export function Notch() {
   // the first paint; adding both kept a permanent dead gutter around the stats.
   const systemWidth = measuredGamingWidth > 0 ? measuredGamingWidth : gamingWidth(gaming);
   useEffect(() => {
-    setSilent(silent && status !== "open");
-  }, [silent, status]);
+    // Enabling ghost must close the panel and cancel any hover-delay timer;
+    // otherwise a stale enter event can pop the notch open seconds later.
+    if (silent) dismiss();
+    setSilent(silent);
+  }, [silent, status, dismiss]);
   useEffect(
     () =>
       onSilentExit(() => {
+        // Same as the original focus mode: the triple-click only turns ghost
+        // off. The notch stays closed; hovering can open it again normally.
         setSilentMode(false);
-        open();
-        keyboardFocus(true);
       }),
-    [open],
+    [],
   );
   const light = useThemeLight();
   const floating = appearance.style === "windows";
@@ -113,6 +121,30 @@ export function Notch() {
   // Hidden tool active (e.g. just disabled) → first visible one.
   const tab = tabId === settingsTab.id ? settingsTab : (visible.find((t) => t.id === tabId) ?? visible[0] ?? tabs[0]);
   const np = useNowPlaying();
+  // The Discord pill uses the middle for the playing title; measure it so the
+  // shape can grow to fit instead of truncating a movie name to a stub.
+  useLayoutEffect(() => {
+    const title = np?.isPlaying ? (np.title || np.artist) : "";
+    if (!title) {
+      setCallTitleWidth(0);
+      return;
+    }
+    let cancelled = false;
+    const family = uiFontFamily(appearance.uiFont);
+    const measure = () => {
+      if (cancelled) return;
+      const ctx = document.createElement("canvas").getContext("2d");
+      if (!ctx) return;
+      ctx.font = `600 11px ${family}`;
+      setCallTitleWidth(ctx.measureText(title).width);
+    };
+    // Set a first value immediately; the font promise can be slow or hang.
+    measure();
+    void document.fonts.load(`600 11px ${family}`).then(measure, measure);
+    return () => {
+      cancelled = true;
+    };
+  }, [np?.isPlaying, np?.title, np?.artist, appearance.uiFont]);
   const live = useLiveActivity();
   const call = useDiscordCall();
   const charge = chargingPulse.use();
@@ -232,6 +264,13 @@ export function Notch() {
       ? Math.max(appearance.lyricsPillMinWidth, Math.min(appearance.lyricsPillLength, lyricWidth + (appearance.lyricsVisualizer ? 108 : 78)))
       : appearance.lyricsPillLength;
   const lyricsExtra = lyricTarget > 0 ? Math.min(360, Math.max(0, lyricTarget - geometry.live.w)) : 0;
+  // Call + playing media: the Discord pill shows the title between the server
+  // icon and the mute/equalizer. Only the part that exceeds the base middle
+  // opening adds width, so short titles keep the pill compact.
+  const callTitleExtra =
+    pillLive === "discord" && np?.isPlaying && callTitleWidth > 0
+      ? Math.min(360, Math.max(0, callTitleWidth - 205 - extraWidth))
+      : 0;
 
   // The row is measured from the real clock face. The shape is exactly that
   // text plus 24 px (12 px per side) and optional Extra width; toggling date,
@@ -245,7 +284,7 @@ export function Notch() {
     (showRecording ? RECORDING_EXTRA : 0);
   const displayShape = {
     ...finalShape,
-    w: clockPill && status !== "open" ? clockShapeWidth : finalShape.w + (showRecording ? RECORDING_EXTRA : 0) + lyricsExtra,
+    w: clockPill && status !== "open" ? clockShapeWidth : finalShape.w + (showRecording ? RECORDING_EXTRA : 0) + lyricsExtra + callTitleExtra,
   };
   // Gaming stats own the pill; a playing track gets its own little island instead.
   const gamingSatellite =
@@ -267,7 +306,7 @@ export function Notch() {
   const timerShift = switchSatellite ? 40 : 0;
   const surface = appearance.theme === "custom" ? appearance.themeColor : light ? LIGHT_SURFACE : DARK_SURFACE;
   const surfaceLight = isLightColor(surface);
-  const transition = useTransitionFor(status, displayShape, lyricTarget > 0);
+  const transition = useTransitionFor(status, displayShape, lyricTarget > 0 || callTitleExtra > 0);
 
   // Click outside closes (in the browser the fake desktop, in Tauri the window blur).
   const hitRef = useRef<HTMLDivElement>(null);
@@ -434,7 +473,7 @@ export function Notch() {
           floating={floating}
         >
           <LiveRightInset.Provider value={rightInset}>
-            <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} widthExtra={lyricsPill ? 0 : appearance.islandWidth} height={lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight} systemWidth={systemWidth} />
+            <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} callExtra={callTitleExtra} widthExtra={lyricsPill ? 0 : appearance.islandWidth} height={lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight} systemWidth={systemWidth} />
           </LiveRightInset.Provider>
           {!chargingView && clockWeather && !idleLine && status !== "open" && !pillLive && <ClosedClock rowRef={clockRow} />}
           <AnimatePresence>
@@ -660,13 +699,13 @@ function Header({ title, onDragStart, onSilent }: { title: string; onDragStart: 
           <Drop size={14} weight={liquidGlass ? "fill" : "bold"} />
         </HeaderButton>
         <HeaderButton
-          label={focus ? t("Nicht stören ausschalten") : t("Nicht stören")}
+          label={focus ? t("Turn off do not disturb") : t("Do not disturb")}
           active={focus}
           onClick={() => setFocusMode(!focus)}
         >
           <MoonStars size={14} weight={focus ? "fill" : "bold"} />
         </HeaderButton>
-        <HeaderButton label={isPinned ? t("Lösen") : t("Offen halten")} active={isPinned} onClick={togglePin}>
+        <HeaderButton label={isPinned ? t("Unpin") : t("Keep open")} active={isPinned} onClick={togglePin}>
           <PushPin size={14} weight={isPinned ? "fill" : "bold"} />
         </HeaderButton>
       </div>

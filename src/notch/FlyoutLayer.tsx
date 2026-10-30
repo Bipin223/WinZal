@@ -138,10 +138,10 @@ function WifiFlyout() {
     <div className="flex max-h-[336px] flex-col">
       <Header
         icon={enabled ? <WifiHigh size={19} weight="bold" /> : <WifiSlash size={19} weight="bold" />}
-        title={t("WLAN")}
-        detail={busy ? t("Wird umgeschaltetâ€¦") : enabled ? net?.name || t("An") : t("Aus")}
+        title={t("Wi-Fi")}
+        detail={busy ? t("Switching…") : enabled ? net?.name || t("On") : t("Off")}
       >
-        <Switch checked={enabled} onChange={() => toggleWifi()} label={t("WLAN")} />
+        <Switch checked={enabled} onChange={() => toggleWifi()} label={t("Wi-Fi")} />
       </Header>
       <div className="flex items-center justify-between px-3 pb-1">
         <span className="text-[9px] font-medium tracking-[0.08em] text-label-4 uppercase">{t("Wi-Fi networks")}</span>
@@ -193,7 +193,7 @@ function BluetoothFlyout() {
       <Header
         icon={<Bluetooth size={19} weight="bold" />}
         title="Bluetooth"
-        detail={busy ? t("Wird umgeschaltetâ€¦") : !bt?.available ? t("Einstellungen") : enabled ? t("An") : t("Aus")}
+        detail={busy ? t("Switching…") : !bt?.available ? t("Settings") : enabled ? t("On") : t("Off")}
       >
         <Switch checked={enabled} onChange={() => toggleBluetooth()} label="Bluetooth" />
       </Header>
@@ -298,7 +298,7 @@ function SessionsFlyout() {
               <button
                 type="button"
                 onClick={() => toggle(session)}
-                aria-label={session.isPlaying ? t("Pause") : t("Abspielen")}
+                aria-label={session.isPlaying ? t("Pause") : t("Play")}
                 className="pressable ml-1 flex size-7 shrink-0 items-center justify-center rounded-[7px] text-label-2 hover:bg-fill-2 hover:text-label"
               >
                 {session.isPlaying ? <Pause size={12} weight="fill" /> : <Play size={12} weight="fill" />}
@@ -313,7 +313,7 @@ function SessionsFlyout() {
               >
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[11px] leading-[14px] font-semibold text-label">
-                    {session.title || session.artist || "â€”"}
+                    {session.title || session.artist || "—"}
                   </span>
                   {session.title && session.artist && (
                     <span className="block truncate text-[9px] leading-[11px] text-label-3">{session.artist}</span>

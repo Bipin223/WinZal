@@ -20,7 +20,7 @@ export function NotesView() {
       <textarea
         value={value}
         autoFocus
-        placeholder={t("Schnelle Notiz …")}
+        placeholder={t("Quick note …")}
         onChange={(e) => {
           note.set(e.target.value);
           setSaved(true);
@@ -30,7 +30,7 @@ export function NotesView() {
         className="flex-1 resize-none rounded-[12px] bg-fill-1 px-3 py-2.5 text-body text-label outline-none [scrollbar-width:none] placeholder:text-label-4"
       />
       <div className="mt-1.5 flex h-4 items-center justify-between px-1 text-caption text-label-3">
-        <span className="tabular">{words} {words === 1 ? t("Wort") : t("Wörter")}</span>
+        <span className="tabular">{words} {words === 1 ? t("word") : t("words")}</span>
         <AnimatePresence>
           {saved && (
             <motion.span
@@ -38,7 +38,7 @@ export function NotesView() {
               animate={{ opacity: 1, transition: content.enter }}
               exit={{ opacity: 0, transition: { duration: 0.4 } }}
             >
-              {t("Gespeichert")}
+              {t("Saved")}
             </motion.span>
           )}
         </AnimatePresence>

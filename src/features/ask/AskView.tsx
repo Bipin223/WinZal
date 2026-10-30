@@ -27,13 +27,13 @@ let saveQueue: Promise<void> = Promise.resolve();
 
 function titleFor(messages: ChatMessage[]): string {
   const first = messages.find((message) => message.role === "user");
-  if (!first) return t("Neuer Chat");
+  if (!first) return t("New chat");
   const line = first.content
     .split("\n")
     .map((part) => part.trim())
     .find((part) => part && !/^(Context|Datei|What is this\?):/i.test(part));
   const text = (line ?? first.content).replace(/\s+/g, " ").trim();
-  return text.slice(0, 60) || t("Neuer Chat");
+  return text.slice(0, 60) || t("New chat");
 }
 
 /** Older builds kept the chat in localStorage; move it to the new history. */
@@ -132,9 +132,9 @@ async function imageFromClipboard(file: File): Promise<string> {
 
 
 const quick: { icon: Icon; label: string; prompt: (text: string) => string }[] = [
-  { icon: TextAlignLeft, label: "Zusammenfassen", prompt: (text) => t("Fasse kurz zusammen: {x}", { x: text }) },
-  { icon: NotePencil, label: "Umformulieren", prompt: (text) => t("Formuliere klarer um: {x}", { x: text }) },
-  { icon: Translate, label: "Ins Englische", prompt: (text) => t("Übersetze ins Englische: {x}", { x: text }) },
+  { icon: TextAlignLeft, label: "Summarize", prompt: (text) => t("Summarize briefly: {x}", { x: text }) },
+  { icon: NotePencil, label: "Rephrase", prompt: (text) => t("Rephrase this more clearly: {x}", { x: text }) },
+  { icon: Translate, label: "To English", prompt: (text) => t("Translate into English: {x}", { x: text }) },
 ];
 
 /*
@@ -309,14 +309,14 @@ export function AskView() {
       askAttachment.set({
         id: crypto.randomUUID?.() ?? `paste-${Date.now()}`,
         kind: "image",
-        title: t("Eingefügtes Bild"),
-        detail: t("Aus der Zwischenablage"),
+        title: t("Pasted image"),
+        detail: t("From the clipboard"),
         image,
       });
       setError(null);
       input.current?.focus({ preventScroll: true });
     } catch {
-      setError(t("Bild konnte nicht gelesen werden"));
+      setError(t("Cannot read image"));
     }
   };
 
@@ -349,7 +349,7 @@ export function AskView() {
       } else if (attached.text) {
         contentText = `${t("Context")}: ${attached.title}\n${attached.text}${prompt ? `\n\n${prompt}` : ""}`;
       } else {
-        contentText = `${t("Datei")}: ${attached.title}${attached.path ? `\n${attached.path}` : ""}${prompt ? `\n\n${prompt}` : ""}`;
+        contentText = `${t("file")}: ${attached.title}${attached.path ? `\n${attached.path}` : ""}${prompt ? `\n\n${prompt}` : ""}`;
       }
     }
 
@@ -371,7 +371,7 @@ export function AskView() {
       }, abort.current.signal);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setError(msg === "no-key" ? t("Kein API-Schlüssel für {p} – in den Einstellungen eintragen.", { p: providerInfo[provider].label }) : tBackend(msg));
+      setError(msg === "no-key" ? t("No API key for {p} – add one in Settings.", { p: providerInfo[provider].label }) : tBackend(msg));
       // Remove the empty reply bubble again.
       chat.set((m) => (m.at(-1)?.content === "" ? m.slice(0, -1) : m));
     } finally {
@@ -382,7 +382,7 @@ export function AskView() {
   const runQuick = (q: (typeof quick)[number]) => {
     const latest = clipboard.get().find((c) => c.kind === "text" || c.kind === "link");
     if (!latest) {
-      setError(t("Zuerst einen Text kopieren – die Schnellaktionen arbeiten mit der Zwischenablage."));
+      setError(t("Copy text first."));
       return;
     }
     void send(q.prompt(latest.text));
@@ -393,7 +393,7 @@ export function AskView() {
       <div ref={list} className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none]">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
-            <span className="text-body text-label-2">{t("Frag etwas oder nutze die Zwischenablage")}</span>
+            <span className="text-body text-label-2">{t("Ask anything or use the clipboard")}</span>
             <div className="flex gap-1.5">
               {quick.map((q) => (
                 <button
@@ -405,7 +405,7 @@ export function AskView() {
                 </button>
               ))}
             </div>
-            <span className="text-[10px] leading-[12px] text-label-3">{t("Bild mit Strg+V einfügen")}</span>
+            <span className="text-[10px] leading-[12px] text-label-3">{t("Paste an image with Ctrl+V")}</span>
           </div>
         ) : (
           <div className="flex flex-col gap-2 pb-1">
@@ -427,7 +427,7 @@ export function AskView() {
           >
             {error}{" "}
             <button onClick={() => navigate("settings", "ask")} className="underline underline-offset-2 hover:text-label">
-              {t("Einstellungen")}
+              {t("Settings")}
             </button>
           </motion.div>
         )}
@@ -455,7 +455,7 @@ export function AskView() {
             </div>
             <button
               type="button"
-              aria-label={t("Entfernen")}
+              aria-label={t("Remove")}
               onClick={clearAskAttachment}
               className="pressable flex size-5 shrink-0 items-center justify-center rounded-full text-label-4 hover:text-label"
             >
@@ -479,17 +479,17 @@ export function AskView() {
         <button
           type="button"
           onClick={() => navigate("settings", "ask")}
-          title={t("Modell in den Einstellungen ändern")}
+          title={t("Change model in Settings")}
           className="min-w-0 truncate px-1 text-caption text-label-2 hover:text-label"
         >
           {config.model || providerInfo[provider].label}
         </button>
         <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-fill-1 p-0.5">
-          <AskAction label={t("AI-Einstellungen")} onClick={() => navigate("settings", "ask")}>
+          <AskAction label={t("AI settings")} onClick={() => navigate("settings", "ask")}>
             <ChatBubbleIcon size={18} weight="bold" />
           </AskAction>
           <AskAction
-            label={saveHistory ? t("Chat-Verlauf") : t("Chat-Verlauf - Speichern aus")}
+            label={saveHistory ? t("Chat history") : t("Chat history - saving off")}
             active={historyOpen}
             onClick={() => {
               setConfirmClear(false);
@@ -498,7 +498,7 @@ export function AskView() {
           >
             <Chats size={18} weight="bold" />
           </AskAction>
-          <AskAction label={t("Neuer Chat")} disabled={messages.length === 0} onClick={startNew}>
+          <AskAction label={t("New chat")} disabled={messages.length === 0} onClick={startNew}>
             <Plus size={18} weight="bold" />
           </AskAction>
         </div>
@@ -506,12 +506,12 @@ export function AskView() {
         {historyOpen && (
           <div className="absolute right-0 bottom-full z-40 mb-1 w-[280px] overflow-hidden rounded-[12px] bg-elevated p-1.5 shadow-2xl ring-1 ring-separator">
             <div className="flex items-center justify-between px-2 py-1">
-              <div className="text-[10px] font-medium tracking-wide text-label-2 uppercase">{t("Gespeicherte Chats")}</div>
+              <div className="text-[10px] font-medium tracking-wide text-label-2 uppercase">{t("Saved chats")}</div>
               {saved.length > 0 && (
                 <button
                   type="button"
-                  aria-label={t("Alle löschen")}
-                  title={t("Alle löschen")}
+                  aria-label={t("Clear all")}
+                  title={t("Clear all")}
                   onClick={() => setConfirmClear(true)}
                   className="pressable flex size-5 items-center justify-center rounded-[6px] text-label-3 hover:text-red"
                 >
@@ -521,7 +521,7 @@ export function AskView() {
             </div>
             <div className="max-h-[200px] overflow-y-auto [scrollbar-width:none]">
               {saved.length === 0 ? (
-                <div className="px-2 py-2 text-caption text-label-3">{t("Noch keine gespeicherten Chats")}</div>
+                <div className="px-2 py-2 text-caption text-label-3">{t("No saved chats yet")}</div>
               ) : (
                 saved.map((item) => (
                   <div
@@ -531,12 +531,12 @@ export function AskView() {
                     <button type="button" onClick={() => void openSaved(item)} className="min-w-0 flex-1 px-2 py-1.5 text-left">
                       <div className="truncate text-[11px] font-medium text-label">{item.title}</div>
                       <div className="mt-0.5 text-[9px] leading-[11px] text-label-3">
-                        {when(item.updatedAt)} · {item.messages} {item.messages === 1 ? t("Nachricht") : t("Nachrichten")}
+                        {when(item.updatedAt)} · {item.messages} {item.messages === 1 ? t("message") : t("messages")}
                       </div>
                     </button>
                     <button
                       type="button"
-                      aria-label={t("Löschen")}
+                      aria-label={t("Delete")}
                       onClick={() => void removeSaved(item)}
                       className="pressable flex size-6 shrink-0 items-center justify-center rounded-[6px] text-label-3 hover:text-red"
                     >
@@ -548,33 +548,33 @@ export function AskView() {
             </div>
             {confirmClear && saved.length > 0 && (
               <div className="mx-1 mt-1 rounded-[8px] bg-fill-1 p-2">
-                <div className="text-[10px] leading-[13px] font-medium text-label">{t("Alle gespeicherten Chats löschen?")}</div>
+                <div className="text-[10px] leading-[13px] font-medium text-label">{t("Delete all saved chats?")}</div>
                 <div className="mt-1.5 flex justify-end gap-1.5">
                   <button
                     type="button"
                     onClick={() => setConfirmClear(false)}
                     className="pressable h-6 rounded-full bg-fill-2 px-2.5 text-[10px] font-medium text-label-2 hover:text-label"
                   >
-                    {t("Abbrechen")}
+                    {t("Cancel")}
                   </button>
                   <button
                     type="button"
                     onClick={() => void clearSaved()}
                     className="pressable h-6 rounded-full bg-red px-2.5 text-[10px] font-semibold text-white"
                   >
-                    {t("Löschen")}
+                    {t("Delete")}
                   </button>
                 </div>
               </div>
             )}
             <div className="mt-1 flex items-center justify-between gap-2 border-t border-separator px-2 pt-2 pb-1">
               <div className="min-w-0">
-                <div className="text-[11px] font-medium text-label">{t("Chats speichern")}</div>
+                <div className="text-[11px] font-medium text-label">{t("Save chats")}</div>
                 <div className="mt-0.5 text-[9px] leading-[11px] text-label-3">
-                  {saveHistory ? t("Bis zu 3 Chats lokal auf diesem PC") : t("Aus - dieser Chat bleibt nur im Speicher")}
+                  {saveHistory ? t("Up to 3 chats, stored only on this PC") : t("Off - this chat stays in memory only")}
                 </div>
               </div>
-              <Switch label={t("Chats speichern")} checked={saveHistory} onChange={setSaving} />
+              <Switch label={t("Save chats")} checked={saveHistory} onChange={setSaving} />
             </div>
           </div>
         )}
@@ -591,7 +591,7 @@ export function AskView() {
           ref={input}
           value={draft}
           rows={1}
-          placeholder={t("Frag etwas …")}
+          placeholder={t("Ask anything …")}
           onChange={(e) => {
             setDraft(e.target.value);
             // Grows up to 3 lines.
@@ -607,13 +607,13 @@ export function AskView() {
           className="max-h-[54px] min-h-[18px] flex-1 resize-none bg-transparent py-0.5 text-body text-label outline-none [scrollbar-width:none] placeholder:text-label-4"
         />
         {streaming ? (
-          <button type="button" aria-label={t("Stopp")} onClick={() => abort.current?.abort()} className="pressable flex size-6 shrink-0 items-center justify-center rounded-full bg-fill-3 text-label">
+          <button type="button" aria-label={t("Stop")} onClick={() => abort.current?.abort()} className="pressable flex size-6 shrink-0 items-center justify-center rounded-full bg-fill-3 text-label">
             <Stop size={11} weight="fill" />
           </button>
         ) : (
           <button
             type="submit"
-            aria-label={t("Senden")}
+            aria-label={t("Send")}
             disabled={!draft.trim() && !attachment}
             className="pressable flex size-6 shrink-0 items-center justify-center rounded-full bg-label text-on-label transition-opacity duration-150 disabled:opacity-25"
           >
@@ -666,7 +666,7 @@ function Bubble({ message, streaming }: { message: ChatMessage; streaming: boole
         {streaming && <span className="ml-0.5 inline-block h-3.5 w-[2px] translate-y-[2px] animate-pulse bg-label-2" />}
         {!user && !streaming && message.content && (
           <button
-            aria-label={t("Kopieren")}
+            aria-label={t("Copy")}
             onClick={() => {
               void navigator.clipboard.writeText(message.content);
               setCopied(true);
@@ -674,7 +674,7 @@ function Bubble({ message, streaming }: { message: ChatMessage; streaming: boole
             }}
             className="pressable mt-1 flex items-center gap-1 text-caption text-label-4 opacity-0 group-hover:opacity-100 hover:text-label-2"
           >
-            {copied ? <CopyCheck size={11} /> : <Copy size={11} weight="bold" />} {copied ? t("Kopiert") : t("Kopieren")}
+            {copied ? <CopyCheck size={11} /> : <Copy size={11} weight="bold" />} {copied ? t("Copied") : t("Copy")}
           </button>
         )}
       </div>

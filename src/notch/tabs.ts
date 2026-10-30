@@ -50,23 +50,23 @@ export interface NotchTab {
 }
 
 export const tabs: NotchTab[] = [
-  { id: "overview", label: "Übersicht", icon: SquaresFour, size: { w: 520, h: 296 }, View: OverviewView },
-  { id: "media", label: "Wiedergabe", icon: MusicNotesSimple, size: { w: 520, h: 232 }, View: NowPlayingView },
+  { id: "overview", label: "Overview", icon: SquaresFour, size: { w: 520, h: 296 }, View: OverviewView },
+  { id: "media", label: "Now Playing", icon: MusicNotesSimple, size: { w: 520, h: 232 }, View: NowPlayingView },
   { id: "timer", label: "Timer", icon: Timer, size: { w: 520, h: 192 }, View: TimerView },
   { id: "todos", label: "To-Dos", icon: CheckCircle, size: { w: 520, h: 276 }, View: TodosView },
-  { id: "notes", label: "Notiz", icon: NotePencil, size: { w: 520, h: 260 }, View: NotesView },
-  { id: "clipboard", label: "Zwischenablage", icon: ClipboardText, size: { w: 600, h: 236 }, View: ClipboardView },
-  { id: "shelf", label: "Ablage", icon: Tray, size: { w: 560, h: 236 }, View: ShelfView },
+  { id: "notes", label: "Note", icon: NotePencil, size: { w: 520, h: 260 }, View: NotesView },
+  { id: "clipboard", label: "Clipboard", icon: ClipboardText, size: { w: 600, h: 236 }, View: ClipboardView },
+  { id: "shelf", label: "Shelf", icon: Tray, size: { w: 560, h: 236 }, View: ShelfView },
   { id: "ask", label: "Ask", icon: ChatBubbleIcon as unknown as Icon, size: { w: 560, h: 440 }, View: AskView },
   { id: "convert", label: "Converter", icon: ArrowsLeftRight, size: { w: 520, h: 290 }, View: ConvertView },
-  { id: "weather", label: "Wetter", icon: CloudSun, size: { w: 520, h: 250 }, View: WeatherView },
+  { id: "weather", label: "Weather", icon: CloudSun, size: { w: 520, h: 250 }, View: WeatherView },
   { id: "system", label: "Hardware", icon: Cpu, size: { w: 600, h: 248 }, View: SystemView },
   { id: "discord", label: "Discord", icon: DiscordLogo, size: { w: 520, h: 210 }, View: DiscordView },
-  { id: "vault", label: "Tresor", icon: Vault, size: { w: 560, h: 324 }, View: VaultView },
+  { id: "vault", label: "Vault", icon: Vault, size: { w: 560, h: 324 }, View: VaultView },
 ];
 
 /** Settings: reached via the gear, not in the tool bar. */
-export const settingsTab: NotchTab = { id: "settings", label: "Einstellungen", icon: GearSix, size: { w: 660, h: 460 }, View: SettingsView };
+export const settingsTab: NotchTab = { id: "settings", label: "Settings", icon: GearSix, size: { w: 660, h: 460 }, View: SettingsView };
 
 export function findTab(id: string): NotchTab | undefined {
   return id === settingsTab.id ? settingsTab : tabs.find((t) => t.id === id);

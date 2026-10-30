@@ -159,7 +159,7 @@ function MuteButton(props: { icon: string | null; level: number; muted: boolean;
   const Speaker = speakerIcon(props.level, props.muted);
   return (
     <button
-      aria-label={props.muted ? t("Stummschaltung aufheben") : t("Stumm")}
+      aria-label={props.muted ? t("Unmute") : t("Mute")}
       title={props.label}
       onClick={props.onToggle}
       className="pressable relative flex size-7 shrink-0 items-center justify-center rounded-full"
@@ -200,8 +200,8 @@ export function MixerToggle({ open, onToggle }: { open: boolean; onToggle: () =>
     <button
       onClick={onToggle}
       aria-expanded={open}
-      aria-label={t("Lautstärke pro App")}
-      title={t("Lautstärke pro App")}
+      aria-label={t("Volume per app")}
+      title={t("Volume per app")}
       className={`pressable pressable-fill flex size-7 items-center justify-center rounded-full transition-colors duration-150 ${
         open ? "bg-fill-2 text-label" : "text-label-3 hover:text-label-2"
       }`}
@@ -295,7 +295,7 @@ export function MixerList({ data }: { data: MixerData }) {
             </motion.div>
           ))}
         </AnimatePresence>
-        {data.apps.length === 0 && <div className="py-2 text-center text-caption text-label-3">{t("Gerade spielt keine App Ton ab")}</div>}
+        {data.apps.length === 0 && <div className="py-2 text-center text-caption text-label-3">{t("No app is playing sound")}</div>}
       </div>
     </motion.div>
   );

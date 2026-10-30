@@ -34,7 +34,7 @@ export function RecordingBadge({ since, className = "" }: { since: number | null
 
   return (
     <motion.div
-      aria-label={t("Bildschirm wird aufgenommen")}
+      aria-label={t("Screen is being recorded")}
       className={`pointer-events-none z-10 flex h-[18px] items-center gap-1 rounded-full px-1.5 ${className}`}
       style={{ backgroundColor: "rgb(255 69 58 / 0.14)" }}
       initial={{ opacity: 0, scale: 0.9, x: 5 }}

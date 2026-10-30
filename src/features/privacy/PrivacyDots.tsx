@@ -30,7 +30,7 @@ export function PrivacyDots({ hideScreen = false }: { hideScreen?: boolean }) {
           <motion.span
             key={color}
             className="privacy-dot size-[6px] rounded-full"
-            title={color === "red" ? t("Bildschirm wird aufgenommen") : t("Mikrofon oder Kamera aktiv")}
+            title={color === "red" ? t("Screen is being recorded") : t("Microphone or camera in use")}
             data-pulse={color === "green" && call?.speaking ? true : undefined}
             style={{ backgroundColor: `var(--color-${color})`, ["--dot" as string]: `var(--color-${color})` }}
             initial={{ opacity: 0, transform: "scale(0.9)" }}

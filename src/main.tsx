@@ -1,5 +1,4 @@
 import { StrictMode, useEffect, useLayoutEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { createRoot } from "react-dom/client";
 import { MotionConfig } from "motion/react";
@@ -115,17 +114,8 @@ const syncClipboardMode = () => {
 syncClipboardMode();
 settings.subscribe(syncClipboardMode);
 
-// Language: update the tray menu in Rust and set the lang attribute.
-let lastLang = "";
-const applyLanguage = () => {
-  const { language } = settings.get();
-  if (language === lastLang) return;
-  lastLang = language;
-  document.documentElement.lang = language;
-  if (isNative) void invoke("set_language", { lang: language });
-};
-applyLanguage();
-settings.subscribe(applyLanguage);
+// The UI is English-only.
+document.documentElement.lang = "en";
 
 // The notch isn't a web page: no browser context menu (except in text fields for
 // cut/paste) and in the app no browser shortcuts like reload or print.

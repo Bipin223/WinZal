@@ -72,9 +72,9 @@ function createMock(): ClipboardSource {
     { id: 7, kind: "image", text: "1600 × 1000", thumbnail: demoImage(1600, 1000), folders: 0, copiedAt: now - 5_000, pinned: true },
     { id: 8, kind: "image", text: "900 × 1400", thumbnail: demoImage(900, 1400), folders: 0, copiedAt: now - 60_000, pinned: false },
     { id: 1, kind: "link", text: "https://github.com/Lakr233/NotchDrop", thumbnail: null, folders: 0, copiedAt: now - 20_000, pinned: false },
-    { id: 2, kind: "text", text: "Die letzten 10 % Feinschliff kosten die meiste Zeit.", thumbnail: null, folders: 0, copiedAt: now - 120_000, pinned: false },
-    { id: 3, kind: "files", text: "Rechnung-Oktober.pdf\nVertrag.docx", thumbnail: null, folders: 0, copiedAt: now - 840_000, pinned: false },
-    { id: 4, kind: "files", text: "Projekte", thumbnail: null, folders: 1, copiedAt: now - 1_800_000, pinned: false },
+    { id: 2, kind: "text", text: "The last 10% of polish takes the most time.", thumbnail: null, folders: 0, copiedAt: now - 120_000, pinned: false },
+    { id: 3, kind: "files", text: "Invoice-October.pdf\nContract.docx", thumbnail: null, folders: 0, copiedAt: now - 840_000, pinned: false },
+    { id: 4, kind: "files", text: "Projects", thumbnail: null, folders: 1, copiedAt: now - 1_800_000, pinned: false },
     { id: 5, kind: "text", text: "SpringVector3NaturalMotionAnimation", thumbnail: null, folders: 0, copiedAt: now - 3_600_000, pinned: false },
     { id: 6, kind: "text", text: "npm run tauri dev", thumbnail: null, folders: 0, copiedAt: now - 7_200_000, pinned: false },
   ];

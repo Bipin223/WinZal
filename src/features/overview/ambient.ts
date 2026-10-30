@@ -217,7 +217,7 @@ export async function connectBluetooth(device: BluetoothPeer) {
     } else {
       bluetooth.set((cur) => ({
         ...cur,
-        error: t("Could not connect. Right-click for Windows settings."),
+        error: t("Not connected · right-click for settings."),
         connecting: null,
         busy: false,
       }));

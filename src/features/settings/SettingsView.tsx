@@ -53,15 +53,14 @@ import { privacy, togglePresentation, usePresenting } from "../privacy/store";
 import { previewDiscord, previewIsland, previewTimer } from "../../notifications/store";
 import { locale, t, tBackend } from "../../i18n";
 
-type PageId = "general" | "notch" | "appearance" | "display" | "performance" | "music" | "tools" | "timer" | "ai" | "discord" | "tips" | "about";
+type PageId = "general" | "notch" | "appearance" | "performance" | "music" | "tools" | "timer" | "ai" | "discord" | "tips" | "about";
 
 const pages: { id: PageId; label: string; icon: Icon }[] = [
-  { id: "general", label: "Allgemein", icon: SlidersHorizontal },
+  { id: "general", label: "General", icon: SlidersHorizontal },
   { id: "notch", label: "Notch", icon: Monitor },
   { id: "appearance", label: "Appearance", icon: Palette },
-  { id: "display", label: "Display", icon: Monitor },
   { id: "performance", label: "Performance", icon: Lightning },
-  { id: "music", label: "Musik", icon: MusicNotesSimple },
+  { id: "music", label: "Music", icon: MusicNotesSimple },
   { id: "tools", label: "Tools", icon: SquaresFour },
   { id: "timer", label: "Timer", icon: Timer },
   { id: "ai", label: "AI", icon: ChatBubbleIcon as unknown as Icon },
@@ -74,7 +73,7 @@ const pages: { id: PageId; label: string; icon: Icon }[] = [
 const sectionPage: Record<string, PageId> = {
   weather: "general",
   updates: "general",
-  display: "display",
+  display: "appearance",
   appearance: "appearance",
   notch: "notch",
   performance: "performance",
@@ -82,7 +81,7 @@ const sectionPage: Record<string, PageId> = {
   fps: "performance",
   music: "music",
   lyrics: "music",
-  presentation: "display",
+  presentation: "appearance",
   alarm: "timer",
   ask: "ai",
   discord: "discord",
@@ -166,13 +165,17 @@ export function SettingsView() {
               </>
             )}
             {page === "notch" && <AppearanceView mode="notch" />}
-            {page === "appearance" && <AppearanceView mode="appearance" />}
-            {page === "display" && (
-              <>
-                <Display />
-                <Typography />
-                <Presentation />
-              </>
+            {page === "appearance" && (
+              <AppearanceView
+                mode="appearance"
+                extra={
+                  <>
+                    <Display />
+                    <Typography />
+                    <Presentation />
+                  </>
+                }
+              />
             )}
             {page === "performance" && (
               <>
@@ -216,32 +219,32 @@ function Updates() {
   const busy = u.phase === "checking" || u.phase === "downloading";
   const status = {
     idle: undefined,
-    checking: t("Suche â€¦"),
-    current: t("Du hast die neueste Version"),
-    available: t("Neue Version gefunden"),
-    downloading: t("Wird geladen â€¦ {n} %", { n: Math.round(u.progress * 100) }),
-    error: t("PrÃ¼fung fehlgeschlagen â€“ spÃ¤ter erneut versuchen"),
+    checking: t("Checking …"),
+    current: t("You have the latest version"),
+    available: t("New version found"),
+    downloading: t("Downloading … {n} %", { n: Math.round(u.progress * 100) }),
+    error: t("Check failed – try again later"),
   }[u.phase];
   const upcoming = u.notes && u.version && u.current ? between(u.notes, u.current, u.version) : [];
 
   return (
     <Group title={t("Updates")} id="settings-updates">
-      <Row label={t("Version {v}", { v: u.current ?? "â€“" })} status={status}>
+      <Row label={t("Version {v}", { v: u.current ?? "—" })} status={status}>
         <Button disabled={busy} onClick={() => void checkForUpdate()}>
-          {t("Jetzt suchen")}
+          {t("Check now")}
         </Button>
       </Row>
       <AnimatePresence initial={false}>
         {(u.phase === "available" || u.phase === "downloading") && u.version && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={fade} className="overflow-hidden">
-            <Row label={t("Version {v} verfÃ¼gbar", { v: u.version })}>
+            <Row label={t("Version {v} available", { v: u.version })}>
               {u.phase === "downloading" ? (
                 <div className="h-1.5 w-28 overflow-hidden rounded-full bg-fill-2">
                   <div className="h-full origin-left rounded-full bg-label transition-transform duration-150 ease-linear" style={{ transform: `scaleX(${u.progress})` }} />
                 </div>
               ) : (
                 <Button primary onClick={() => void installUpdate()}>
-                  {t("Jetzt aktualisieren")}
+                  {t("Update now")}
                 </Button>
               )}
             </Row>
@@ -252,11 +255,11 @@ function Updates() {
       <Row
         label={
           <span className="flex items-center gap-1.5">
-            {t("Neuerungen")}
+            {t("What's new")}
             {unseen.length > 0 && !showLog && <span className="size-[7px] rounded-full bg-link" />}
           </span>
         }
-        status={unseen.length > 0 ? t(unseen.length === 1 ? "Neu in Version {v}" : "{n} Versionen seit deinem letzten Update", { v: unseen[0].version, n: unseen.length }) : undefined}
+        status={unseen.length > 0 ? t(unseen.length === 1 ? "New in version {v}" : "{n} versions since your last update", { v: unseen[0].version, n: unseen.length }) : undefined}
       >
         <Button
           onClick={() => {
@@ -264,7 +267,7 @@ function Updates() {
             setShowLog((v) => !v);
           }}
         >
-          {showLog ? t("Ausblenden") : t("Anzeigen")}
+          {showLog ? t("Hide") : t("Show")}
         </Button>
       </Row>
       <AnimatePresence initial={false}>
@@ -274,11 +277,11 @@ function Updates() {
           </motion.div>
         )}
       </AnimatePresence>
-      <Row label={t("Automatisch suchen")}>
-        <Switch label={t("Automatisch suchen")} checked={auto} onChange={(on) => updateSettings({ updates: { ...updates, auto: on } })} />
+      <Row label={t("Check automatically")}>
+        <Switch label={t("Check automatically")} checked={auto} onChange={(on) => updateSettings({ updates: { ...updates, auto: on } })} />
       </Row>
-      <Row label={t("Automatisch installieren")}>
-        <Switch label={t("Automatisch installieren")} checked={install} onChange={(on) => updateSettings({ updates: { ...updates, install: on } })} />
+      <Row label={t("Install automatically")}>
+        <Switch label={t("Install automatically")} checked={install} onChange={(on) => updateSettings({ updates: { ...updates, install: on } })} />
       </Row>
     </Group>
   );
@@ -298,7 +301,7 @@ function ChangelogList({ entries, fresh }: { entries: ChangelogEntry[]; fresh?: 
         >
           <div className="flex items-baseline gap-1.5 text-caption">
             <span className="tabular font-semibold text-label">{e.version}</span>
-            {fresh?.has(e.version) && <span className="font-medium text-link">{t("Neu")}</span>}
+            {fresh?.has(e.version) && <span className="font-medium text-link">{t("New")}</span>}
             <span className="ml-auto text-label-3">{date.format(new Date(`${e.date}T12:00:00`))}</span>
           </div>
           <ul className="mt-1 flex flex-col gap-0.5">
@@ -369,8 +372,8 @@ function Ask() {
 
 
   return (
-    <Group title={t("AI-Chat")} id="settings-ask">
-      <Row label={t("Anbieter")}>
+    <Group title={t("AI Chat")} id="settings-ask">
+      <Row label={t("Provider")}>
         <Segmented<AskProvider>
           id="ask-provider"
           size="sm"
@@ -380,21 +383,21 @@ function Ask() {
         />
       </Row>
       {provider === "custom" && (
-        <Row label={t("Base-URL")}>
+        <Row label={t("Base URL")}>
           <TextField
             value={s.ask.configs.custom.baseUrl}
             onChange={(baseUrl) => updateAsk("custom", { baseUrl: baseUrl.trim() })}
-            placeholder="https://â€¦/v1"
+            placeholder="https://your-api/v1"
             width="w-52"
           />
         </Row>
       )}
       <SecretRow
         name={`ai.${provider}` as SecretName}
-        label={t("API-SchlÃ¼ssel")}
+        label={t("API key")}
         onSaved={() => void load()}
       />
-      <Row label={t("Modell")} error={error ?? undefined}>
+      <Row label={t("Model")} error={error ?? undefined}>
         <div className="flex items-center gap-1.5">
           {models.length ? (
             <Select
@@ -415,8 +418,8 @@ function Ask() {
             type="button"
             onClick={() => void load()}
             disabled={loading}
-            title={t("Modelle laden")}
-            aria-label={t("Modelle laden")}
+            title={t("Loading models…")}
+            aria-label={t("Loading models…")}
             className="pressable flex size-7 shrink-0 items-center justify-center rounded-full text-label-3 hover:text-label disabled:opacity-40"
           >
             <ArrowClockwise size={14} weight="bold" className={loading ? "animate-spin" : ""} />
@@ -432,9 +435,9 @@ function Ask() {
           options={effortLevels}
         />
       </Row>
-      <Row label={t("Chats speichern")}>
+      <Row label={t("Save chats")}>
         <Switch
-          label={t("Chats speichern")}
+          label={t("Save chats")}
           checked={s.ask.saveHistory}
           onChange={(on) => updateSettings({ ask: { ...s.ask, saveHistory: on } })}
         />
@@ -452,31 +455,19 @@ function General() {
 
   return (
     <Group>
-      <Row label={t("Sprache")}>
-        <Segmented
-          id="ui-language"
-          size="sm"
-          value={s.language}
-          onChange={(language) => updateSettings({ language: language as "en" | "de" })}
-          options={[
-            { value: "en", label: "English" },
-            { value: "de", label: "Deutsch" },
-          ]}
-        />
-      </Row>
-      <Row label={t("Uhrzeit")}>
+      <Row label={t("Clock")}>
         <Segmented
           id="clock-format"
           size="sm"
           value={s.units.clock}
           onChange={(clock) => updateSettings((p) => ({ units: { ...p.units, clock } }))}
           options={[
-            { value: "24", label: t("24 Std.") },
-            { value: "12", label: t("12 Std.") },
+            { value: "24", label: t("24 h") },
+            { value: "12", label: t("12 h") },
           ]}
         />
       </Row>
-      <Row label={t("Ã–ffnen")}>
+      <Row label={t("Open")}>
         <Segmented
           id="open-mode"
           size="sm"
@@ -484,33 +475,33 @@ function General() {
           onChange={(openMode) => updateSettings({ openMode })}
           options={[
             { value: "hover", label: t("Hover") },
-            { value: "click", label: t("Klick") },
+            { value: "click", label: t("Click") },
           ]}
         />
       </Row>
       <AnimatePresence initial={false}>
         {s.openMode === "hover" && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={fade} className="overflow-hidden">
-            <Row label={t("Hover-VerzÃ¶gerung")}>
+            <Row label={t("Hover delay")}>
               <Segmented
                 id="hover-delay"
                 size="sm"
                 value={s.hoverDelay}
                 onChange={(hoverDelay) => updateSettings({ hoverDelay })}
                 options={[
-                  { value: "fast", label: t("Schnell") },
+                  { value: "fast", label: t("Fast") },
                   { value: "normal", label: t("Normal") },
-                  { value: "patient", label: t("Geduldig") },
+                  { value: "patient", label: t("Patient") },
                 ]}
               />
             </Row>
           </motion.div>
         )}
       </AnimatePresence>
-      <Row label={t("Mit Windows starten")}>
+      <Row label={t("Start with Windows")}>
         {auto !== null && (
           <Switch
-            label={t("Mit Windows starten")}
+            label={t("Start with Windows")}
             checked={auto}
             onChange={(v) => {
               setAuto(v);
@@ -519,10 +510,10 @@ function General() {
           />
         )}
       </Row>
-      <Row label={t("TastenkÃ¼rzel")}>
+      <Row label={t("Shortcut")}>
         <span className="flex items-center gap-1 text-caption text-label-2">
           <Keyboard size={13} weight="bold" className="text-label-3" />
-          {["Strg", "Alt", "Leertaste"].map((k) => (
+          {["Ctrl", "Alt", "Space"].map((k) => (
             <kbd key={k} className="rounded-[5px] bg-fill-2 px-1.5 py-0.5 font-sans text-caption">{t(k)}</kbd>
           ))}
         </span>
@@ -558,19 +549,19 @@ function Display() {
       window.clearTimeout(stop);
     };
   }, []);
-  const label = (m: MonitorInfo, i: number) => `${m.primary ? t("Hauptbildschirm") : t("Bildschirm {n}", { n: i + 1 })} Â· ${m.width}Ã—${m.height}`;
+  const label = (m: MonitorInfo, i: number) => `${m.primary ? t("Main display") : t("Display {n}", { n: i + 1 })} · ${m.width}×${m.height}`;
 
   return (
-    <Group id="settings-display">
-      <Row label={t("Sichtbarkeit")}>
+    <Group title={t("Display")} id="settings-display">
+      <Row label={t("Visibility")}>
         <Segmented
           id="display-visibility"
           size="sm"
           value={d.visibility}
           onChange={(visibility) => updateSettings((cur) => ({ display: { ...cur.display, visibility } }))}
           options={[
-            { value: "always", label: t("Immer oben") },
-            { value: "hide-fullscreen", label: t("Vollbild: aus") },
+            { value: "always", label: t("Always on top") },
+            { value: "hide-fullscreen", label: t("Full screen: hide") },
           ]}
         />
       </Row>
@@ -588,7 +579,7 @@ function Display() {
         <Row label={t("Position")}>
           <Button onClick={() => updateSettings((cur) => ({ display: { ...cur.display, offset: 0 } }))}>
             <span className="flex items-center gap-1.5">
-              <ArrowsInLineHorizontal size={13} weight="bold" /> {t("Zur Mitte")}
+              <ArrowsInLineHorizontal size={13} weight="bold" /> {t("Center")}
             </span>
           </Button>
         </Row>
@@ -612,11 +603,11 @@ function Display() {
           ]}
         />
       </Row>
-      <Row label={t("Nicht stÃ¶ren")}>
-        <Switch label={t("Nicht stÃ¶ren")} checked={focus} onChange={setFocusMode} />
+      <Row label={t("Do not disturb")}>
+        <Switch label={t("Do not disturb")} checked={focus} onChange={setFocusMode} />
       </Row>
-      <Row label={t("Aufnahme-Punkte")}>
-        <Switch label={t("Aufnahme-Punkte")} checked={s.privacyDots} onChange={(privacyDots) => updateSettings({ privacyDots })} />
+      <Row label={t("Recording dots")}>
+        <Switch label={t("Recording dots")} checked={s.privacyDots} onChange={(privacyDots) => updateSettings({ privacyDots })} />
       </Row>
     </Group>
   );
@@ -639,7 +630,7 @@ function Typography() {
   const formatWeight = (value: number) => (value === 0 ? t("Default") : `${value > 0 ? "+" : ""}${value}`);
   return (
     <Group title={t("Font")} id="settings-font">
-      <Row label={t("Schriftfamilie")}>
+      <Row label={t("Font family")}>
         <Select
           value={uiFont}
           onChange={(uiFont) => updateSettings((cur) => ({ appearance: { ...cur.appearance, uiFont } }))}
@@ -673,7 +664,7 @@ function Typography() {
       <div className="mx-3 mt-2 rounded-[10px] bg-fill-2 px-3 py-3">
         <div className={info.className}>{t(info.sample)}</div>
         <div className="mt-1 text-[10px] text-label-4">
-          {eff.size % 1 === 0 ? eff.size : eff.size.toFixed(1)} px Â· {eff.weight}
+          {eff.size % 1 === 0 ? eff.size : eff.size.toFixed(1)} px · {eff.weight}
         </div>
       </div>
       <Row label={t("Size")}>
@@ -958,7 +949,7 @@ function GamingApps() {
         <Row key={id} label={friendlyAppName(id)}>
           <button
             type="button"
-            aria-label={t("Entfernen")}
+            aria-label={t("Remove")}
             onClick={() => remove(id)}
             className="pressable flex size-6 items-center justify-center rounded-full bg-fill-2 text-label-3 hover:text-label"
           >
@@ -966,10 +957,10 @@ function GamingApps() {
           </button>
         </Row>
       ))}
-      <Row label={t("Eigene .exe")}>
+      <Row label={t("Custom .exe")}>
         <div className="flex items-center gap-1.5">
           <TextField value={manual} onChange={setManual} onSubmit={addManual} placeholder="game.exe" width="w-32" />
-          <Button onClick={addManual}>{t("HinzufÃ¼gen")}</Button>
+          <Button onClick={addManual}>{t("Add")}</Button>
         </div>
       </Row>
     </Group>
@@ -991,34 +982,34 @@ function Presentation() {
   const presenting = usePresenting();
   const recording = privacy.use().screen;
   return (
-    <Group title={t("PrÃ¤sentationsmodus")} id="settings-presentation">
+    <Group title={t("Presentation mode")} id="settings-presentation">
       <Row
-        label={t("PrÃ¤sentationsmodus")}
+        label={t("Presentation mode")}
       >
-        <Switch label={t("PrÃ¤sentationsmodus")} checked={presenting} onChange={togglePresentation} />
+        <Switch label={t("Presentation mode")} checked={presenting} onChange={togglePresentation} />
       </Row>
-      <Row label={t("Bei Bildschirmaufnahme")}>
+      <Row label={t("While recording the screen")}>
         <Switch
-          label={t("Bei Bildschirmaufnahme")}
+          label={t("While recording the screen")}
           checked={auto}
           onChange={(on) => updateSettings((cur) => ({ presentation: { ...cur.presentation, auto: on } }))}
         />
       </Row>
       {auto && recording && !presenting && (
-        <Row label={t("FÃ¼r diese Aufnahme aus")} />
+        <Row label={t("Off for this recording")} />
       )}
     </Group>
   );
 }
 
 const discordStatus: Record<string, string> = {
-  off: "Aus â€“ Tool â€žDiscordâ€œ einschalten",
-  "no-config": "Client-ID und Secret fehlen",
-  "no-client": "Discord lÃ¤uft nicht",
-  connecting: "Verbinde â€¦",
-  authorizing: "In Discord bestÃ¤tigen",
-  ready: "Verbunden",
-  error: "Fehler",
+  off: "Off – turn on the “Discord” tool",
+  "no-config": "Client ID and secret missing",
+  "no-client": "Discord isn't running",
+  connecting: "Connecting …",
+  authorizing: "Confirm in Discord",
+  ready: "Connected",
+  error: "Error",
 };
 
 /** Discord call: your own app in the developer portal (the only way Discord grants voice scopes). */
@@ -1041,52 +1032,52 @@ function Discord() {
         </Row>
         {s.discord.presence && (
           <>
-            <Row label={t("Wird angezeigt nach â€žListening toâ€œ")}>
+            <Row label={t("Shown after “Listening to”")}>
               <Segmented<"title" | "artist" | "app">
                 id="discord-status"
                 size="sm"
                 value={s.discord.statusLine}
                 onChange={(statusLine) => updateSettings((cur) => ({ discord: { ...cur.discord, statusLine } }))}
                 options={[
-                  { value: "title", label: t("Titel") },
-                  { value: "artist", label: t("KÃ¼nstler") },
-                  { value: "app", label: t("App-Name") },
+                  { value: "title", label: t("Song") },
+                  { value: "artist", label: t("Artist") },
+                  { value: "app", label: t("App name") },
                 ]}
               />
             </Row>
-            <Row label={t("App-Name")}>
+            <Row label={t("App name")}>
               <div className="flex items-center gap-1.5">
                 <TextField value={name} onChange={setName} onSubmit={saveName} placeholder="WinZal" width="w-40" />
-                {name.trim() !== s.discord.appName && <Button onClick={saveName}>{t("Sichern")}</Button>}
+                {name.trim() !== s.discord.appName && <Button onClick={saveName}>{t("Save")}</Button>}
               </div>
             </Row>
           </>
         )}
       </Group>
-      <Group title={t("Verbindung")} id="settings-discord-connection">
+      <Group title={t("Connection")} id="settings-discord-connection">
         <Row label={t("Status")} error={state.error ? tBackend(state.error) : undefined}>
           <span className={`text-caption ${state.status === "ready" ? "text-green" : "text-label-2"}`}>
             {t(discordStatus[state.status] ?? state.status)}
           </span>
         </Row>
-        <Row label={t("Client-ID")}>
+        <Row label={t("Client ID")}>
           <div className="flex items-center gap-1.5">
             <TextField value={id} onChange={setId} onSubmit={save} placeholder="123456789012345678" width="w-40" />
-            {id.trim() !== s.discord.clientId && <Button onClick={save}>{t("Sichern")}</Button>}
+            {id.trim() !== s.discord.clientId && <Button onClick={save}>{t("Save")}</Button>}
           </div>
         </Row>
-        <SecretRow name="discord.secret" label={t("Client-Secret")} onSaved={reconnectDiscord} />
+        <SecretRow name="discord.secret" label={t("Client secret")} onSaved={reconnectDiscord} />
       </Group>
     </>
   );
 }
 
 const durations: { value: string; label: string }[] = [
-  { value: "0", label: "1Ã—" },
+  { value: "0", label: "1×" },
   { value: "5", label: "5 s" },
   { value: "15", label: "15 s" },
   { value: "30", label: "30 s" },
-  { value: "-1", label: "Bis Stopp" },
+  { value: "-1", label: "Until stopped" },
 ];
 
 /** Timer alarm: sound, volume, duration, with preview. */
@@ -1106,11 +1097,11 @@ function Alarm() {
 
   return (
     <Group id="settings-alarm">
-      <Row label={t("Alarm-Ton")}>
+      <Row label={t("Alarm sound")}>
         <div className="flex items-center gap-1.5">
           <button
-            aria-label={previewing ? t("Stopp") : t("ProbehÃ¶ren")}
-            title={previewing ? t("Stopp") : t("ProbehÃ¶ren")}
+            aria-label={previewing ? t("Stop") : t("Preview")}
+            title={previewing ? t("Stop") : t("Preview")}
             onClick={() => {
               if (!previewing) return preview();
               stopAlarm();
@@ -1131,13 +1122,13 @@ function Alarm() {
           />
         </div>
       </Row>
-      <Row label={t("LautstÃ¤rke")}>
+      <Row label={t("Volume")}>
         <div className="flex w-52 items-center gap-2">
-          <Slider label={t("LautstÃ¤rke")} value={Math.round(a.volume * 100)} min={5} max={100} step={5} onChange={(v) => set({ volume: v / 100 })} />
+          <Slider label={t("Volume")} value={Math.round(a.volume * 100)} min={5} max={100} step={5} onChange={(v) => set({ volume: v / 100 })} />
           <span className="tabular w-8 text-right text-caption text-label-2">{Math.round(a.volume * 100)}</span>
         </div>
       </Row>
-      <Row label={t("Dauer")}>
+      <Row label={t("Duration")}>
         <Segmented id="alarm-duration" size="sm" value={String(a.duration)} onChange={(v) => set({ duration: Number(v) as AlarmDuration })} options={durations.map((o) => ({ ...o, label: t(o.label) }))} />
       </Row>
     </Group>
@@ -1158,7 +1149,7 @@ function FpsUnlockRow() {
     };
   }, []);
   return (
-    <Row label={t("FPS & CPU-Temperatur")}>
+    <Row label={t("FPS & CPU temperature")}>
       {state === "ok" || state === "relogin" ? (
         <SelectedDot size={8} />
       ) : (
@@ -1172,7 +1163,7 @@ function FpsUnlockRow() {
             });
           }}
         >
-          {t("Freischalten")}
+          {t("Unlock")}
         </Button>
       )}
     </Row>
@@ -1251,8 +1242,8 @@ function Weather() {
   const { weather: w } = settings.use();
   const [searching, setSearching] = useState(false);
   return (
-    <Group title={t("Wetter")} id="settings-weather">
-      <Row label={t("Standort")}>
+    <Group title={t("Weather")} id="settings-weather">
+      <Row label={t("Location")}>
         <Segmented<"auto" | "manual">
           id="weather-mode"
           size="sm"
@@ -1264,13 +1255,13 @@ function Weather() {
             } else setSearching(true);
           }}
           options={[
-            { value: "auto", label: t("Automatisch") },
-            { value: "manual", label: t("Manuell") },
+            { value: "auto", label: t("Automatic") },
+            { value: "manual", label: t("Manual") },
           ]}
         />
       </Row>
-      <Row label={t("Ort")}>
-        <Button onClick={() => setSearching((v) => !v)}>{w?.name ?? t("Wird erkannt â€¦")}</Button>
+      <Row label={t("City")}>
+        <Button onClick={() => setSearching((v) => !v)}>{w?.name ?? t("Detecting …")}</Button>
       </Row>
       <AnimatePresence initial={false}>
         {searching && (
@@ -1339,7 +1330,7 @@ function Tools() {
 
 /**
  * Field for a key. Stored values are never read back, it only shows
- * "saved Ã¢Å“â€œ". Typing a new one overwrites it, saving empty deletes it.
+ * "saved ✓". Typing a new one overwrites it, saving empty deletes it.
  */
 function SecretRow({ name, label, onSaved }: { name: SecretName; label: string; onSaved?: () => void }) {
   const [stored, setStored] = useState(false);
@@ -1385,12 +1376,12 @@ function SecretRow({ name, label, onSaved }: { name: SecretName; label: string; 
             setError(null);
           }}
           onSubmit={() => void save()}
-          placeholder={stored ? t("Gespeichert") : t("EinfÃ¼gen")}
+          placeholder={stored ? t("Saved") : t("Paste")}
           width="w-40"
         />
         {(value || stored) && (
           <Button onClick={() => void save()} disabled={!value && !stored}>
-            {value ? t("Sichern") : t("LÃ¶schen")}
+            {value ? t("Save") : t("Delete")}
           </Button>
         )}
       </div>

@@ -57,13 +57,13 @@ export function PasswordForm(props: {
     });
 
   const bits = strengthBits(password);
-  const strength = bits >= 80 ? t("Stark") : bits >= 55 ? t("Mittel") : t("Schwach");
+  const strength = bits >= 80 ? t("Strong") : bits >= 55 ? t("Fair") : t("Weak");
   return (
     <div className="flex h-full flex-col gap-2">
       {props.item && (
         <HeaderActions>
           <HeaderButton
-            label={confirmDelete ? t("Wirklich löschen?") : t("Löschen")}
+            label={confirmDelete ? t("Really delete?") : t("Delete")}
             active={confirmDelete}
             onClick={() =>
               confirmDelete
@@ -80,12 +80,12 @@ export function PasswordForm(props: {
       )}
       <Group>
         <Row label={t("Name")}>
-          <TextField value={name} onChange={setName} placeholder={t("z. B. GitHub")} width={FIELD} onSubmit={save} autoFocus={!props.item} />
+          <TextField value={name} onChange={setName} placeholder={t("e.g. GitHub")} width={FIELD} onSubmit={save} autoFocus={!props.item} />
         </Row>
-        <Row label={t("Benutzername / E-Mail")}>
+        <Row label={t("Username / email")}>
           <TextField value={username} onChange={setUsername} placeholder={t("optional")} width={FIELD} onSubmit={save} />
         </Row>
-        <Row label={t("Passwort")}>
+        <Row label={t("Password")}>
           <div className="flex items-center gap-1">
             <TextField
               value={password}
@@ -95,13 +95,13 @@ export function PasswordForm(props: {
               }}
               secret
               revealed={generated}
-              placeholder={t("Eingeben oder erzeugen")}
+              placeholder={t("Type or generate")}
               width="w-[266px]"
               onSubmit={save}
             />
             <button
-              aria-label={t("Passwort erzeugen")}
-              title={t("Passwort erzeugen")}
+              aria-label={t("Generate password")}
+              title={t("Generate password")}
               onClick={() => generate()}
               className="pressable pressable-fill flex size-7 items-center justify-center rounded-full bg-fill-2 text-label-2 hover:text-label"
             >
@@ -112,15 +112,15 @@ export function PasswordForm(props: {
       </Group>
 
       <div className="flex h-7 items-center gap-3 px-3 text-caption text-label-3">
-        <span>{t("Länge")}</span>
+        <span>{t("Length")}</span>
         <div className="w-24">
-          <Slider value={opts.length} min={8} max={64} onChange={(length) => setOpts({ length })} label={t("Länge")} />
+          <Slider value={opts.length} min={8} max={64} onChange={(length) => setOpts({ length })} label={t("Length")} />
         </div>
         <span className="tabular w-4 text-label-2">{opts.length}</span>
-        <span className="ml-2">{t("Ziffern")}</span>
-        <Switch checked={opts.digits} onChange={(digits) => setOpts({ digits })} label={t("Ziffern")} />
-        <span className="ml-1">{t("Symbole")}</span>
-        <Switch checked={opts.symbols} onChange={(symbols) => setOpts({ symbols })} label={t("Symbole")} />
+        <span className="ml-2">{t("Digits")}</span>
+        <Switch checked={opts.digits} onChange={(digits) => setOpts({ digits })} label={t("Digits")} />
+        <span className="ml-1">{t("Symbols")}</span>
+        <Switch checked={opts.symbols} onChange={(symbols) => setOpts({ symbols })} label={t("Symbols")} />
       </div>
 
       <div className="mt-auto flex items-center gap-2">
@@ -133,9 +133,9 @@ export function PasswordForm(props: {
           </div>
         )}
         <div className="ml-auto flex gap-2">
-          <Button onClick={props.onDone}>{t("Abbrechen")}</Button>
+          <Button onClick={props.onDone}>{t("Cancel")}</Button>
           <Button primary disabled={!canSave} onClick={save}>
-            {props.item ? t("Sichern") : t("Hinzufügen")}
+            {props.item ? t("Save") : t("Add")}
           </Button>
         </div>
       </div>
@@ -216,36 +216,36 @@ export function TotpForm(props: { onDone: () => void; run: (action: () => Promis
           </AnimatePresence>
         </span>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-body text-label">{scan ? t("QR-Code erkannt") : t("QR-Code mit Strg+V einfügen")}</div>
+          <div className="truncate text-body text-label">{scan ? t("QR code found") : t("Paste a QR code with Ctrl+V")}</div>
           <div className="truncate text-caption text-label-3">
             {error ? (
               <span className="text-red">{error}</span>
             ) : scan ? (
-              [scan.issuer, scan.account].filter(Boolean).join(" · ") || t("Schlüssel übernommen")
+              [scan.issuer, scan.account].filter(Boolean).join(" · ") || t("Key added")
             ) : (
-              t("Screenshot mit Win+Umschalt+S, dann hier einfügen")
+              t("Screenshot with Win+Shift+S, then paste here")
             )}
           </div>
         </div>
         {scan ? (
-          <Button onClick={() => setScan(null)}>{t("Verwerfen")}</Button>
+          <Button onClick={() => setScan(null)}>{t("Discard")}</Button>
         ) : (
           <Button icon={ClipboardText} disabled={busy} onClick={() => void paste()}>
-            {t("Einfügen")}
+            {t("Paste")}
           </Button>
         )}
       </div>
 
       <Group>
         <Row label={t("Name")}>
-          <TextField value={name} onChange={setName} placeholder={t("z. B. GitHub")} width={FIELD} onSubmit={() => void save()} />
+          <TextField value={name} onChange={setName} placeholder={t("e.g. GitHub")} width={FIELD} onSubmit={() => void save()} />
         </Row>
         {!scan && (
           <>
-            <Row label={t("Schlüssel")}>
-              <TextField value={secret} onChange={setSecret} secret placeholder={t("Base32 oder otpauth://")} width={FIELD} onSubmit={() => void save()} />
+            <Row label={t("Key")}>
+              <TextField value={secret} onChange={setSecret} secret placeholder={t("Base32 or otpauth://")} width={FIELD} onSubmit={() => void save()} />
             </Row>
-            <Row label={t("Konto")}>
+            <Row label={t("Account")}>
               <TextField value={account} onChange={setAccount} placeholder={t("optional")} width={FIELD} onSubmit={() => void save()} />
             </Row>
           </>
@@ -253,9 +253,9 @@ export function TotpForm(props: { onDone: () => void; run: (action: () => Promis
       </Group>
 
       <div className="mt-auto flex justify-end gap-2">
-        <Button onClick={props.onDone}>{t("Abbrechen")}</Button>
+        <Button onClick={props.onDone}>{t("Cancel")}</Button>
         <Button primary disabled={!canSave} onClick={() => void save()}>
-          {t("Hinzufügen")}
+          {t("Add")}
         </Button>
       </div>
     </div>
