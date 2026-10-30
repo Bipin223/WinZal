@@ -10,14 +10,14 @@ import { springs } from "../design/motion";
  * Purely decorative: it never takes the pill's width and it does not intercept
  * clicks, so the FPS tools keep their layout.
  */
-export function GamingSatellite({ show, playing, floating }: { show: boolean; playing: boolean; floating: boolean }) {
+export function GamingSatellite({ show, playing, floating, liquid = false }: { show: boolean; playing: boolean; floating: boolean; liquid?: boolean }) {
   return (
     <AnimatePresence>
       {show && (
         <motion.div
           key="gaming-equalizer"
           aria-hidden
-          className="pointer-events-none absolute flex size-7 items-center justify-center bg-notch"
+          className={`pointer-events-none absolute flex size-7 items-center justify-center bg-notch ${liquid ? "liquid-surface" : ""}`}
           style={{
             right: "calc(100% + 10px)",
             top: 0,
@@ -32,6 +32,7 @@ export function GamingSatellite({ show, playing, floating }: { show: boolean; pl
           animate={{ opacity: 1, scale: 1, x: 0, transition: springs.snappy }}
           exit={{ opacity: 0, scale: 0.55, x: 5, transition: { duration: 0.14, ease: "easeIn" } }}
         >
+          {liquid && <span aria-hidden className="liquid-rim absolute inset-0 rounded-full" />}
           <Equalizer playing={playing} height={10} fps={48} />
         </motion.div>
       )}

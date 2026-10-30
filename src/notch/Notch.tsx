@@ -4,7 +4,7 @@ import { Drop, GearSix, Ghost, MoonStars, PushPin } from "@phosphor-icons/react"
 import { content, springs } from "../design/motion";
 import { useNowPlaying } from "../platform/media";
 import { uiFontFamily } from "../ui/font";
-import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onSilentExit, onTrayOpen, setHitRect, setMemoryLow, setNotchHeight, setSilent } from "../platform/native";
+import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onSilentExit, onTrayOpen, screenLuminance, setHitRect, setMemoryLow, setNotchHeight, setSilent } from "../platform/native";
 import { PrivacyDots } from "../features/privacy/PrivacyDots";
 import { FOCUS_CLICKS, focusMode, setFocusMode } from "./focus";
 import { silentMode, setSilentMode } from "./silent";
@@ -85,10 +85,41 @@ export function Notch() {
   const [callTitleWidth, setCallTitleWidth] = useState(0);
   const clockRow = useRef<HTMLDivElement>(null);
   const { tools: toolSettings, display: displaySettings, appearance, gaming } = settings.use();
+  const [backdropLum, setBackdropLum] = useState(0.5);
+  const liquidDynamic = appearance.material === "liquid" && appearance.liquidDynamic;
+  useEffect(() => {
+    if (!liquidDynamic) {
+      setBackdropLum(0.5);
+      return;
+    }
+    let alive = true;
+    const read = () =>
+      void screenLuminance().then((value) => {
+        if (alive) setBackdropLum(Math.min(1, Math.max(0, value)));
+      });
+    read();
+    const id = window.setInterval(read, 3000);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+    };
+  }, [liquidDynamic]);
   // Silent mode is the only ghost; game transparency reuses the Glass alpha (0.62).
   const ghostOpacity = silent && status !== "open" ? (appearance.ghostSolid ? 1 : 0.28) : 1;
-  const materialAlpha = appearance.material === "glass" ? 0.62 : appearance.material === "dark" ? 0.82 : 1;
-  const notchAlpha = gaming.transparent && gamingLive ? 0.62 : materialAlpha;
+  const liquidLevel = Math.min(100, Math.max(0, appearance.liquidIntensity)) / 100;
+  // Dynamic mode unlocks the extra-clear low end; off keeps the previous floor.
+  const liquidBase = appearance.liquidDynamic
+    ? 0.04 + 0.76 * Math.pow(liquidLevel, 0.72)
+    : 0.25 + 0.55 * liquidLevel;
+  const liquidAlpha = appearance.liquidDynamic
+    ? Math.min(0.86, Math.max(0.03, liquidBase + (backdropLum - 0.5) * 0.22))
+    : liquidBase;
+  const materialAlpha = appearance.material === "liquid" ? liquidAlpha : appearance.material === "glass" ? 0.62 : appearance.material === "dark" ? 0.82 : 1;
+  // Gaming transparency used to pin Glass at 0.62. Liquid keeps its own
+  // intensity (still capped at 0.62) so the game pill and satellites match.
+  const notchAlpha = gaming.transparent && gamingLive
+    ? appearance.material === "liquid" ? Math.min(materialAlpha, 0.62) : 0.62
+    : materialAlpha;
   // Measured is the truth once the live row exists. The estimate is only for
   // the first paint; adding both kept a permanent dead gutter around the stats.
   const systemWidth = measuredGamingWidth > 0 ? measuredGamingWidth : gamingWidth(gaming);
@@ -222,10 +253,6 @@ export function Notch() {
         r: lineHeight / 2,
       }
     : shapeFor(status, pillLive, size, systemWidth);
-  const shape =
-    !lineView && appearance.corners === "squared" && baseShape.r > 5
-      ? { ...baseShape, r: Math.min(baseShape.r, 8), ear: Math.min(baseShape.ear, 3) }
-      : baseShape;
   const customIsland = !lineView && status !== "open";
   // Gaming owns its width: it is measured from the live row. The island width
   // setting is optional extra air, never a subtraction, so it cannot clip or
@@ -234,11 +261,11 @@ export function Notch() {
   const extraWidth = Math.max(0, appearance.islandWidth);
   const sizedShape = customIsland
     ? {
-        ...shape,
-        w: Math.max(80, shape.w + (lyricsPill || gamingPill ? 0 : extraWidth)),
+        ...baseShape,
+        w: Math.max(80, baseShape.w + (lyricsPill || gamingPill ? 0 : extraWidth)),
         h: lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight,
       }
-    : shape;
+    : baseShape;
   const tightHit = lineView;
   const finalShape = floating
     ? {
@@ -306,6 +333,12 @@ export function Notch() {
   const timerShift = switchSatellite ? 40 : 0;
   const surface = appearance.theme === "custom" ? appearance.themeColor : light ? LIGHT_SURFACE : DARK_SURFACE;
   const surfaceLight = isLightColor(surface);
+  // Dynamic mode also protects the text: as the glass gets clearer, a soft
+  // content scrim fades in so labels never sit directly on bright desktop.
+  const readableGuard =
+    appearance.material === "liquid" && appearance.liquidDynamic
+      ? Math.max(0, 1 - Math.min(100, appearance.liquidIntensity) / 45) * 0.3
+      : 0;
   const transition = useTransitionFor(status, displayShape, lyricTarget > 0 || callTitleExtra > 0);
 
   // Click outside closes (in the browser the fake desktop, in Tauri the window blur).
@@ -429,6 +462,8 @@ export function Notch() {
     <div
       className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center transition-opacity duration-200"
       data-surface={surfaceLight ? "light" : "dark"}
+      data-material={appearance.material}
+      data-readable={readableGuard > 0.01 ? "true" : "false"}
       // In the browser the notch moves inside the window; natively the whole window moves (display.rs).
       style={{
         ["--accent" as string]: appearance.accent === "auto" ? np?.accent : appearance.accent,
@@ -471,6 +506,9 @@ export function Notch() {
           transition={transition}
           elevated={status === "open"}
           floating={floating}
+          liquid={appearance.material === "liquid"}
+          scrim={readableGuard}
+          scrimLight={surfaceLight}
         >
           <LiveRightInset.Provider value={rightInset}>
             <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} callExtra={callTitleExtra} widthExtra={lyricsPill ? 0 : appearance.islandWidth} height={lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight} systemWidth={systemWidth} />
@@ -560,17 +598,19 @@ export function Notch() {
             />
           </>
         )}
-        <GamingSatellite show={gamingSatellite} playing={!!np?.isPlaying} floating={floating} />
+        <GamingSatellite show={gamingSatellite} playing={!!np?.isPlaying} floating={floating} liquid={appearance.material === "liquid"} />
         <ActivitySwitch
           show={switchSatellite}
           kind={switchKind}
           onSwitch={() => callView.set(switchKind === "music" ? "music" : "call")}
           floating={floating}
+          liquid={appearance.material === "liquid"}
         />
         <TimerSatellite
           show={timerSatellite}
           floating={floating}
           shift={timerShift}
+          liquid={appearance.material === "liquid"}
           onOpen={() => {
             navigate("timer");
             open();
@@ -587,24 +627,27 @@ export function Notch() {
 
 /** Windows-island style: the selected clock face in the floating closed pill. */
 function ChargingPulse({ percent }: { percent: number }) {
+  const glass = settings.use().appearance.material === "liquid";
   return (
     <motion.div
-      className="absolute inset-0 flex items-center justify-center gap-2"
+      className="absolute inset-0 flex items-center justify-center"
       initial={{ opacity: 0, scale: 0.86, y: 3 }}
       animate={{ opacity: 1, scale: 1, y: 0, transition: springs.open }}
       exit={{ opacity: 0, scale: 0.92, y: -2, transition: springs.close }}
       style={{ transformOrigin: "50% 50%", willChange: "transform, opacity" }}
     >
-      <span className="relative flex items-center justify-center">
-        <motion.span
-          aria-hidden
-          className="absolute size-6 rounded-full bg-green/25"
-          animate={{ scale: [0.8, 1.7], opacity: [0.55, 0] }}
-          transition={{ duration: 1.25, repeat: 2, ease: "easeOut" }}
-        />
-        <BatteryMeter percent={percent} charging plugged size="md" />
-      </span>
-      <span className="text-caption font-semibold text-label">{t("Charging")}</span>
+      <div className={`flex items-center justify-center gap-2 ${glass ? "liquid-glass rounded-full px-3 py-1" : ""}`}>
+        <span className="relative flex items-center justify-center">
+          <motion.span
+            aria-hidden
+            className="absolute size-6 rounded-full bg-green/25"
+            animate={{ scale: [0.8, 1.7], opacity: [0.55, 0] }}
+            transition={{ duration: 1.25, repeat: 2, ease: "easeOut" }}
+          />
+          <BatteryMeter percent={percent} charging plugged size="md" />
+        </span>
+        <span className="text-caption font-semibold text-label">{t("Charging")}</span>
+      </div>
     </motion.div>
   );
 }
@@ -660,10 +703,10 @@ function Header({ title, onDragStart, onSilent }: { title: string; onDragStart: 
   const isPinned = pinned.use();
   const focus = focusMode.use();
   const silent = silentMode.use();
-  const liquidGlass = settings.use().appearance.material === "glass";
+  const liquidGlass = settings.use().appearance.material === "liquid";
   const toggleLiquidGlass = () =>
     updateSettings((cur) => ({
-      appearance: { ...cur.appearance, material: cur.appearance.material === "glass" ? "solid" : "glass" },
+      appearance: { ...cur.appearance, material: cur.appearance.material === "liquid" ? "solid" : "liquid" },
     }));
   return (
     // Empty header space = drag handle.

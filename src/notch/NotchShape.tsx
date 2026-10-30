@@ -10,6 +10,12 @@ interface Props {
   elevated: boolean;
   /** Windows island: all corners rounded, accent rim, no top ears. */
   floating?: boolean;
+  /** Clear liquid-glass body with a light rim. */
+  liquid?: boolean;
+  /** Soft content scrim while the glass is very clear (0..1). */
+  scrim?: number;
+  /** Use a light scrim for dark text on the light theme. */
+  scrimLight?: boolean;
   children?: ReactNode;
 }
 
@@ -21,7 +27,7 @@ interface Props {
  * re-render per frame. Animations are interruptible and keep their velocity
  * (important when hovering in and out quickly).
  */
-export function NotchShape({ geometry, transition, elevated, floating = false, children }: Props) {
+export function NotchShape({ geometry, transition, elevated, floating = false, liquid = false, scrim = 0, scrimLight = false, children }: Props) {
   const w = useMotionValue(geometry.w);
   const h = useMotionValue(geometry.h);
   const r = useMotionValue(geometry.r);
@@ -96,14 +102,33 @@ export function NotchShape({ geometry, transition, elevated, floating = false, c
       />
       <motion.div
         // clip instead of hidden: no scroll container, so focus/scrollIntoView can't shift the content.
-        className="absolute inset-0 overflow-clip bg-notch"
+        className={`absolute inset-0 overflow-clip bg-notch ${liquid ? "liquid-surface" : ""}`}
         style={{
           borderTopLeftRadius: floating ? r : 0,
           borderTopRightRadius: floating ? r : 0,
           borderBottomLeftRadius: r,
           borderBottomRightRadius: r,
+          backgroundImage:
+            liquid && scrim > 0
+              ? `linear-gradient(180deg, rgba(${scrimLight ? "255, 255, 255" : "0, 0, 0"}, ${scrim}), rgba(${scrimLight ? "255, 255, 255" : "0, 0, 0"}, ${scrim * 0.9}))`
+              : undefined,
         }}
       >
+        {liquid && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-[inherit]"
+            style={{
+              background:
+                "linear-gradient(135deg, rgb(255 255 255 / 0.14), transparent 32%, transparent 70%, rgb(255 255 255 / 0.05))",
+              // Attached to the top edge, a light top rim reads as a stray white
+              // line. Keep the full rim only on the floating island.
+              boxShadow: floating
+                ? "inset 0 1px 0 rgb(255 255 255 / 0.28), inset 0 0 0 1px rgb(255 255 255 / 0.07)"
+                : "inset 0 -1px 0 rgb(255 255 255 / 0.10), inset 1px 0 0 rgb(255 255 255 / 0.05), inset -1px 0 0 rgb(255 255 255 / 0.05)",
+            }}
+          />
+        )}
         <ShapeWidth.Provider value={w}>{children}</ShapeWidth.Provider>
       </motion.div>
     </motion.div>

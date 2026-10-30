@@ -1,7 +1,8 @@
 import { createStore } from "../../lib/store";
 import { fetchPrivacy, type PrivacyState } from "../../platform/services";
-import { onPresentationSet, onPresentationToggle, trayPresentation } from "../../platform/native";
+import { onCaptureToggle, onPresentationSet, onPresentationToggle, setCaptureHidden, trayPresentation } from "../../platform/native";
 import { settings, updateSettings } from "../../settings/store";
+import { notify } from "../../notifications/store";
 
 /*
  * Mic/camera/screen use, polled once for the privacy dots and the presentation mode.
@@ -52,6 +53,27 @@ export function startPresentationMode() {
   settings.subscribe(sync);
   privacy.subscribe(sync);
   snoozed.subscribe(sync);
+  sync();
+}
+
+/**
+ * Windows capture exclusion: the notch stays visible to the user but OBS,
+ * Snipping Tool and screen shares no longer record it. Ctrl+Alt+H toggles it.
+ */
+export function startCapturePrivacy() {
+  const sync = () => setCaptureHidden(settings.get().presentation.hideCapture);
+  onCaptureToggle(() => {
+    const hideCapture = !settings.get().presentation.hideCapture;
+    updateSettings((s) => ({ presentation: { ...s.presentation, hideCapture } }));
+    notify({
+      kind: "info",
+      app: "WinZal",
+      title: hideCapture ? "Hidden from screen capture" : "Visible in screen capture",
+      body: hideCapture ? "OBS and screen shares won't record the notch." : "The notch will appear in recordings again.",
+      color: hideCapture ? "#30d158" : "#0a84ff",
+    });
+  });
+  settings.subscribe(sync);
   sync();
 }
 

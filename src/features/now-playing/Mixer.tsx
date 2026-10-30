@@ -20,7 +20,6 @@ import { t } from "../../i18n";
 const POLL_MS = 1500;
 /** Row height + gap of the list; the notch grows by this per app. */
 export const MIXER_ROW = 34;
-export const MIXER_MAX_ROWS = 5;
 
 export interface MixerData {
   apps: AppVolume[];
@@ -216,7 +215,7 @@ export function MixerToggle({ open, onToggle }: { open: boolean; onToggle: () =>
 type Item = { key: string; name: string; icon: string | null; playing: boolean; level: number; muted: boolean; set: (patch: { level?: number; muted?: boolean }) => void };
 
 /**
- * Full list: the playing app on top, then the system, then every other app with sound.
+ * Full list: playing apps first, then the rest, and system volume always last.
  * When the playing app changes while the list is open, the rows slide to their new place.
  */
 export function MixerList({ data }: { data: MixerData }) {
@@ -257,10 +256,10 @@ export function MixerList({ data }: { data: MixerData }) {
     muted: a.muted,
     set: (patch) => data.setApp(a.id, patch),
   }));
+  // System volume is always the last row, below every app.
   if (sys) items.push({ key: "system", name: t("System"), icon: null, playing: false, level: sys.level, muted: sys.muted, set: data.setSystem });
-  const rank = (i: Item) => (i.playing ? 0 : i.key === "system" ? 1 : 2);
-  // Stable sort: apps keep Windows' order among themselves.
-  items.sort((a, b) => rank(a) - rank(b));
+  // Stable sort: apps keep Windows' order among themselves, playing first.
+  items.sort((a, b) => Number(b.playing) - Number(a.playing));
 
   return (
     <motion.div
@@ -270,24 +269,26 @@ export function MixerList({ data }: { data: MixerData }) {
       exit={{ opacity: 0, filter: "blur(4px)", transition: content.exit }}
     >
       <div className="mx-0.5 mt-2 mb-1.5 h-px shrink-0 bg-separator" />
-      <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 [scrollbar-width:none]">
+      <div className="mx-0.5 mb-1.5 flex shrink-0 items-center gap-2 rounded-[8px] px-1 py-1">
         {outputs.length > 0 && (
-          <div className="mb-1 flex items-center gap-2 rounded-[8px] px-2 py-1">
-            <span className="shrink-0 text-caption font-medium text-label-2">{t("Output")}</span>
-            <div className="ml-auto min-w-0">
-              <Select
-                value={currentOutput}
-                options={outputs.map((output) => ({
-                  value: output.id,
-                  label: output.label,
-                  icon: outputIcon(output.kind),
-                }))}
-                onChange={chooseOutput}
-                width="w-52"
-              />
-            </div>
+          <span className="shrink-0 text-caption font-medium text-label-2">{t("Output")}</span>
+        )}
+        {outputs.length > 0 && (
+          <div className="ml-auto min-w-0 pl-2">
+            <Select
+              value={currentOutput}
+              options={outputs.map((output) => ({
+                value: output.id,
+                label: output.label,
+                icon: outputIcon(output.kind),
+              }))}
+              onChange={chooseOutput}
+              width="w-40"
+            />
           </div>
         )}
+      </div>
+      <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 [scrollbar-width:none]">
         <AnimatePresence initial={false} mode="popLayout">
           {items.map((item, i) => (
             <motion.div key={item.key} layout="position" transition={springs.morph} exit={{ opacity: 0, transition: content.exit }}>
@@ -295,7 +296,7 @@ export function MixerList({ data }: { data: MixerData }) {
             </motion.div>
           ))}
         </AnimatePresence>
-        {data.apps.length === 0 && <div className="py-2 text-center text-caption text-label-3">{t("No app is playing sound")}</div>}
+        {items.length === 0 && <div className="py-2 text-center text-caption text-label-3">{t("No app is playing sound")}</div>}
       </div>
     </motion.div>
   );

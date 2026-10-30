@@ -13,12 +13,14 @@ export function TimerSatellite({
   floating,
   onOpen,
   shift = 0,
+  liquid = false,
 }: {
   show: boolean;
   floating: boolean;
   onOpen?: () => void;
   /** Extra px to the right when the activity switch occupies the first slot. */
   shift?: number;
+  liquid?: boolean;
 }) {
   const s = timer.use();
   const remaining = useRemaining();
@@ -65,7 +67,7 @@ export function TimerSatellite({
             move.current = null;
           }}
           whileTap={{ scale: 0.92 }}
-          className="pressable pointer-events-auto absolute flex size-8 cursor-pointer items-center justify-center bg-notch"
+          className={`pressable pointer-events-auto absolute flex size-8 cursor-pointer items-center justify-center bg-notch ${liquid ? "liquid-surface" : ""}`}
           style={{
             left: "calc(100% + 10px)",
             top: 0,
@@ -96,6 +98,7 @@ export function TimerSatellite({
             />
           </svg>
           <span className="tabular relative text-[7.5px] leading-none font-semibold">{label}</span>
+          {liquid && <span aria-hidden className="liquid-rim absolute inset-0 rounded-full" />}
         </motion.button>
       )}
     </AnimatePresence>

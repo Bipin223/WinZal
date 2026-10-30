@@ -18,11 +18,13 @@ export function ActivitySwitch({
   kind,
   onSwitch,
   floating,
+  liquid = false,
 }: {
   show: boolean;
   kind: "music" | "call" | null;
   onSwitch: () => void;
   floating: boolean;
+  liquid?: boolean;
 }) {
   const np = useNowPlaying();
   const ring = useRef<SVGCircleElement>(null);
@@ -79,7 +81,7 @@ export function ActivitySwitch({
                 />
               </svg>
             )}
-            <span className={`absolute grid place-items-center overflow-hidden rounded-full border border-white/10 bg-notch ${kind === "music" && np?.duration ? "inset-[4px]" : "inset-[2px]"}`}>
+            <span className={`absolute grid place-items-center overflow-hidden rounded-full border border-white/10 bg-notch ${liquid ? "liquid-surface" : ""} ${kind === "music" && np?.duration ? "inset-[4px]" : "inset-[2px]"}`}>
               {kind === "music" ? (
                 np?.artwork ? (
                   <img src={np.artwork} alt="" draggable={false} className="size-full object-cover" />
@@ -89,6 +91,7 @@ export function ActivitySwitch({
               ) : (
                 <DiscordLogo size={15} />
               )}
+              {liquid && <span aria-hidden className="liquid-rim absolute inset-0 rounded-full" />}
             </span>
           </span>
         </motion.button>

@@ -45,7 +45,7 @@ export function FlyoutLayer() {
           key={kind}
           data-flyout-hit
           className={`pointer-events-auto absolute z-40 overflow-hidden rounded-[20px] border border-separator shadow-[0_26px_60px_-18px_rgb(0_0_0/0.8),0_6px_18px_rgb(0_0_0/0.35)] ${
-            material === "glass" ? "bg-notch backdrop-blur-2xl" : "bg-elevated"
+            material === "liquid" ? "liquid-glass" : material === "glass" ? "bg-notch backdrop-blur-2xl" : "bg-elevated"
           }`}
           style={{
             width: kind === "sessions" ? 334 : 300,

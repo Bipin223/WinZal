@@ -978,7 +978,7 @@ function friendlyAppName(id: string): string {
 
 /** Presentation mode: one switch, plus automatic while the screen is recorded or shared. */
 function Presentation() {
-  const { auto } = settings.use().presentation;
+  const { auto, hideCapture } = settings.use().presentation;
   const presenting = usePresenting();
   const recording = privacy.use().screen;
   return (
@@ -993,6 +993,13 @@ function Presentation() {
           label={t("While recording the screen")}
           checked={auto}
           onChange={(on) => updateSettings((cur) => ({ presentation: { ...cur.presentation, auto: on } }))}
+        />
+      </Row>
+      <Row label={t("Hide from screen capture")} status={t("OBS won't record the notch. Ctrl+Alt+H.")}>
+        <Switch
+          label={t("Hide from screen capture")}
+          checked={hideCapture}
+          onChange={(on) => updateSettings((cur) => ({ presentation: { ...cur.presentation, hideCapture: on } }))}
         />
       </Row>
       {auto && recording && !presenting && (

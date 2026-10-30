@@ -155,8 +155,10 @@ pub fn run() {
     let shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::Space);
     let presentation = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyP);
     let silent = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyS);
+    let capture = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyH);
     let power = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT | Modifiers::SHIFT), Code::KeyM);
-    let (h_shortcut, h_presentation, h_silent, h_power) = (shortcut.clone(), presentation.clone(), silent.clone(), power.clone());
+    let (h_shortcut, h_presentation, h_silent, h_capture, h_power) =
+        (shortcut.clone(), presentation.clone(), silent.clone(), capture.clone(), power.clone());
 
     tauri::Builder::default()
         // A second launch doesn't open a second notch.
@@ -177,6 +179,8 @@ pub fn run() {
                         let _ = app.emit("notch://presentation-toggle", ());
                     } else if pressed == &h_silent {
                         let _ = app.emit("notch://silent-toggle", ());
+                    } else if pressed == &h_capture {
+                        let _ = app.emit("notch://capture-toggle", ());
                     } else if pressed == &h_power {
                         let _ = app.emit("notch://power-cycle", ());
                     }
@@ -220,6 +224,8 @@ pub fn run() {
             keyboard_focus,
             set_notch_height,
             set_notch_width,
+            set_capture_hidden,
+            screen_luminance,
             notch_prompt_mode,
             set_webview_render_mode,
             set_gpu_preference,
@@ -348,6 +354,7 @@ pub fn run() {
             let _ = app.global_shortcut().register(shortcut);
             let _ = app.global_shortcut().register(presentation);
             let _ = app.global_shortcut().register(silent);
+            let _ = app.global_shortcut().register(capture);
             let _ = app.global_shortcut().register(power);
             enable_autostart_once(app.handle());
             build_tray(app)?;
@@ -370,6 +377,64 @@ fn set_notch_height(height: f64, window: WebviewWindow) -> Result<(), String> {
     window
         .set_size(tauri::LogicalSize::new(1260.0, height))
         .map_err(|error| error.to_string())
+}
+
+/// Keep the notch usable on the desktop but out of OBS and screen captures.
+/// Windows 10 2004+ supports WDA_EXCLUDEFROMCAPTURE for windowed apps.
+#[tauri::command]
+fn set_capture_hidden(hidden: bool, window: WebviewWindow) -> Result<(), String> {
+    use windows::Win32::UI::WindowsAndMessaging::{SetWindowDisplayAffinity, WDA_EXCLUDEFROMCAPTURE, WDA_NONE};
+    let hwnd = window.hwnd().map_err(|error| error.to_string())?;
+    let affinity = if hidden { WDA_EXCLUDEFROMCAPTURE } else { WDA_NONE };
+    unsafe { SetWindowDisplayAffinity(hwnd, affinity) }.map_err(|error| error.to_string())
+}
+
+/// Average brightness in the strips beside the notch. Read through the
+/// transparent window, so the wallpaper/game behind drives the glass tint.
+#[tauri::command]
+fn screen_luminance(window: WebviewWindow) -> Result<f32, String> {
+    use windows::Win32::Graphics::Gdi::{GetDC, GetPixel, ReleaseDC, CLR_INVALID};
+
+    let size = window.outer_size().map_err(|error| error.to_string())?;
+    let position = window.outer_position().map_err(|error| error.to_string())?;
+    let scale = window.scale_factor().map_err(|error| error.to_string())? as f32;
+    let (w, h) = (size.width as f32, size.height as f32);
+    if w < 120.0 || h < 40.0 {
+        return Ok(0.5);
+    }
+
+    let dc = unsafe { GetDC(None) };
+    if dc.is_invalid() {
+        return Ok(0.5);
+    }
+
+    let mut total = 0.0f32;
+    let mut count = 0.0f32;
+    // The notch is centred; these strips always sit to its left and right.
+    for offset in [24.0f32, 48.0, 72.0] {
+        for edge in [0.0f32, 1.0] {
+            for y in [12.0f32, 28.0, 46.0] {
+                let x = if edge == 0.0 {
+                    position.x as f32 + offset * scale
+                } else {
+                    position.x as f32 + w - offset * scale
+                };
+                let y = position.y as f32 + (y * scale).min(h - 1.0);
+                let pixel = unsafe { GetPixel(dc, x as i32, y as i32) };
+                if pixel.0 == CLR_INVALID {
+                    continue;
+                }
+                let value = pixel.0;
+                let r = (value & 0xff) as f32 / 255.0;
+                let g = ((value >> 8) & 0xff) as f32 / 255.0;
+                let b = ((value >> 16) & 0xff) as f32 / 255.0;
+                total += 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                count += 1.0;
+            }
+        }
+    }
+    unsafe { ReleaseDC(None, dc) };
+    Ok(if count > 0.0 { total / count } else { 0.5 })
 }
 
 /// Widen the transparent window for an attached flyout. The notch is centered

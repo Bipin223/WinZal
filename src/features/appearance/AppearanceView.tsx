@@ -20,7 +20,8 @@ const CLOCK_ACCENTS = ["#ff453a", "#ff9f0a", "#ffd60a", "#30d158", "#0a84ff", "#
 const DEFAULTS: Appearance = {
   accent: "auto",
   material: "solid",
-  corners: "rounded",
+  liquidIntensity: 56,
+  liquidDynamic: true,
   theme: "dark",
   themeColor: "#141416",
   style: "dynamic",
@@ -315,31 +316,44 @@ export function AppearanceView({ mode = "appearance", extra }: { mode?: "appeara
           <ColorPickerPanel value={a.themeColor} onChange={(themeColor) => set({ themeColor })} />
         </Section>
       )}
-      <div className="grid grid-cols-2 gap-1.5">
-        <div className="rounded-[12px] bg-fill-1 p-2">
-          <Choice
-            label={t("Material")}
-            value={a.material}
-            options={[
-              ["solid", t("Solid")],
-              ["dark", t("Dark glass")],
-              ["glass", t("Glass")],
-            ]}
-            onChange={(material) => set({ material: material as Appearance["material"] })}
+      <Section label={t("Material")}>
+        <Choice
+          label={t("Surface")}
+          value={a.material}
+          options={[
+            ["solid", t("Solid")],
+            ["dark", t("Dark glass")],
+            ["glass", t("Glass")],
+            ["liquid", t("Liquid glass")],
+          ]}
+          onChange={(material) => set({ material: material as Appearance["material"] })}
+        />
+      </Section>
+      {a.material === "liquid" && (
+        <Section label={t("Liquid glass")}>
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <span className="text-caption font-medium text-label-2">{t("Glass intensity")}</span>
+            <span className="tabular text-caption text-label-3">{a.liquidIntensity}%</span>
+          </div>
+          <Slider
+            label={t("Glass intensity")}
+            value={a.liquidIntensity}
+            min={0}
+            max={100}
+            onChange={(liquidIntensity) => set({ liquidIntensity })}
           />
-        </div>
-        <div className="rounded-[12px] bg-fill-1 p-2">
-          <Choice
-            label={t("Corners")}
-            value={a.corners}
-            options={[
-              ["rounded", t("Rounded")],
-              ["squared", t("Squared")],
-            ]}
-            onChange={(corners) => set({ corners: corners as Appearance["corners"] })}
-          />
-        </div>
-      </div>
+          <div className="mt-1">
+            <ToggleRow
+              label={t("Dynamic adaptation")}
+              checked={a.liquidDynamic}
+              onChange={(liquidDynamic) => set({ liquidDynamic })}
+            />
+          </div>
+          <div className="text-caption text-label-3">
+            {t("Adapts the glass and adds contrast when needed.")}
+          </div>
+        </Section>
+      )}
       <Section label={t("Interaction")}>
         <ToggleRow
           label={t("Drag animation")}

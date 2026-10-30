@@ -89,8 +89,11 @@ export interface Settings {
   /** Notch colours and shape. `accent: "auto"` follows the album art. */
   appearance: {
     accent: string;
-    material: "solid" | "dark" | "glass";
-    corners: "rounded" | "squared";
+    material: "solid" | "dark" | "glass" | "liquid";
+    /** Liquid glass body opacity, 0-100. Dynamic mode shifts it a little. */
+    liquidIntensity: number;
+    /** Adapt the liquid glass to the brightness behind the notch. */
+    liquidDynamic: boolean;
     /** Dark, light, follow Windows, or a custom island color with matching text. */
     theme: "dark" | "light" | "system" | "custom";
     /** Surface color for the custom theme. Text switches automatically. */
@@ -183,8 +186,9 @@ export interface Settings {
   /**
    * Presentation mode: hides clipboard previews, balances and the vault while sharing
    * the screen. `manual` = switched on by hand, `auto` = on while a recording is detected.
+   * `hideCapture` keeps the notch out of OBS and screen captures while staying usable.
    */
-  presentation: { manual: boolean; auto: boolean };
+  presentation: { manual: boolean; auto: boolean; hideCapture: boolean };
   /** Check for a new version once a day, anonymously (installs only on click). */
   updates: { auto: boolean; install: boolean };
 }
@@ -242,7 +246,8 @@ const defaults: Settings = {
   appearance: {
     accent: "auto",
     material: "solid",
-    corners: "rounded",
+    liquidIntensity: 56,
+    liquidDynamic: true,
     theme: "dark",
     themeColor: "#141416",
     style: "dynamic",
@@ -289,7 +294,7 @@ const defaults: Settings = {
   discord: { clientId: "", presence: true, appName: "Bipin Rizal's WinZal app", statusLine: "title" },
   alarm: { sound: "chime", volume: 0.7, duration: 5 },
   units: regionUnits(),
-  presentation: { manual: false, auto: true },
+  presentation: { manual: false, auto: true, hideCapture: true },
   updates: { auto: true, install: true },
 };
 

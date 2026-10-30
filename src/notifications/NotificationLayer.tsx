@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { content, springs } from "../design/motion";
 import { setNotificationVisible } from "../platform/native";
@@ -62,16 +62,44 @@ export function NotificationLayer() {
 
 function IslandNotification({ item }: { item: AppNotification }) {
   const dragged = useRef(false);
+  const measure = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(300);
   const minHeight = item.body ? 62 : 48;
+  // Long notifications grow sideways, never taller: measure the unwrapped
+  // text and animate the capsule to the width it needs (up to 680px).
+  useLayoutEffect(() => {
+    const el = measure.current;
+    if (!el) return;
+    let alive = true;
+    const update = () => {
+      if (alive) setWidth(Math.min(680, Math.max(300, Math.ceil(el.scrollWidth) + 76)));
+    };
+    update();
+    void document.fonts.ready.then(update);
+    return () => {
+      alive = false;
+    };
+  }, [item.id, item.app, item.title, item.body]);
 
   return (
     <div className="pointer-events-none fixed top-0 left-1/2 z-[120] -translate-x-1/2 pt-[2px]">
+      <div
+        ref={measure}
+        aria-hidden
+        className="pointer-events-none fixed top-0 -left-[2000px] w-max whitespace-nowrap"
+      >
+        <div className="text-[8px] font-semibold tracking-[0.14em] uppercase">
+          {item.app} <span className="ml-3 text-[8.5px] font-normal tracking-normal">now</span>
+        </div>
+        <div className="text-[15.5px] leading-[19px] font-semibold">{item.title}</div>
+        {item.body && <div className="text-[12.5px] leading-[15px]">{item.body}</div>}
+      </div>
       <motion.div
         data-notification-hit
         className="pointer-events-auto relative flex items-center overflow-hidden rounded-full border border-white/15 shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_12px_30px_-14px_rgb(0_0_0/0.55)]"
         style={{ background: "linear-gradient(180deg, rgba(40, 40, 44, 0.58), rgba(12, 12, 14, 0.72))", minHeight }}
         initial={{ width: 124, height: 24, borderRadius: 15, opacity: 0 }}
-        animate={{ width: 300, height: "auto", borderRadius: 999, opacity: 1 }}
+        animate={{ width, height: minHeight, borderRadius: 999, opacity: 1 }}
         exit={{ width: 124, height: 24, borderRadius: 15, opacity: 0, transition: springs.close }}
         transition={{ type: "spring", visualDuration: 0.38, bounce: 0 }}
         drag

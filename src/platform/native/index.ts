@@ -83,6 +83,28 @@ export function trayPresentation(on: boolean) {
   if (isNative) void invoke("tray_presentation", { on });
 }
 
+/** Keep the window out of screen captures (WDA_EXCLUDEFROMCAPTURE). */
+export function setCaptureHidden(hidden: boolean) {
+  if (isNative) void invoke("set_capture_hidden", { hidden });
+}
+
+/** Average brightness beside the notch, 0 (black) to 1 (white). */
+export async function screenLuminance(): Promise<number> {
+  if (!isNative) return 0.5;
+  try {
+    return await invoke<number>("screen_luminance");
+  } catch {
+    return 0.5;
+  }
+}
+
+/** Global shortcut (Ctrl+Alt+H): toggle capture exclusion. */
+export function onCaptureToggle(handler: () => void): () => void {
+  if (!isNative) return () => {};
+  const off = listen("notch://capture-toggle", handler);
+  return () => void off.then((f) => f());
+}
+
 /** Global shortcut / tray: silent mode. */
 export function onSilentToggle(handler: () => void): () => void {
   if (!isNative) return () => {};

@@ -8,7 +8,7 @@ import { holdOpen } from "../../notch/useNotchState";
 import { flyout, toggleFlyout } from "../../notch/flyout";
 import { requestSize } from "../../notch/size";
 import { findTab } from "../../notch/tabs";
-import { MIXER_MAX_ROWS, MIXER_ROW, MixerList, MixerToggle, useMixer } from "./Mixer";
+import { MIXER_ROW, MixerList, MixerToggle, useMixer } from "./Mixer";
 import { Equalizer } from "./Equalizer";
 import { LyricEqualizer } from "./LyricVisualizer";
 import { settings, lyricTrackKey, setLyricTrackOffset } from "../../settings/store";
@@ -32,13 +32,14 @@ export function NowPlayingView() {
   const sessionsOpen = flyout.use().kind === "sessions";
   const source = mix.source?.name;
 
-  // The mixer grows the notch by its rows (at most MIXER_MAX_ROWS, then it scrolls).
-  // The lyric-sync row needs one compact row.
-  const rows = Math.min(MIXER_MAX_ROWS, (mix.system ? 1 : 0) + Math.max(1, mix.apps.length));
+  // The mixer grows the notch to fit every app row, then the system volume row.
+  // The fixed header only holds the output picker; the list itself can scroll
+  // if it exceeds the available height.
+  const rows = Math.max(1, (mix.system ? 1 : 0) + mix.apps.length);
   useEffect(() => {
     if ((!mixerOpen && !syncOpen) || !np) return requestSize("media", null);
     const base = findTab("media")!.size;
-    const extra = mixerOpen ? rows * MIXER_ROW + 14 : SYNC_ROW + 14;
+    const extra = mixerOpen ? rows * MIXER_ROW + 58 : SYNC_ROW + 14;
     requestSize("media", { w: base.w, h: base.h + extra });
   }, [mixerOpen, syncOpen, rows, !!np]);
   useEffect(() => () => requestSize("media", null), []);
