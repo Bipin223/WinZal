@@ -6284,7 +6284,7 @@ dependencies = [
 
 [[package]]
 name = "winzal"
-version = "1.7.12"
+version = "1.7.13"
 dependencies = [
  "aes-gcm",
  "arboard",

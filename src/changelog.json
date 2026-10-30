@@ -1,5 +1,26 @@
 [
   {
+    "version": "1.7.13",
+    "date": "2026-10-30",
+    "items": [
+      {
+        "en": "Settings reorganized: dedicated Gaming and Privacy pages, Window/Behavior under Notch, clock format with clock faces, Accent under Appearance, and Updates under About"
+      },
+      {
+        "en": "Animation styles: Snappy, Smooth (default) and Relaxed, with a softer relaxed media close; hover timing is unchanged"
+      },
+      {
+        "en": "Notifications stay above borderless fullscreen media and YouTube fullscreen"
+      },
+      {
+        "en": "CPU rendering is the default; iGPU remains selectable and the saved personal preference is preserved across updates"
+      },
+      {
+        "en": "Hide from screen capture now defaults off; Solid remains the default material"
+      }
+    ]
+  },
+  {
     "version": "1.7.12",
     "date": "2026-10-30",
     "items": [
