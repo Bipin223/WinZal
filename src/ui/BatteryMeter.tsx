@@ -10,6 +10,10 @@ type Props = {
   saver?: boolean;
   /** `md` for the Overview header, `xs` for the Power strip. */
   size?: "xs" | "md";
+  /** `reference` = the soft cream header badge with a muted number. */
+  tone?: "default" | "reference";
+  /** Hide the bolt inside the badge (the header puts it outside). */
+  showBolt?: boolean;
 };
 
 /**
@@ -19,7 +23,15 @@ type Props = {
  * A connected charger shows the bolt; unplugged has no bolt. Battery Saver is
  * yellow; under 20 % is red.
  */
-export function BatteryMeter({ percent, charging = false, plugged = false, saver = false, size = "md" }: Props) {
+export function BatteryMeter({
+  percent,
+  charging = false,
+  plugged = false,
+  saver = false,
+  size = "md",
+  tone = "default",
+  showBolt = true,
+}: Props) {
   const level = Math.max(0, Math.min(100, Math.round(percent)));
   const low = level < 20;
   // Lenovo conservation mode keeps the battery below 100 % and often leaves
@@ -28,8 +40,10 @@ export function BatteryMeter({ percent, charging = false, plugged = false, saver
   const powered = charging || plugged;
   // Critical and saver states override the normal white body. The bolt alone
   // communicates charging; a plugged-in full battery stays white.
-  const body = low ? "var(--color-red)" : saver ? "var(--color-yellow)" : "#f4f4f6";
-  const ink = "#26262a";
+  const reference = tone === "reference";
+  const body = low ? "var(--color-red)" : saver ? "var(--color-yellow)" : reference ? "#f2efe7" : "#f4f4f6";
+  // The reference badge has a soft gray number; state colors still need dark ink.
+  const ink = reference ? (low ? "#2b0704" : saver ? "#332a00" : "#828d8f") : "#26262a";
   const md = size === "md";
   const width = md ? 28 : 22;
   const height = md ? 15 : 12;
@@ -45,9 +59,11 @@ export function BatteryMeter({ percent, charging = false, plugged = false, saver
     ? "0 0 9px rgb(255 69 58 / 0.28)"
     : saver
       ? "0 0 9px rgb(255 214 10 / 0.26)"
-      : powered
-        ? "0 0 11px rgb(255 255 255 / 0.2), 0 1px 2px rgb(0 0 0 / 0.22)"
-        : "0 0 10px rgb(255 255 255 / 0.16), 0 1px 2px rgb(0 0 0 / 0.22)";
+      : reference
+        ? "0 0 9px rgb(255 248 235 / 0.18), 0 1px 2px rgb(0 0 0 / 0.2)"
+        : powered
+          ? "0 0 11px rgb(255 255 255 / 0.2), 0 1px 2px rgb(0 0 0 / 0.22)"
+          : "0 0 10px rgb(255 255 255 / 0.16), 0 1px 2px rgb(0 0 0 / 0.22)";
 
   return (
     <span
@@ -67,7 +83,13 @@ export function BatteryMeter({ percent, charging = false, plugged = false, saver
       >
         <span
           className="flex items-center justify-center leading-none font-extrabold tabular"
-          style={{ gap: md ? 0.6 : 0.5, fontSize, color: ink, letterSpacing: md ? "-0.02em" : "-0.03em" }}
+          style={{
+            gap: md ? 0.6 : 0.5,
+            fontSize,
+            color: ink,
+            letterSpacing: md ? "-0.02em" : "-0.03em",
+            transition: "color 220ms ease",
+          }}
         >
           <motion.span
             key={level}
@@ -76,7 +98,7 @@ export function BatteryMeter({ percent, charging = false, plugged = false, saver
           >
             {level}
           </motion.span>
-          {powered && (
+          {showBolt && powered && (
             <motion.span
               className="flex"
               animate={{ scale: [1, 1.16, 1], opacity: [0.82, 1, 0.82] }}

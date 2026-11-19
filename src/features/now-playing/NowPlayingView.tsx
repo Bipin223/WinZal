@@ -1,6 +1,7 @@
 ﻿import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useAnimationFrame, useMotionValue, useTransform } from "motion/react";
 import { ArrowUpRight, CaretDown, MusicNoteSimple, Pause, Play, SkipBack, SkipForward, Waveform } from "@phosphor-icons/react";
+import { IdleRecordIcon } from "../../ui/glyphs";
 import { artwork as artworkSwap, content, springs } from "../../design/motion";
 import { useSmoothArtwork } from "./artwork";
 import { livePosition, media, useNowPlaying, type NowPlaying } from "../../platform/media";
@@ -384,7 +385,17 @@ function IconButton(props: { label: string; onClick: () => void; children: React
 
 function Empty() {
   return (
-    <div className="flex h-full items-center justify-center text-body text-label-3">{t("Nothing playing")}</div>
+    <div className="flex h-full items-center justify-center">
+      <div className="flex items-center gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center text-label-2">
+          <IdleRecordIcon size={30} />
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-title text-label">{t("Nothing playing")}</span>
+          <span className="block truncate text-body text-label-3">{t("Idle")}</span>
+        </span>
+      </div>
+    </div>
   );
 }
 

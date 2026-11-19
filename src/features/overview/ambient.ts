@@ -55,16 +55,36 @@ export const bluetooth = createStore<BluetoothData>({
 
 let wifiSettle = 0;
 let wifiTimer: number | undefined;
+let wifiRetry: number | undefined;
 let wifiUsers = 0;
 
 let btSettle = 0;
 let btTimer: number | undefined;
+let btRetry: number | undefined;
 let btUsers = 0;
 
+function retryWifi(ms: number) {
+  window.clearTimeout(wifiRetry);
+  wifiRetry = window.setTimeout(refreshWifi, ms);
+}
+
+function retryBluetooth(ms: number) {
+  window.clearTimeout(btRetry);
+  btRetry = window.setTimeout(refreshBluetooth, ms);
+}
+
 function refreshWifi() {
+  if (wifiUsers === 0) return;
   const s = wifi.get();
   if (s.busy || Date.now() < wifiSettle) return;
-  void systemControls.network().then((net) => wifi.set((cur) => ({ ...cur, net }))).catch(() => {});
+  void systemControls
+    .network()
+    .then((net) => {
+      wifi.set((cur) => ({ ...cur, net }));
+      // A blocked radio read looks like "off": retry until a real state arrives.
+      if (!net.connected && !net.enabled) retryWifi(2500);
+    })
+    .catch(() => retryWifi(1500));
 }
 
 export function useWifiAmbient() {
@@ -77,7 +97,10 @@ export function useWifiAmbient() {
     }
     return () => {
       wifiUsers = Math.max(0, wifiUsers - 1);
-      if (wifiUsers === 0) window.clearInterval(wifiTimer);
+      if (wifiUsers === 0) {
+        window.clearInterval(wifiTimer);
+        window.clearTimeout(wifiRetry);
+      }
     };
   }, []);
   return state;
@@ -146,9 +169,17 @@ export async function connectWifi(network: WifiNetwork) {
 }
 
 function refreshBluetooth() {
+  if (btUsers === 0) return;
   const s = bluetooth.get();
   if (s.busy || Date.now() < btSettle) return;
-  void systemControls.bluetooth().then((bt) => bluetooth.set((cur) => ({ ...cur, bt }))).catch(() => {});
+  void systemControls
+    .bluetooth()
+    .then((bt) => {
+      bluetooth.set((cur) => ({ ...cur, bt }));
+      // WinRT can briefly lose the radio after resume; fall back until it loads.
+      if (!bt.available) retryBluetooth(2000);
+    })
+    .catch(() => retryBluetooth(1500));
 }
 
 export function useBluetoothAmbient() {
@@ -161,7 +192,10 @@ export function useBluetoothAmbient() {
     }
     return () => {
       btUsers = Math.max(0, btUsers - 1);
-      if (btUsers === 0) window.clearInterval(btTimer);
+      if (btUsers === 0) {
+        window.clearInterval(btTimer);
+        window.clearTimeout(btRetry);
+      }
     };
   }, []);
   return state;

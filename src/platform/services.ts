@@ -95,7 +95,7 @@ export function probeFiles(paths: string[]): Promise<{ files: DroppedFile[]; ffm
   const files = paths.map((p) => {
     const name = p.split(/[\\/]/).pop() ?? p;
     const ext = name.includes(".") ? name.split(".").pop()!.toLowerCase() : "";
-    const kind: FileKind = /^(png|jpe?g|webp|bmp|gif|ico|tiff?|dds|tga)$/.test(ext)
+    const kind: FileKind = /^(png|jpe?g|webp|bmp|gif|ico|tiff?|dds|tga|heic|heif)$/.test(ext)
       ? "image"
       : /^(mp3|wav|flac|m4a|aac|ogg|opus)$/.test(ext)
         ? "audio"
@@ -657,6 +657,62 @@ export interface AudioOutput {
 export const audioOutputs = {
   list: (): Promise<AudioOutput[]> => (isNative ? invoke<AudioOutput[]>("audio_outputs") : Promise.resolve([])),
   set: (id: string): Promise<void> => (isNative ? invoke("audio_set_output", { id }) : Promise.resolve()),
+};
+
+export interface ObsStatus {
+  installed: boolean;
+  running: boolean;
+  websocket: boolean;
+  connected: boolean;
+  recording: boolean;
+  paused: boolean;
+  timecode: string;
+  error: string | null;
+}
+
+let mockObs: ObsStatus = {
+  installed: true,
+  running: true,
+  websocket: true,
+  connected: true,
+  recording: false,
+  paused: false,
+  timecode: "00:00:00.000",
+  error: null,
+};
+
+/** OBS Studio through its local WebSocket server. */
+export const obs = {
+  status: (): Promise<ObsStatus> => (isNative ? invoke<ObsStatus>("obs_status") : Promise.resolve({ ...mockObs })),
+  start: (): Promise<void> => {
+    if (isNative) return invoke("obs_start");
+    mockObs = { ...mockObs, recording: true, paused: false, timecode: "00:00:00.000" };
+    return Promise.resolve();
+  },
+  stop: (): Promise<void> => {
+    if (isNative) return invoke("obs_stop");
+    mockObs = { ...mockObs, recording: false, paused: false, timecode: "00:00:00.000" };
+    return Promise.resolve();
+  },
+  pause: (): Promise<void> => {
+    if (isNative) return invoke("obs_pause");
+    mockObs = { ...mockObs, paused: true };
+    return Promise.resolve();
+  },
+  resume: (): Promise<void> => {
+    if (isNative) return invoke("obs_resume");
+    mockObs = { ...mockObs, paused: false };
+    return Promise.resolve();
+  },
+  show: (): Promise<void> => (isNative ? invoke("obs_show") : Promise.resolve()),
+  prepare: (): Promise<string> => (isNative ? invoke<string>("obs_prepare") : Promise.resolve("OBS WebSocket enabled")),
+  /** High-volume audio meters from OBS while the recording view is visible. */
+  meter: (enabled: boolean): Promise<void> =>
+    isNative ? invoke("obs_meter", { enabled }) : Promise.resolve(),
+  onLevel: (listener: (level: number) => void): Promise<() => void> =>
+    isNative
+      ? listen<number>("obs://levels", (event) => listener(event.payload))
+      : Promise.resolve(() => {}),
 };
 
 export const systemControls = {

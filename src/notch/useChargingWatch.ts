@@ -2,22 +2,24 @@ import { useEffect, useRef } from "react";
 import { createStore } from "../lib/store";
 import { playChargeChime } from "../lib/sound";
 import { settings } from "../settings/store";
-import { notify } from "../notifications/store";
-import { t } from "../i18n";
 import { useBatteryStatus } from "../features/overview/battery";
 
 /** The temporary charging capsule shown on the closed pill after plugging in. */
 export const chargingPulse = createStore<{ active: boolean; percent: number }>({ active: false, percent: 0 });
 
+/** The same capsule for the low-battery warning, drawn in red. */
+export const lowBatteryPulse = createStore<{ active: boolean; percent: number }>({ active: false, percent: 0 });
+
 /**
- * Watches the shared battery reading for the whole app: the closed-pill charging
- * pulse/chime and the low-battery notification. One poll now drives the header,
- * the Power strip and these alerts.
+ * Watches the shared battery reading for the whole app: the closed-pill
+ * charging capsule/chime and the low-battery capsule. One poll now drives the
+ * header, the Power strip and these alerts.
  */
 export function useChargingWatch() {
   const battery = useBatteryStatus();
   const lastPlugged = useRef<boolean | null>(null);
   const hideTimer = useRef<number | undefined>(undefined);
+  const lowTimer = useRef<number | undefined>(undefined);
   const lowNotified = useRef(false);
 
   useEffect(() => {
@@ -28,17 +30,16 @@ export function useChargingWatch() {
     if (!plugged && battery.percent < 20) {
       if (!lowNotified.current) {
         lowNotified.current = true;
-        notify({
-          kind: "info",
-          app: "WinZal",
-          title: t("Battery low"),
-          body: t("Only {n}% left. Plug in a charger.").replace("{n}", String(battery.percent)),
-          color: "#ff453a",
-          duration: 7000,
-        });
+        window.clearTimeout(lowTimer.current);
+        lowBatteryPulse.set({ active: true, percent: battery.percent });
+        lowTimer.current = window.setTimeout(() => {
+          lowBatteryPulse.set({ active: false, percent: battery.percent });
+        }, 4000);
       }
     } else if (plugged || battery.percent >= 20) {
       lowNotified.current = false;
+      window.clearTimeout(lowTimer.current);
+      if (lowBatteryPulse.get().active) lowBatteryPulse.set({ active: false, percent: battery.percent });
     }
 
     if (lastPlugged.current === null) {
@@ -46,6 +47,8 @@ export function useChargingWatch() {
       return;
     }
     if (plugged && !lastPlugged.current) {
+      window.clearTimeout(lowTimer.current);
+      if (lowBatteryPulse.get().active) lowBatteryPulse.set({ active: false, percent: battery.percent });
       chargingPulse.set({ active: true, percent: battery.percent });
       playChargeChime(settings.get().alarm.volume);
       window.clearTimeout(hideTimer.current);
@@ -59,5 +62,11 @@ export function useChargingWatch() {
     lastPlugged.current = plugged;
   }, [battery]);
 
-  useEffect(() => () => window.clearTimeout(hideTimer.current), []);
+  useEffect(
+    () => () => {
+      window.clearTimeout(hideTimer.current);
+      window.clearTimeout(lowTimer.current);
+    },
+    []
+  );
 }

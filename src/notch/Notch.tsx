@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { AnimatePresence, animate, motion, useMotionValue, type Transition } from "motion/react";
-import { Drop, GearSix, Ghost, MoonStars, PushPin } from "@phosphor-icons/react";
+import { Drop, GearSix, Ghost, Lightning, MoonStars, PushPin } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
 import { useNowPlaying } from "../platform/media";
 import { uiFontFamily } from "../ui/font";
@@ -19,8 +19,7 @@ import { callView, useDiscordCall } from "../features/discord/store";
 import { FlyoutLayer } from "./FlyoutLayer";
 import { closeFlyout, flyout } from "./flyout";
 import { notchOpenRequest } from "./openRequest";
-import { chargingPulse, useChargingWatch } from "./useChargingWatch";
-import { BatteryMeter } from "../ui/BatteryMeter";
+import { chargingPulse, lowBatteryPulse, useChargingWatch } from "./useChargingWatch";
 import { NotificationLayer } from "../notifications/NotificationLayer";
 import { notifications } from "../notifications/store";
 import { DOCK_HEIGHT, HEADER_HEIGHT, geometry, openGeometry, type NotchGeometry } from "./geometry";
@@ -180,7 +179,11 @@ export function Notch() {
   const live = useLiveActivity();
   const call = useDiscordCall();
   const charge = chargingPulse.use();
+  const low = lowBatteryPulse.use();
   const chargingView = charge.active && status !== "open" && !idleLine;
+  const lowView = low.active && !chargingView && status !== "open" && !idleLine;
+  // Both battery alerts use the same compact, background-free capsule.
+  const alertView = chargingView || lowView;
 
   // Like the Dynamic Island: opening jumps to the running activity's tool,
   // but only after a pause. Closed briefly (copying a key, grabbing a file) → you
@@ -206,23 +209,24 @@ export function Notch() {
   const override = sizeOverride.use();
   const size = override?.tabId === tab.id ? override : tab.size;
   // Live activity shown in the closed notch (the idle line only lets the timer alarm through).
-  const shownLive = chargingView ? null : idleLine ? (alert ? "timer" : null) : live.id;
-  // The closed clock is optional; Windows island prefers it over the live media slot.
+  const shownLive = alertView ? null : idleLine ? (alert ? "timer" : null) : live.id;
+  // The closed clock is optional and appears when no live activity owns the pill.
   const clockWeather = appearance.clockWeather;
-  // Lyrics only make sense when the media pill is visible, so they win over the clock
-  // in the floating island (otherwise the whole lyrics option would do nothing there).
+  // Lyrics only make sense when the media pill is visible.
   const lyricsPill = appearance.lyricsInPill && shownLive === "media";
-  const pillLive = floating ? (clockWeather && !lyricsPill ? null : shownLive) : shownLive;
+  // The floating island shows the same live activity as the notch; the clock is
+  // the fallback when nothing is live.
+  const pillLive = shownLive;
   const prevLive = useRef<string | null>(pillLive);
   const liveEnded = prevLive.current !== null && !pillLive;
   useEffect(() => {
     prevLive.current = pillLive;
   });
-  const clockPill = !chargingView && clockWeather && !pillLive;
+  const clockPill = !alertView && clockWeather && !pillLive;
   // Measure the real clock row in the parent so date/day/weather toggles and
   // face changes resize the pill immediately, without a store subscription race.
   useLayoutEffect(() => {
-    if (!clockWeather || idleLine || chargingView || status === "open") {
+    if (!clockWeather || idleLine || alertView || status === "open") {
       setMeasuredClockWidth(0);
       return;
     }
@@ -236,10 +240,12 @@ export function Notch() {
     ro.observe(el);
     report();
     return () => ro.disconnect();
-  }, [clockWeather, clockPill, chargingView, idleLine, status]);
+  }, [clockWeather, clockPill, alertView, idleLine, status]);
   // Screen recording gets its own chip at the right end of the closed pill.
   const { recording, since } = useRecording();
-  const showRecording = recording && !idleLine && status !== "open";
+  const showRecording = recording && !idleLine && status !== "open" && !alertView;
+  // Recording keeps the pill's dynamic left edge and extends only to the right.
+  const recordingShift = showRecording ? RECORDING_EXTRA / 2 : 0;
   const rightInset = useMotionValue(0);
   useEffect(() => {
     const control = animate(rightInset, showRecording ? RECORDING_INSET : 0, springs.snappy);
@@ -315,16 +321,22 @@ export function Notch() {
   const clockShapeWidth =
     Math.min(740, Math.max(76, clockContent + extraWidth + (status === "peek" ? 16 : 0))) +
     (showRecording ? RECORDING_EXTRA : 0);
-  const displayShape = {
-    ...finalShape,
-    w: clockPill && status !== "open" ? clockShapeWidth : finalShape.w + (showRecording ? RECORDING_EXTRA : 0) + lyricsExtra + callTitleExtra,
-  };
+  // Battery alerts get their own compact capsule instead of the resting pill.
+  const CAPSULE_PILL_W = 112;
+  const restingWidth =
+    clockPill && status !== "open"
+      ? clockShapeWidth
+      : finalShape.w + (showRecording ? RECORDING_EXTRA : 0) + lyricsExtra + callTitleExtra;
+  const displayShape = alertView
+    ? { ...finalShape, w: CAPSULE_PILL_W, h: 30, r: 15, ear: 0 }
+    : { ...finalShape, w: restingWidth };
   // Gaming stats own the pill; a playing track gets its own little island instead.
   const gamingSatellite =
     pillLive === "system" && !!np?.isPlaying && appearance.musicInPill && !idleLine && status !== "open";
   // A running timer gets its own circle on the right whenever another live
   // activity owns the main pill (gaming, call, music).
-  const timerSatellite = timerLive && !idleLine && status !== "open" && pillLive !== "timer";
+  const timerSatellite =
+    timerLive && !idleLine && !alertView && status !== "open" && pillLive !== "timer";
   // Call + music: a circular switch shows the other activity. It sits first on
   // the right; the timer moves one slot further right when both are present.
   const canSwap = !!call && !!np?.isPlaying && appearance.musicInPill;
@@ -473,7 +485,8 @@ export function Notch() {
       // In the browser the notch moves inside the window; natively the whole window moves (display.rs).
       style={{
         ["--accent" as string]: appearance.accent === "auto" ? np?.accent : appearance.accent,
-        ["--color-notch" as string]: fillWithAlpha(surface, notchAlpha),
+        // Battery alerts are their own glass capsule: no notch body behind them.
+        ["--color-notch" as string]: alertView ? "transparent" : fillWithAlpha(surface, notchAlpha),
         transform: isNative ? undefined : `translateX(${drag.offset}px)`,
       }}
     >
@@ -495,7 +508,7 @@ export function Notch() {
         <motion.div
           className="relative"
           animate={{
-            x: appearance.dragAnimation ? drag.lag : 0,
+            x: (appearance.dragAnimation ? drag.lag : 0) + recordingShift,
             scaleX: appearance.dragAnimation ? 1 + Math.abs(drag.lag) / 500 : 1,
             scaleY: appearance.dragAnimation ? 1 - Math.abs(drag.lag) / 1600 : 1,
           }}
@@ -511,19 +524,24 @@ export function Notch() {
           geometry={displayShape}
           transition={transition}
           elevated={status === "open"}
-          floating={floating}
-          liquid={appearance.material === "liquid"}
-          scrim={readableGuard}
+          floating={alertView ? true : floating}
+          liquid={alertView ? false : appearance.material === "liquid"}
+          scrim={alertView ? 0 : readableGuard}
           scrimLight={surfaceLight}
         >
           <LiveRightInset.Provider value={rightInset}>
             <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} callExtra={callTitleExtra} widthExtra={lyricsPill ? 0 : appearance.islandWidth} height={lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight} systemWidth={systemWidth} restWidth={displayShape.w} />
           </LiveRightInset.Provider>
-          {!chargingView && clockWeather && !idleLine && status !== "open" && <ClosedClock rowRef={clockRow} visible={!pillLive} />}
+          {!alertView && clockWeather && !idleLine && status !== "open" && <ClosedClock rowRef={clockRow} visible={!pillLive} shiftX={recordingShift} />}
           <AnimatePresence>
             {chargingView && <ChargingPulse key="charging" percent={charge.percent} />}
+            {lowView && <ChargingPulse key="low" percent={low.percent} tone="low" />}
           </AnimatePresence>
-          {!idleLine && <PrivacyDots hideScreen={showRecording} />}
+          {!idleLine && !alertView && (
+            <PrivacyDots
+              hideScreen={showRecording || (status === "open" && tab.id === "recording")}
+            />
+          )}
           <AnimatePresence>
             {showRecording && (
               <RecordingBadge key="recording" since={since} className="absolute top-1/2 right-2 -translate-y-1/2" />
@@ -631,35 +649,86 @@ export function Notch() {
   );
 }
 
-/** Windows-island style: the selected clock face in the floating closed pill. */
-function ChargingPulse({ percent }: { percent: number }) {
-  const glass = settings.use().appearance.material === "liquid";
+/**
+ * Battery alert: a compact liquid-glass capsule whose liquid rises to the
+ * battery level while the notch is closed. Green when charging, red when low.
+ */
+function ChargingPulse({ percent, tone = "charging" }: { percent: number; tone?: "charging" | "low" }) {
+  const lowAlert = tone === "low";
+  const value = Math.min(100, Math.max(0, Math.round(percent)));
+  const fill = lowAlert
+    ? "bg-[linear-gradient(180deg,#ff8a80_0%,#ff453a_42%,#b3231b_100%)]"
+    : "bg-[linear-gradient(180deg,#7cf29d_0%,#30d158_42%,#159a3f_100%)]";
+  const glow = lowAlert
+    ? "shadow-[0_0_18px_-4px_rgb(255_69_58/0.65)]"
+    : "shadow-[0_0_18px_-4px_rgb(48_209_88/0.65)]";
   return (
     <motion.div
       className="absolute inset-0 flex items-center justify-center"
-      initial={{ opacity: 0, scale: 0.86, y: 3 }}
+      initial={{ opacity: 0, scale: 0.88, y: 2 }}
       animate={{ opacity: 1, scale: 1, y: 0, transition: springs.open }}
-      exit={{ opacity: 0, scale: 0.92, y: -2, transition: springs.close }}
+      exit={{ opacity: 0, scale: 0.94, y: -2, transition: springs.close }}
       style={{ transformOrigin: "50% 50%", willChange: "transform, opacity" }}
+      role="status"
+      aria-label={`${lowAlert ? t("Battery low") : t("Charging")} ${value}%`}
     >
-      <div className={`flex items-center justify-center gap-2 ${glass ? "liquid-glass rounded-full px-3 py-1" : ""}`}>
-        <span className="relative flex items-center justify-center">
-          <motion.span
+      <div className={`liquid-glass relative h-full w-full overflow-hidden rounded-full ${glow}`}>
+        {/* The height is the level; the moving crest makes it read as liquid. */}
+        <motion.div
+          className="absolute inset-x-0 bottom-0"
+          initial={{ height: "6%" }}
+          animate={{ height: `${Math.max(8, value)}%` }}
+          transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className={`absolute inset-0 ${fill}`} />
+          {/* Two crests at different speeds: the liquid reads as moving, not a bar. */}
+          <svg
             aria-hidden
-            className="absolute size-6 rounded-full bg-green/25"
-            animate={{ scale: [0.8, 1.7], opacity: [0.55, 0] }}
-            transition={{ duration: 1.25, repeat: 2, ease: "easeOut" }}
-          />
-          <BatteryMeter percent={percent} charging plugged size="md" />
+            className="charging-wave-slow absolute -top-[8px] left-0 h-[10px] w-[200%]"
+            viewBox="0 0 16 10"
+            preserveAspectRatio="none"
+          >
+            <path
+              d="M0 5 Q 1 1 2 5 T 4 5 T 6 5 T 8 5 T 10 5 T 12 5 T 14 5 T 16 5 V 10 H 0 Z"
+              fill={lowAlert ? "rgb(255 150 150 / 0.3)" : "rgb(120 255 160 / 0.3)"}
+            />
+          </svg>
+          <svg
+            aria-hidden
+            className="charging-wave absolute -top-[5px] left-0 h-[9px] w-[200%]"
+            viewBox="0 0 16 9"
+            preserveAspectRatio="none"
+          >
+            <path
+              d="M0 4.5 Q 1 0.5 2 4.5 T 4 4.5 T 6 4.5 T 8 4.5 T 10 4.5 T 12 4.5 T 14 4.5 T 16 4.5 V 9 H 0 Z"
+              fill={lowAlert ? "rgb(255 235 235 / 0.5)" : "rgb(235 255 242 / 0.45)"}
+            />
+          </svg>
+        </motion.div>
+        {/* Specular sheen over the glass, above the liquid line. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-1 top-[1px] h-[9px] rounded-full bg-gradient-to-b from-white/35 to-transparent"
+        />
+        <span className="relative z-10 flex items-center justify-center gap-1 text-[12.5px] font-semibold tracking-[-0.01em] text-white drop-shadow-[0_1px_1px_rgb(0_0_0/0.45)]">
+          {!lowAlert && <Lightning size={10} weight="fill" className="text-[#e4ffea]" />}
+          {value}%
         </span>
-        <span className="text-caption font-semibold text-label">{t("Charging")}</span>
       </div>
     </motion.div>
   );
 }
 
 /** Windows-island style: the selected clock face in the floating closed pill. */
-function ClosedClock({ rowRef, visible = true }: { rowRef: RefObject<HTMLDivElement | null>; visible?: boolean }) {
+function ClosedClock({
+  rowRef,
+  visible = true,
+  shiftX = 0,
+}: {
+  rowRef: RefObject<HTMLDivElement | null>;
+  visible?: boolean;
+  shiftX?: number;
+}) {
   const now = useMinute();
   const appearance = settings.use().appearance;
   const size = appearance.clockClosedSize;
@@ -673,9 +742,12 @@ function ClosedClock({ rowRef, visible = true }: { rowRef: RefObject<HTMLDivElem
   // Stacked face keeps the side text centered against the block.
   const baseline = appearance.clockStyle !== "stacked";
   return (
-    <div
+    <motion.div
       aria-hidden={!visible}
       className={`pointer-events-none absolute inset-0 flex items-center justify-center px-1 ${visible ? "transition-opacity duration-300" : "opacity-0"}`}
+      initial={false}
+      animate={{ x: -shiftX }}
+      transition={springs.snappy}
     >
       <div
         ref={rowRef}
@@ -703,7 +775,7 @@ function ClosedClock({ rowRef, visible = true }: { rowRef: RefObject<HTMLDivElem
           </span>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 

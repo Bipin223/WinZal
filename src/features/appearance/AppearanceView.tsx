@@ -69,6 +69,7 @@ const DEFAULTS: Appearance = {
 
 export function AppearanceView({ mode = "appearance", extra }: { mode?: "appearance" | "notch"; extra?: ReactNode }) {
   const a = settings.use().appearance;
+  const gaming = settings.use().gaming;
   const display = settings.use().display;
   const units = settings.use().units;
   const line = display.idleStyle === "line";
@@ -339,6 +340,18 @@ export function AppearanceView({ mode = "appearance", extra }: { mode?: "appeara
           ]}
           onChange={(material) => set({ material: material as Appearance["material"] })}
         />
+        <div className="mt-2">
+          <ToggleRow
+            label={t("Transparent in games")}
+            checked={gaming.transparent}
+            onChange={(transparent) =>
+              updateSettings((cur) => ({ gaming: { ...cur.gaming, transparent } }))
+            }
+          />
+        </div>
+        <div className="text-caption text-label-3">
+          {t("Fades the notch while a game is in the foreground.")}
+        </div>
       </Section>
       {a.material === "liquid" && (
         <Section label={t("Liquid glass")}>

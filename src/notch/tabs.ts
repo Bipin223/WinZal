@@ -9,6 +9,7 @@ import {
   SquaresFour,
   MusicNotesSimple,
   NotePencil,
+  Record,
   Timer,
   Tray,
   Vault,
@@ -29,6 +30,7 @@ import { ConvertView } from "../features/convert/ConvertView";
 import { WeatherView } from "../features/weather/WeatherView";
 import { SystemView } from "../features/system/SystemView";
 import { DiscordView } from "../features/discord/DiscordView";
+import { RecordingView } from "../features/recording/RecordingView";
 import { VaultView } from "../features/vault/VaultView";
 import { SettingsView } from "../features/settings/SettingsView";
 
@@ -62,6 +64,7 @@ export const tabs: NotchTab[] = [
   { id: "weather", label: "Weather", icon: CloudSun, size: { w: 520, h: 250 }, View: WeatherView },
   { id: "system", label: "Hardware", icon: Cpu, size: { w: 600, h: 248 }, View: SystemView },
   { id: "discord", label: "Discord", icon: DiscordLogo, size: { w: 520, h: 210 }, View: DiscordView },
+  { id: "recording", label: "Recording", icon: Record, size: { w: 520, h: 260 }, View: RecordingView },
   { id: "vault", label: "Vault", icon: Vault, size: { w: 560, h: 324 }, View: VaultView },
 ];
 

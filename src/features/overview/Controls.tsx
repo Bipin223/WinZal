@@ -26,7 +26,7 @@ import {
   type PowerMode,
   type VolumeState,
 } from "../../platform/services";
-import { BatteryIcon, BluetoothOffIcon, BluetoothOnIcon, WifiOffIcon, WifiOnIcon } from "../../ui/glyphs";
+import { BatteryIcon, BluetoothOnIcon, WifiOnIcon } from "../../ui/glyphs";
 import { focusMode, refreshFocusMode, setFocusMode } from "../../notch/focus";
 import { toggleFlyout } from "../../notch/flyout";
 import { useBluetoothAmbient, useWifiAmbient, toggleBluetooth, toggleWifi } from "./ambient";
@@ -68,6 +68,8 @@ function ToggleTile(props: {
   straight?: boolean;
   /** No circle behind the glyph, just black/white. */
   bareIcon?: boolean;
+  /** Extra left space before the label, e.g. for a wide bare glyph. */
+  labelPad?: string;
   activeIconBgClass?: string;
 }) {
   const On = props.onIcon;
@@ -213,7 +215,7 @@ function ToggleTile(props: {
           )}
         </motion.span>
 
-        <span className="min-w-0 flex-1">
+        <span className={`min-w-0 flex-1 ${props.labelPad ?? ""}`}>
           <span className="block truncate text-[11px] leading-[13px] font-semibold">{props.label}</span>
           <span className={`block truncate text-[10px] leading-[12px] ${props.active ? "text-on-label/55" : "text-label-3"}`}>
             {props.state}
@@ -279,7 +281,7 @@ function FocusTile() {
 function WifiTile() {
   const { net, busy, error } = useWifiAmbient();
   const enabled = !!(net?.enabled ?? net?.connected);
-  const state = busy ? "." : enabled ? (net?.connected ? net.name || t("Connected") : t("On")) : t("Off");
+  const state = busy ? "." : !net ? "…" : enabled ? (net.connected ? net.name || t("Connected") : t("On")) : t("Off");
 
   return (
     <div className="relative min-w-0">
@@ -288,7 +290,7 @@ function WifiTile() {
         state={state}
         active={enabled}
         onIcon={WifiOnIcon}
-        offIcon={WifiOffIcon}
+        offIcon={WifiOnIcon}
         straight
         bareIcon
         iconSize={22}
@@ -310,7 +312,7 @@ function WifiTile() {
 function BluetoothTile() {
   const { bt, busy, error } = useBluetoothAmbient();
   const active = !!bt?.on;
-  const state = busy ? "." : bt?.available ? (active ? t("On") : t("Off")) : t("Settings");
+  const state = busy ? "." : !bt ? "…" : bt.available ? (active ? t("On") : t("Off")) : t("Settings");
 
   return (
     <div className="relative min-w-0">
@@ -319,7 +321,7 @@ function BluetoothTile() {
         state={state}
         active={active}
         onIcon={BluetoothOnIcon}
-        offIcon={BluetoothOffIcon}
+        offIcon={BluetoothOnIcon}
         straight
         bareIcon
         iconSize={22}
@@ -435,10 +437,13 @@ function PowerTile() {
         state={busy ? "." : current.label}
         active={false}
         statusDot={current.dot}
-        renderGlyph={() => <BatteryIcon level={current.level} size={22} className={current.tone} />}
+        renderGlyph={() => (
+          <BatteryIcon variant="capsule" level={current.level} size={28} className={current.tone} />
+        )}
         glyphKey={mode}
         straight
         bareIcon
+        labelPad="pl-1.5"
         onClick={() => {
           if (Date.now() < suppressClick.current) {
             suppressClick.current = 0;

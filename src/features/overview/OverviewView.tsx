@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Eye, EyeSlash, MusicNoteSimple, Timer } from "@phosphor-icons/react";
+import { Eye, EyeSlash, Lightning, MusicNoteSimple, Timer } from "@phosphor-icons/react";
 import { DiscordLogo } from "../../ui/brands";
 import { content, springs } from "../../design/motion";
 import { HeaderActions, HeaderButton } from "../../notch/header";
@@ -20,6 +20,7 @@ import { useMinute } from "../../lib/useMinute";
 import { useSecond } from "../../lib/useSecond";
 import { PowerActions, QuickControls, SystemRow } from "./Controls";
 import { BatteryMeter } from "../../ui/BatteryMeter";
+import { IdleRecordIcon } from "../../ui/glyphs";
 import { useBatteryStatus } from "./battery";
 import { systemControls } from "../../platform/services";
 
@@ -56,8 +57,12 @@ export function OverviewView() {
 
 function BatteryIndicator() {
   const battery = useBatteryStatus();
+  const appearance = settings.use().appearance;
   if (!battery?.present) return null;
   const percent = Math.min(100, Math.max(0, battery.percent));
+  const powered = battery.charging || battery.plugged;
+  // Same accent as the first clock digit; falls back to the label colour when that tint is off.
+  const accent = appearance.clockAccentFirstDigit ? appearance.clockAccent : "var(--color-label)";
   return (
     <motion.button
       type="button"
@@ -68,7 +73,32 @@ function BatteryIndicator() {
       animate={{ opacity: 1, scale: 1, transition: springs.snappy }}
       className="pressable flex h-7 items-center rounded-full px-0.5 outline-none transition-colors duration-150 hover:bg-fill-1 focus:outline-none"
     >
-      <BatteryMeter percent={percent} charging={battery.charging} plugged={battery.plugged} saver={battery.saver} size="md" />
+      <BatteryMeter
+        percent={percent}
+        charging={battery.charging}
+        plugged={battery.plugged}
+        saver={battery.saver}
+        size="md"
+        tone="reference"
+        showBolt={false}
+      />
+      {/* Fixed slot: the bolt can appear without moving the badge or the icons beside it. */}
+      <span className="ml-1 flex h-full w-3 shrink-0 items-center justify-center">
+        <motion.span
+          aria-hidden
+          initial={false}
+          animate={{ opacity: powered ? 1 : 0, scale: powered ? 1 : 0.55 }}
+          transition={springs.snappy}
+          className="flex"
+        >
+          <Lightning
+            size={11}
+            weight="fill"
+            className="transition-colors duration-200"
+            style={{ color: accent, filter: "drop-shadow(0 0 4px currentColor)" }}
+          />
+        </motion.span>
+      </span>
     </motion.button>
   );
 }
@@ -187,7 +217,7 @@ function Activity() {
   }
 
   return (
-    <div className="relative h-11 overflow-hidden rounded-[12px] bg-fill-1">
+    <div className={`relative h-11 overflow-hidden rounded-[12px] ${item ? "bg-fill-1" : ""}`}>
       <AnimatePresence mode="popLayout" initial={false}>
         {item ? (
           <motion.button
@@ -208,12 +238,18 @@ function Activity() {
         ) : (
           <motion.div
             key="idle"
-            className="absolute inset-0 flex items-center justify-center text-footnote text-label-3"
+            className="absolute inset-0 flex items-center gap-2.5 px-2.5 text-left"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1, transition: content.enter }}
             exit={{ opacity: 0, transition: content.exit }}
           >
-            {t("Nothing playing")}
+            <span className="flex size-7 shrink-0 items-center justify-center text-label-2">
+              <IdleRecordIcon size={24} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-footnote font-medium text-label">{t("Nothing playing")}</span>
+              <span className="block truncate text-caption text-label-3">{t("Idle")}</span>
+            </span>
           </motion.div>
         )}
       </AnimatePresence>

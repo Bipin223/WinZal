@@ -1,6 +1,7 @@
 ﻿//! Quick-drop converter: drop files on the notch and convert them to another format.
 //!
 //! - Images (png, jpg, webp, bmp, gif, ico, tiff): directly with the `image` crate.
+//! - HEIC/HEIF: through Windows Imaging Component and the Microsoft HEIF codec.
 //! - DDS (game textures): read via `image`, written ourselves as BC3/DXT5 with mipmaps.
 //! - Audio/video: via ffmpeg if installed (PATH or the default winget locations).
 //! - Documents and spreadsheets: see `documents.rs`.
@@ -10,15 +11,24 @@
 
 use std::fs::File;
 use std::io::BufWriter;
+use std::os::windows::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use image::codecs::jpeg::JpegEncoder;
+use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
 use image::{DynamicImage, ImageFormat};
 use serde::Serialize;
+use windows::core::{Interface, PCWSTR};
+use windows::Win32::Foundation::GENERIC_READ;
+use windows::Win32::Graphics::Imaging::{
+    CLSID_WICImagingFactory, IWICBitmapSource, IWICImagingFactory, IWICPalette, WICBitmapDitherTypeNone,
+    WICBitmapPaletteTypeCustom, WICDecodeMetadataCacheOnLoad, GUID_WICPixelFormat32bppRGBA,
+};
+use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED};
 
-const IMAGE_IN: &[&str] = &["png", "jpg", "jpeg", "webp", "bmp", "gif", "ico", "tif", "tiff", "dds", "tga"];
+const IMAGE_IN: &[&str] = &["png", "jpg", "jpeg", "webp", "bmp", "gif", "ico", "tif", "tiff", "dds", "tga", "heic", "heif"];
 const AUDIO_IN: &[&str] = &["mp3", "wav", "flac", "m4a", "aac", "ogg", "opus", "wma"];
 const VIDEO_IN: &[&str] = &["mp4", "mov", "mkv", "avi", "webm", "wmv", "m4v"];
 
@@ -104,8 +114,59 @@ fn convert_one(input: &Path, target: &str, quality: u8, max_size: Option<u32>) -
     Ok(output)
 }
 
+fn load_image(input: &Path) -> Result<DynamicImage, String> {
+    match extension(input).as_str() {
+        "heic" | "heif" => decode_wic(input),
+        _ => image::open(input).map_err(|_| "Bild konnte nicht gelesen werden".to_string()),
+    }
+}
+
+/// HEIC/HEIF through Windows Imaging Component, which uses the installed
+/// Microsoft HEIF/HEVC codecs. The `image` crate has no HEIC decoder.
+fn decode_wic(path: &Path) -> Result<DynamicImage, String> {
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let factory: IWICImagingFactory =
+            CoCreateInstance(&CLSID_WICImagingFactory, None, CLSCTX_INPROC_SERVER)
+                .map_err(|e| format!("HEIC decoder unavailable ({e})"))?;
+        let wide: Vec<u16> = path.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+        let decoder = factory
+            .CreateDecoderFromFilename(
+                PCWSTR(wide.as_ptr()),
+                None,
+                GENERIC_READ,
+                WICDecodeMetadataCacheOnLoad,
+            )
+            .map_err(|e| format!("HEIC could not be opened (install the Microsoft HEIF Image Extension): {e}"))?;
+        let frame = decoder.GetFrame(0).map_err(|e| format!("HEIC frame: {e}"))?;
+        let source: IWICBitmapSource = frame.cast().map_err(|e| format!("HEIC frame: {e}"))?;
+        let converter = factory.CreateFormatConverter().map_err(|e| format!("HEIC converter: {e}"))?;
+        let no_palette: Option<&IWICPalette> = None;
+        converter
+            .Initialize(
+                &source,
+                &GUID_WICPixelFormat32bppRGBA,
+                WICBitmapDitherTypeNone,
+                no_palette,
+                0.0,
+                WICBitmapPaletteTypeCustom,
+            )
+            .map_err(|e| format!("HEIC pixel format: {e}"))?;
+        let mut width = 0u32;
+        let mut height = 0u32;
+        converter.GetSize(&mut width, &mut height).map_err(|e| format!("HEIC size: {e}"))?;
+        let stride = width * 4;
+        let mut pixels = vec![0u8; (stride as usize) * (height as usize)];
+        converter
+            .CopyPixels(std::ptr::null(), stride, &mut pixels)
+            .map_err(|e| format!("HEIC pixels: {e}"))?;
+        let rgba = image::RgbaImage::from_raw(width, height, pixels).ok_or("HEIC produced an empty image")?;
+        Ok(DynamicImage::ImageRgba8(rgba))
+    }
+}
+
 fn convert_image(input: &Path, output: &Path, target: &str, quality: u8, max_size: Option<u32>) -> Result<(), String> {
-    let mut img = image::open(input).map_err(|_| "Bild konnte nicht gelesen werden".to_string())?;
+    let mut img = load_image(input)?;
     let longest = |i: &DynamicImage| i.width().max(i.height());
     if let Some(max) = max_size.filter(|&m| m > 0 && longest(&img) > m) {
         img = img.resize(max, max, image::imageops::FilterType::Lanczos3);
@@ -121,7 +182,11 @@ fn convert_image(input: &Path, output: &Path, target: &str, quality: u8, max_siz
         // JPEG has no transparency: flatten onto white instead of black.
         "jpg" => DynamicImage::ImageRgb8(flatten_white(&img)).write_with_encoder(JpegEncoder::new_with_quality(&mut writer, quality)),
         "webp" => img.write_with_encoder(WebPEncoder::new_lossless(&mut writer)),
-        "png" => img.write_to(&mut writer, ImageFormat::Png),
+        "png" => img.write_with_encoder(PngEncoder::new_with_quality(
+            &mut writer,
+            CompressionType::Best,
+            FilterType::Adaptive,
+        )),
         "bmp" => img.write_to(&mut writer, ImageFormat::Bmp),
         "gif" => img.write_to(&mut writer, ImageFormat::Gif),
         "ico" => img.write_to(&mut writer, ImageFormat::Ico),
@@ -269,3 +334,4 @@ fn free_path(input: &Path, ext: &str) -> PathBuf {
     }
     candidate
 }
+

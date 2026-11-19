@@ -820,9 +820,7 @@ function GamingSettings() {
       <Row label={t("Divider line")}>
         <Switch label={t("Divider line")} checked={g.divider} onChange={(divider) => setG({ divider })} />
       </Row>
-      <Row label={t("Transparent in games")}>
-        <Switch label={t("Transparent in games")} checked={g.transparent} onChange={(transparent) => setG({ transparent })} />
-      </Row>
+
     </Group>
     <Group title={t("Gaming mode")} id="settings-gaming-mode">
       <Row

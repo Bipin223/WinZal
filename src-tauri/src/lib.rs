@@ -17,6 +17,7 @@ mod lyrics;
 mod media;
 mod memory;
 mod mixer;
+mod obs;
 mod privacy;
 pub mod secrets;
 mod system;
@@ -279,6 +280,14 @@ pub fn run() {
             controls::focus_set,
             controls::brightness_get,
             controls::brightness_set,
+            obs::obs_status,
+            obs::obs_start,
+            obs::obs_stop,
+            obs::obs_pause,
+            obs::obs_resume,
+            obs::obs_show,
+            obs::obs_prepare,
+            obs::obs_meter,
             ambient::network_get,
             ambient::wifi_set,
             ambient::wifi_networks,
@@ -344,8 +353,9 @@ pub fn run() {
             drop::install(&window);
             hit_test::spawn(app.handle().clone(), window.clone());
             display::spawn(app.handle().clone(), window);
-            ambient::spawn_energy_watch();
-            ambient::restore_power(app.handle().clone());
+            // Power mode is manual only: WinZal never re-applies a mode on
+            // startup and never changes it on battery. The laptop/Windows owns
+            // that restore.
             media::spawn(app.handle().clone());
             clipboard::spawn(app.handle().clone());
             toasts::spawn(app.handle().clone());

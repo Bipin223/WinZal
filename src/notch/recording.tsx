@@ -35,14 +35,16 @@ export function RecordingBadge({ since, className = "" }: { since: number | null
   return (
     <motion.div
       aria-label={t("Screen is being recorded")}
-      className={`pointer-events-none z-10 flex h-[18px] items-center gap-1 rounded-full px-1.5 ${className}`}
-      style={{ backgroundColor: "rgb(255 69 58 / 0.14)" }}
+      className={`pointer-events-none z-10 flex h-[18px] items-center gap-1 ${className}`}
       initial={{ opacity: 0, scale: 0.9, x: 5 }}
       animate={{ opacity: 1, scale: 1, x: 0, transition: springs.snappy }}
       exit={{ opacity: 0, scale: 0.9, x: 5, transition: { duration: 0.12 } }}
     >
-      <span className="rec-blink size-[5px] shrink-0 rounded-full" style={{ backgroundColor: "var(--color-red)" }} />
-      <span className="tabular text-[9px] leading-none font-semibold text-label-2">{formatElapsed(elapsed)}</span>
+      <span
+        className="rec-dot size-[6px] shrink-0 rounded-full"
+        style={{ backgroundColor: "var(--color-red)", boxShadow: "0 0 8px rgb(255 69 58 / 0.7)" }}
+      />
+      <span className="tabular text-[9.5px] leading-none font-semibold text-label-2">{formatElapsed(elapsed)}</span>
     </motion.div>
   );
 }

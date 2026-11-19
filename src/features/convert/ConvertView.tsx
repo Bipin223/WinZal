@@ -108,8 +108,16 @@ function FilesPanel() {
       setFfmpeg(p.ffmpeg);
       setResults(null);
       const kind = commonKind(p.files);
+      // HEIC/HEIF are already lossy photos: default to JPG instead of a
+      // lossless PNG that can balloon to several times the original size.
+      const photo = p.files.some((f) => f.ext === "heic" || f.ext === "heif");
+      const preferred = kind
+        ? photo
+          ? ["jpg", ...targets[kind].filter((t) => t !== "jpg")]
+          : targets[kind]
+        : [];
       // Preselect a format none of the files has yet.
-      setTarget(kind ? (targets[kind].find((t) => !p.files.some((f) => sameFormat(f.ext, t))) ?? targets[kind][0]) : null);
+      setTarget(kind ? (preferred.find((t) => !p.files.some((f) => sameFormat(f.ext, t))) ?? preferred[0]) : null);
     });
   };
   useEffect(() => {
@@ -235,6 +243,14 @@ function FilesPanel() {
                 ))}
               </div>
             )}
+
+            {kind === "image" &&
+              target === "png" &&
+              files.some((f) => /^(heic|heif|jpe?g)$/.test(f.ext)) && (
+                <div className="text-caption text-label-3">
+                  {t("PNG is lossless — photos can be many times larger. JPG is much smaller.")}
+                </div>
+              )}
 
             <div className="flex items-center gap-3">
               {kind === "image" && (

@@ -12,7 +12,8 @@ use windows::Devices::Bluetooth::{BluetoothConnectionStatus, BluetoothDevice};
 use windows::Devices::Enumeration::DeviceInformation;
 use windows::Devices::Radios::{Radio, RadioAccessStatus, RadioKind, RadioState};
 use windows::Win32::Devices::Bluetooth::{
-    BluetoothFindFirstRadio, BluetoothFindRadioClose, BluetoothGetDeviceInfo, BluetoothSetServiceState,
+    BluetoothFindFirstRadio, BluetoothFindRadioClose, BluetoothGetDeviceInfo, BluetoothIsConnectable,
+    BluetoothSetServiceState,
     BLUETOOTH_ADDRESS, BLUETOOTH_ADDRESS_0, BLUETOOTH_DEVICE_INFO, BLUETOOTH_FIND_RADIO_PARAMS,
     BLUETOOTH_SERVICE_ENABLE, BLUETOOTH_SERVICE_DISABLE,
 };
@@ -96,7 +97,10 @@ fn set_radio(kind: RadioKind, on: bool) -> Result<bool, String> {
 /// Wi-Fi status through `netsh`: no COM/WinRT, no admin, no extra memory.
 /// The SSID line is the most locale-stable part of the output.
 fn network_status() -> Network {
-    let enabled = radio_state(RadioKind::WiFi) == Some(RadioState::On);
+    // WinRT is the primary source, but its radio list can be briefly unavailable
+    // after resume. `netsh` also prints the software radio state, so use it as a
+    // fallback instead of showing the tile as Off while Wi-Fi is still on.
+    let mut enabled = radio_state(RadioKind::WiFi).map(|state| state == RadioState::On);
     let out = Command::new("netsh")
         .args(["wlan", "show", "interfaces"])
         .creation_flags(CREATE_NO_WINDOW)
@@ -106,18 +110,24 @@ fn network_status() -> Network {
         let text = String::from_utf8_lossy(&out.stdout);
         for line in text.lines() {
             let line = line.trim();
+            let lower = line.to_ascii_lowercase();
+            if lower == "software on" {
+                enabled = Some(true);
+            } else if lower == "software off" {
+                enabled = Some(false);
+            }
             if let Some(rest) = line.strip_prefix("SSID") {
                 if let Some((_, value)) = rest.split_once(':') {
                     let name = value.trim();
                     if !name.is_empty() {
-                        return Network { connected: true, wifi: true, name: name.to_string(), enabled };
+                        return Network { connected: true, wifi: true, name: name.to_string(), enabled: enabled.unwrap_or(true) };
                     }
                 }
             }
         }
     }
 
-    Network { connected: false, wifi: false, name: String::new(), enabled }
+    Network { connected: false, wifi: false, name: String::new(), enabled: enabled.unwrap_or(false) }
 }
 
 #[tauri::command]
@@ -335,16 +345,35 @@ pub struct Bluetooth {
     on: bool,
 }
 
+/// WinRT's radio list can fail right after resume; the Win32 API still sees the
+/// radio and reports whether it is connectable (on).
+fn bluetooth_radio_on() -> Option<bool> {
+    let params = BLUETOOTH_FIND_RADIO_PARAMS {
+        dwSize: std::mem::size_of::<BLUETOOTH_FIND_RADIO_PARAMS>() as u32,
+    };
+    let mut radio = HANDLE::default();
+    let find = unsafe { BluetoothFindFirstRadio(&params, &mut radio) }.ok()?;
+    let on = unsafe { BluetoothIsConnectable(Some(radio)) }.as_bool();
+    let _ = unsafe { BluetoothFindRadioClose(find) };
+    let _ = unsafe { CloseHandle(radio) };
+    Some(on)
+}
+
+fn bluetooth_state() -> Bluetooth {
+    match radio_state(RadioKind::Bluetooth) {
+        Some(state) => Bluetooth { available: true, on: state == RadioState::On },
+        None => match bluetooth_radio_on() {
+            Some(on) => Bluetooth { available: true, on },
+            None => Bluetooth { available: false, on: false },
+        },
+    }
+}
+
 #[tauri::command]
 pub async fn bluetooth_get() -> Result<Bluetooth, String> {
-    tauri::async_runtime::spawn_blocking(|| {
-        match radio_state(RadioKind::Bluetooth) {
-            Some(state) => Bluetooth { available: true, on: state == RadioState::On },
-            None => Bluetooth { available: false, on: false },
-        }
-    })
-    .await
-    .map_err(|e| e.to_string())
+    tauri::async_runtime::spawn_blocking(|| Ok(bluetooth_state()))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 /// Toggle the Bluetooth radio, like the Bluetooth button in Windows quick settings.
@@ -352,9 +381,11 @@ pub async fn bluetooth_get() -> Result<Bluetooth, String> {
 pub async fn bluetooth_set(on: bool) -> Result<Bluetooth, String> {
     tauri::async_runtime::spawn_blocking(move || {
         set_radio(RadioKind::Bluetooth, on)?;
-        match radio_state(RadioKind::Bluetooth) {
-            Some(state) => Ok(Bluetooth { available: true, on: state == RadioState::On }),
-            None => Err("Bluetooth radio disappeared while switching".into()),
+        let state = bluetooth_state();
+        if state.available {
+            Ok(state)
+        } else {
+            Err("Bluetooth radio disappeared while switching".into())
         }
     })
     .await
@@ -630,6 +661,10 @@ fn energy_status() -> Result<Energy, String> {
 
 /// Keep the promise of only two modes on battery: if Lenovo's custom thermal
 /// mode is active when the charger disappears, glide back to Balanced.
+///
+/// Not started automatically: WinZal must never change the power mode on its
+/// own. Reserved for an explicit opt-in.
+#[allow(dead_code)]
 pub fn spawn_energy_watch() {
     std::thread::spawn(|| {
         let mut battery_reads = 0u8;
@@ -675,22 +710,44 @@ pub async fn energy_set(mode: String, app: tauri::AppHandle) -> Result<Energy, S
 /// Re-apply the last chosen power mode after a restart. Custom needs the
 /// task-only helper (never a surprise UAC prompt at login); the Windows overlay
 /// modes can be restored without it.
+///
+/// Not called at launch: the laptop/Windows owns the restore, and WinZal must
+/// not fight a mode chosen outside the app.
+#[allow(dead_code)]
 pub fn restore_power(app: tauri::AppHandle) {
     std::thread::spawn(move || {
         let Ok(dir) = app.path().app_data_dir() else { return };
-        let stored = std::fs::read_to_string(dir.join("power-mode")).unwrap_or_default();
-        let mode = stored.trim();
+        let path = dir.join("power-mode");
+        let stored = std::fs::read_to_string(&path).unwrap_or_default();
+        let mode = stored.trim().to_string();
         if mode.is_empty() {
             return;
         }
+        // If the user picks another mode while the restore is waiting (or
+        // retrying), that pick wins. The startup restore must never fight the
+        // Power tile.
+        let changed = || {
+            std::fs::read_to_string(&path)
+                .map(|now| now.trim() != mode)
+                .unwrap_or(false)
+        };
         // The power service can still be waking up right after logon or an
         // update relaunch; retry instead of silently leaving the old mode.
         std::thread::sleep(Duration::from_secs(2));
+        if changed() {
+            return;
+        }
         if mode == "custom" {
             let _ = crate::fps::start_helper_task_only();
             let deadline = Instant::now() + Duration::from_secs(15);
             while !crate::fps::helper_ready() && Instant::now() < deadline {
+                if changed() {
+                    return;
+                }
                 std::thread::sleep(Duration::from_millis(300));
+            }
+            if changed() {
+                return;
             }
             if !crate::fps::helper_ready() {
                 // No helper: leave the machine on Balanced instead of a stale mode.
@@ -707,13 +764,19 @@ pub fn restore_power(app: tauri::AppHandle) {
         // when the elevated helper is not running. Retry because the first call
         // right after logon can race the power service.
         for attempt in 0..3 {
-            let desired = if mode == "high" { "max" } else { mode };
-            if let Ok(energy) = apply_energy(mode) {
+            if changed() {
+                return;
+            }
+            let desired = if mode == "high" { "max" } else { mode.as_str() };
+            if let Ok(energy) = apply_energy(&mode) {
                 if energy.scheme == desired {
                     return;
                 }
             }
             std::thread::sleep(Duration::from_secs(2 + attempt));
+        }
+        if changed() {
+            return;
         }
         let _ = activate_plan(&BALANCED_PLAN);
         let _ = set_overlay(&BALANCED);

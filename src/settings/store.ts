@@ -210,6 +210,7 @@ export const TOOL_IDS = [
   "weather",
   "system",
   "discord",
+  "recording",
   "vault",
 ] as const;
 

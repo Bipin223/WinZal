@@ -96,6 +96,37 @@ body {
 .rec-blink {
   animation: rec-blink 1.05s ease-in-out infinite;
 }
+
+/* Closed-pill recording dot and the recording-card waveform. */
+.rec-dot {
+  animation: rec-dot 2.2s ease-in-out infinite;
+}
+@keyframes rec-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+@keyframes rec-wave {
+  from {
+    transform: scaleY(0.35);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.rec-wave {
+  animation: rec-wave 0.9s ease-in-out infinite alternate;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rec-dot,
+  .rec-wave {
+    animation: none;
+  }
+}
 @keyframes rec-blink {
   0%,
   100% {
@@ -577,6 +608,22 @@ body {
   transition: background-color 600ms ease;
 }
 
+/* Charging capsule: the crest slides sideways while the level rises. */
+@keyframes charging-wave {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.charging-wave {
+  animation: charging-wave 2.6s linear infinite;
+}
+.charging-wave-slow {
+  animation: charging-wave 4.2s linear infinite reverse;
+}
+
 /* Rim for detached liquid satellites; edge-only so equalizer bars stay untouched. */
 .liquid-rim {
   pointer-events: none;
@@ -630,5 +677,9 @@ body {
 @media (prefers-reduced-motion: reduce) {
   [data-material="liquid"] .pressable:active {
     transform: none;
+  }
+  .charging-wave,
+  .charging-wave-slow {
+    animation: none;
   }
 }

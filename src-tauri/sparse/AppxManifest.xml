@@ -7,7 +7,7 @@
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap uap3 uap10 rescap">
 
-  <Identity Name="WinZal.Notch" Publisher="CN=WinZal" Version="1.7.11.0" />
+  <Identity Name="WinZal.Notch" Publisher="CN=WinZal" Version="1.7.13.0" />
 
   <Properties>
     <DisplayName>WinZal</DisplayName>
@@ -38,6 +38,10 @@
   <Capabilities>
     <rescap:Capability Name="runFullTrust" />
     <uap3:Capability Name="userNotificationListener" />
+    <!-- Wi-Fi/Bluetooth radio state and toggles. Packaged apps lose access to
+         Windows.Devices.Radios without these. -->
+    <DeviceCapability Name="radios" />
+    <DeviceCapability Name="bluetooth" />
   </Capabilities>
 </Package>
 

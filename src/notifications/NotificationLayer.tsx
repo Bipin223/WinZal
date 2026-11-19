@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { CaretRight } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
 import { setNotificationVisible } from "../platform/native";
 import { openNotificationApp } from "../platform/services";
@@ -63,16 +64,14 @@ export function NotificationLayer() {
 function IslandNotification({ item }: { item: AppNotification }) {
   const dragged = useRef(false);
   const measure = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(300);
-  const minHeight = item.body ? 62 : 48;
-  // Long notifications grow sideways, never taller: measure the unwrapped
-  // text and animate the capsule to the width it needs (up to 680px).
+  const [width, setWidth] = useState(290);
+  // Quiet ticker: one line, 34 px. Long text grows sideways to 430, never taller.
   useLayoutEffect(() => {
     const el = measure.current;
     if (!el) return;
     let alive = true;
     const update = () => {
-      if (alive) setWidth(Math.min(680, Math.max(300, Math.ceil(el.scrollWidth) + 76)));
+      if (alive) setWidth(Math.min(430, Math.max(290, Math.ceil(el.scrollWidth) + 72)));
     };
     update();
     void document.fonts.ready.then(update);
@@ -86,20 +85,17 @@ function IslandNotification({ item }: { item: AppNotification }) {
       <div
         ref={measure}
         aria-hidden
-        className="pointer-events-none fixed top-0 -left-[2000px] w-max whitespace-nowrap"
+        className="pointer-events-none fixed top-0 -left-[2000px] w-max whitespace-nowrap text-[10.5px] font-semibold"
       >
-        <div className="text-[8px] font-semibold tracking-[0.14em] uppercase">
-          {item.app} <span className="ml-3 text-[8.5px] font-normal tracking-normal">now</span>
-        </div>
-        <div className="text-[15.5px] leading-[19px] font-semibold">{item.title}</div>
-        {item.body && <div className="text-[12.5px] leading-[15px]">{item.body}</div>}
+        {item.title}
+        {item.body && <span className="text-[9.5px] font-normal"> · {item.body}</span>}
       </div>
       <motion.div
         data-notification-hit
-        className="pointer-events-auto relative flex items-center overflow-hidden rounded-full border border-white/15 shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_12px_30px_-14px_rgb(0_0_0/0.55)]"
-        style={{ background: "linear-gradient(180deg, rgba(40, 40, 44, 0.58), rgba(12, 12, 14, 0.72))", minHeight }}
+        className="pointer-events-auto relative flex items-center overflow-hidden rounded-full border border-white/15 shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_12px_26px_-14px_rgb(0_0_0/0.55)]"
+        style={{ background: "linear-gradient(180deg, rgba(40, 40, 44, 0.62), rgba(12, 12, 14, 0.76))" }}
         initial={{ width: 124, height: 24, borderRadius: 15, opacity: 0 }}
-        animate={{ width, height: minHeight, borderRadius: 999, opacity: 1 }}
+        animate={{ width, height: 34, borderRadius: 999, opacity: 1 }}
         exit={{ width: 124, height: 24, borderRadius: 15, opacity: 0, transition: springs.close }}
         transition={{ type: "spring", visualDuration: 0.38, bounce: 0 }}
         drag
@@ -140,34 +136,36 @@ function IslandNotification({ item }: { item: AppNotification }) {
           }
         }}
       >
-        <span aria-hidden className="pointer-events-none absolute inset-x-10 top-0 h-px bg-white/30" />
+        <span aria-hidden className="pointer-events-none absolute inset-x-8 top-0 h-px bg-white/30" />
         <motion.div
-          className="relative flex w-full items-center gap-[13px] px-[10px] py-[2px]"
-          style={{ minWidth: 298 }}
-          initial={{ opacity: 0, y: 5 }}
+          className="relative flex w-full min-w-0 items-center gap-2 px-2.5"
+          initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0, transition: { ...content.enter, delay: 0.06 } }}
         >
           <motion.div
+            className="flex shrink-0"
             initial={{ scale: 0.55, rotate: -8, opacity: 0 }}
             animate={{ scale: 1, rotate: 0, opacity: 1 }}
             transition={springs.peek}
           >
-            <NotificationIcon item={item} size={32} />
+            <NotificationIcon item={item} size={20} />
           </motion.div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="min-w-0 truncate text-[8px] font-semibold tracking-[0.14em] text-white/45 uppercase">{item.app}</span>
-              <span className="ml-auto shrink-0 text-[8.5px] text-white/35">now</span>
-            </div>
-            <div className="mt-px truncate text-[15.5px] leading-[19px] font-semibold text-white">{item.title}</div>
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <span className="shrink-0 max-w-[45%] truncate text-[10.5px] font-semibold text-white">{item.title}</span>
             {item.body && (
-              <div className="line-clamp-2 text-[12.5px] leading-[15px] text-white/60">{item.body}</div>
+              <>
+                <span className="shrink-0 text-[9px] text-white/25">·</span>
+                <span className="min-w-0 flex-1 truncate text-[9.5px] text-white/45">{item.body}</span>
+              </>
             )}
           </div>
+          <span className="flex size-[15px] shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-white/55">
+            <CaretRight size={8} weight="bold" />
+          </span>
         </motion.div>
         {hasProgress(item) && (
           <motion.span
-            className="absolute inset-x-0 bottom-0 h-[2px] origin-left"
+            className="absolute inset-x-3 bottom-0 h-[1.5px] origin-left"
             style={{ background: item.color }}
             initial={{ scaleX: 1 }}
             animate={{ scaleX: 0 }}
