@@ -69,6 +69,9 @@ const DRAG_START: f64 = 6.0;
 #[derive(Default)]
 pub struct HitState {
     rect: Mutex<HitRect>,
+    /// Detached Recent satellite. It is clickable and hoverable on its own,
+    /// but must not make the notch itself peek/open.
+    recent: Mutex<Option<HitRect>>,
     /// While true (e.g. typing), the window stays clickable.
     pinned: Mutex<bool>,
     /// Ghost mode: fully click-through until three quick clicks wake it.
@@ -86,6 +89,11 @@ impl HitState {
 #[tauri::command]
 pub fn set_hit_rect(rect: HitRect, state: State<'_, HitState>) {
     *state.rect.lock().unwrap() = rect;
+}
+
+#[tauri::command]
+pub fn set_recent_hit(rect: Option<HitRect>, state: State<'_, HitState>) {
+    *state.recent.lock().unwrap() = rect;
 }
 
 #[tauri::command]
@@ -116,6 +124,7 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
     thread::spawn(move || {
         // `None` forces a defined state on the first pass.
         let mut last_inside: Option<bool> = None;
+        let mut last_recent: Option<bool> = None;
         let mut last_ignore: Option<bool> = None;
         let mut was_down = false;
         // Where the current press started; None = button up or the press began near the notch.
@@ -147,6 +156,7 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
             // scaling, where the two can disagree by many pixels at the right
             // and bottom edges.
             let rect = *state.rect.lock().unwrap();
+            let recent = *state.recent.lock().unwrap();
             let fallback = window.scale_factor().unwrap_or(1.0);
             let sx = axis_scale(rect.vw, inner.width, fallback);
             let sy = axis_scale(rect.vh, inner.height, fallback);
@@ -154,10 +164,10 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
             let y = (cursor.y - origin.y as f64) / sy;
             let dragging = unsafe { GetAsyncKeyState(VK_LBUTTON.0 as i32) } as u16 & 0x8000 != 0;
             let pressed = dragging && !was_down;
-            // Edge distance to the hit zone; a held button keeps the fast poll (drags).
-            let dx = (rect.x - x).max(x - (rect.x + rect.w)).max(0.0);
-            let dy = (rect.y - y).max(y - (rect.y + rect.h)).max(0.0);
-            far = !dragging && !was_down && dx.hypot(dy) > FAR;
+            // Edge distance to either hit zone; a held button keeps the fast poll (drags).
+            let main_distance = |r: &HitRect| (r.x - x).max(x - (r.x + r.w)).max(0.0).hypot((r.y - y).max(y - (r.y + r.h)).max(0.0));
+            let distance = recent.map_or_else(|| main_distance(&rect), |hub| main_distance(&rect).min(main_distance(&hub)));
+            far = !dragging && !was_down && distance > FAR;
 
             // Grow the zone only for a real drag that started away from the notch (a file
             // from Explorer). A plain click right below the notch must reach the app
@@ -196,21 +206,33 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
                     let _ = window.emit("notch://hover", false);
                     last_inside = Some(false);
                 }
+                if last_recent != Some(false) {
+                    let _ = window.emit("notch://recent-hover", false);
+                    last_recent = Some(false);
+                }
                 continue;
             }
 
             clicks = 0;
             let inside = if drag_active { rect.grown() } else { rect }.contains(x, y);
-            let ignore = !inside && !*state.pinned.lock().unwrap();
+            let recent_inside = recent.is_some_and(|hub| hub.contains(x, y));
+            let clickable = inside || recent_inside;
+            let ignore = !clickable && !*state.pinned.lock().unwrap();
 
             // Only call on change: every call goes through the event loop.
             if last_ignore != Some(ignore) {
                 let _ = window.set_ignore_cursor_events(ignore);
                 last_ignore = Some(ignore);
             }
+            // The notch only reacts to its own zone. A hover over the detached
+            // switcher gets a separate event, so it never makes the pill open.
             if last_inside != Some(inside) {
                 let _ = window.emit("notch://hover", inside);
                 last_inside = Some(inside);
+            }
+            if last_recent != Some(recent_inside) {
+                let _ = window.emit("notch://recent-hover", recent_inside);
+                last_recent = Some(recent_inside);
             }
         }
     });

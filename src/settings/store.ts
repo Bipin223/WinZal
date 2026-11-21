@@ -85,6 +85,10 @@ export interface Settings {
   privacyDots: boolean;
   /** Windows toasts + island notification cards. Off stops the native listener. */
   notifications: boolean;
+  /** Overview profile: a local override for the Windows name/photo and its display. */
+  profile: { name: string; photo: string; show: boolean; showPhoto: boolean; showName: boolean };
+  /** Apps tool: Start-menu IDs pinned to the launchpad. */
+  apps: { pinned: string[] };
   /** Per-role size/weight offsets; 0 = the built-in default. */
   typography: Record<TypeRole, TypeAxis>;
   /** Notch colours and shape. `accent: "auto"` follows the album art. */
@@ -176,6 +180,8 @@ export interface Settings {
     lyricsGlowStyle: LyricGlowStyle;
     /** Line entrance effect. */
     lyricsAnimation: LyricAnimation;
+    /** Spark: keep already-sung words visible instead of dimming them again. */
+    lyricsKeepRevealed: boolean;
     /** true = hardware acceleration (smoother, more RAM); false = software/CPU (less RAM, more CPU). */
     gpuAcceleration: boolean;
     /** GPU mode when acceleration is on: auto, integrated, or discrete. */
@@ -199,6 +205,7 @@ export interface Settings {
 /** All tool IDs in default order. Must match `src/notch/tabs.ts`. */
 export const TOOL_IDS = [
   "overview",
+  "apps",
   "media",
   "timer",
   "todos",
@@ -220,6 +227,8 @@ const defaults: Settings = {
   openMode: "hover",
   hoverDelay: "normal",
   notifications: true,
+  profile: { name: "", photo: "", show: true, showPhoto: true, showName: true },
+  apps: { pinned: [] },
   tools: TOOL_IDS.map((id) => ({ id, enabled: !DEFAULT_OFF.has(id) })),
   ask: {
     provider: "gemini",
@@ -293,6 +302,7 @@ const defaults: Settings = {
     lyricsVisualizerStyle: "bars",
     lyricsGlowStyle: "aurora",
     lyricsAnimation: "word",
+    lyricsKeepRevealed: false,
     gpuAcceleration: false,
     gpuPreference: "igpu",
   },
@@ -344,6 +354,18 @@ settings.set((s) => {
   return {
     ...defaults,
     ...s,
+    profile: {
+      name: s.profile?.name ?? "",
+      photo: s.profile?.photo ?? "",
+      show: s.profile?.show !== false,
+      showPhoto: s.profile?.showPhoto !== false,
+      showName: s.profile?.showName !== false,
+    },
+    apps: {
+      pinned: Array.isArray(s.apps?.pinned)
+        ? s.apps.pinned.filter((id): id is string => typeof id === "string")
+        : [],
+    },
     tools,
     typography: {
       caption: { ...defaults.typography.caption, ...s.typography?.caption },
@@ -376,6 +398,7 @@ settings.set((s) => {
         if (stored === "duet") return "word";
         return valid.includes(stored as LyricAnimation) ? (stored as LyricAnimation) : "word";
       })(),
+      lyricsKeepRevealed: s.appearance?.lyricsKeepRevealed === true,
       // Old Default / Large / Small / Big / Biggest become one continuous size.
       lyricsTextSize: (() => {
         const legacy = s.appearance as { lyricsTextSize?: number; lyricsSize?: string } | undefined;

@@ -20,9 +20,6 @@ export const HEADER_HEIGHT = 32;
 /** Tool bar at the bottom of the open notch (like OmniNotch). */
 export const DOCK_HEIGHT = 46;
 
-/** Padding when open. Inner radii = r − PADDING (concentric). */
-export const PADDING = 16;
-
 export const geometry = {
   /** Idle: compact notch with room for time, short date and weather. */
   closed: { w: 206, h: 30, r: 10, ear: 6 },

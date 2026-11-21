@@ -786,4 +786,6 @@ export const systemControls = {
   power: (action: "lock" | "sleep" | "screen-off" | "restart" | "shutdown"): Promise<void> =>
     isNative ? invoke("power_action", { action }) : Promise.resolve(),
   openUri: (uri: string): Promise<void> => (isNative ? invoke("open_uri", { uri }) : Promise.resolve()),
+  /** Windows' own Task View: live window thumbnails and virtual desktops. */
+  taskView: (): Promise<void> => (isNative ? invoke("task_view") : Promise.resolve()),
 };

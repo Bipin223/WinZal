@@ -14,6 +14,18 @@ export function setHitRect(rect: { x: number; y: number; w: number; h: number; v
   if (isNative) void invoke("set_hit_rect", { rect });
 }
 
+/** The detached Recent satellite's own hit zone (outside the notch hit rect). */
+export function setRecentHit(rect: { x: number; y: number; w: number; h: number; vw: number; vh: number } | null) {
+  if (isNative) void invoke("set_recent_hit", { rect });
+}
+
+/** Cursor over the Recent satellite, from the same Win32 poll as the notch. */
+export function onRecentHover(handler: (inside: boolean) => void): () => void {
+  if (!isNative) return () => {};
+  const off = listen<boolean>("notch://recent-hover", (e) => handler(e.payload));
+  return () => void off.then((f) => f());
+}
+
 /** Keeps the window clickable even when the cursor is outside (e.g. while typing). */
 export function setPinned(pinned: boolean) {
   if (isNative) void invoke("set_pinned", { pinned });
@@ -140,11 +152,6 @@ export function keyboardFocus(focus: boolean) {
 /** Compact the transparent window while closed; expand it for the open panel. */
 export function setNotchHeight(height: number) {
   if (isNative) void invoke("set_notch_height", { height });
-}
-
-/** Widen the transparent window for an attached flyout; Rust re-centers it. */
-export function setNotchWidth(width: number) {
-  if (isNative) void invoke("set_notch_width", { width });
 }
 
 /** WebView2 memory target: low while the notch sits closed, normal otherwise. */

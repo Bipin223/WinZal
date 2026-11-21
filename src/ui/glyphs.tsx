@@ -30,29 +30,6 @@ export function WifiOnIcon({ size = 22, className }: Props) {
   );
 }
 
-export function WifiOffIcon({ size = 22, className }: Props) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={3}
-      strokeLinecap="round"
-      className={className}
-    >
-      {WIFI_ARCS.map((d, i) => (
-        <path key={i} d={d} />
-      ))}
-      <circle cx="12" cy="18.8" r="1.95" fill="currentColor" stroke="none" />
-      {/* Cut a clean gap around the slash, iPhone-style. */}
-      <path d="M4.5 4.5 19.5 19.5" stroke="var(--color-notch)" strokeWidth={6.8} />
-      <path d="M4.5 4.5 19.5 19.5" stroke="currentColor" />
-    </svg>
-  );
-}
-
 const BT_RUNE = [
   "M12 2.5V21.5",
   "M12 2.5 19 7.5 5 16.5",
@@ -76,28 +53,6 @@ export function BluetoothOnIcon({ size = 22, className }: Props) {
       {BT_RUNE.map((d, i) => (
         <path key={i} d={d} />
       ))}
-    </svg>
-  );
-}
-
-export function BluetoothOffIcon({ size = 22, className }: Props) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={3.2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      {BT_RUNE.map((d, i) => (
-        <path key={i} d={d} />
-      ))}
-      <path d="M4.5 4.5 19.5 19.5" stroke="var(--color-notch)" strokeWidth={7} />
-      <path d="M4.5 4.5 19.5 19.5" stroke="currentColor" />
     </svg>
   );
 }

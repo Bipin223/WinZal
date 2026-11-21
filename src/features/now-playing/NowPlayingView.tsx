@@ -61,7 +61,7 @@ export function NowPlayingView() {
             <div className="relative min-w-0 flex-1">
               <AnimatePresence mode="popLayout" initial={false}>
                 <motion.div
-                  key={np.title}
+                  key={`${np.appId}\u0000${np.title}\u0000${np.artist}`}
                   initial={{ opacity: 0, filter: "blur(4px)" }}
                   animate={{ opacity: 1, filter: "blur(0px)", transition: content.enter }}
                   exit={{ opacity: 0, filter: "blur(4px)", transition: content.exit }}

@@ -1,5 +1,6 @@
 pub mod ai;
 mod ambient;
+mod apps;
 mod ask_history;
 mod audio;
 mod audio_out;
@@ -19,12 +20,19 @@ mod memory;
 mod mixer;
 mod obs;
 mod privacy;
+mod profile;
+mod recent;
 pub mod secrets;
+mod start_apps;
 mod system;
+mod taskview;
 mod temps;
 mod toasts;
 mod vault;
+mod winicons;
 
+use std::os::windows::process::CommandExt;
+use std::process::Stdio;
 use std::sync::Mutex;
 
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
@@ -33,11 +41,16 @@ use tauri::{App, AppHandle, Emitter, Manager, State, WebviewWindow};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use windows::Win32::Foundation::HWND;
-use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, SetForegroundWindow};
+use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, SetForegroundWindow, ShowWindow, SW_SHOW};
 
 /// Opens/closes the notch from anywhere. Ctrl+Alt = AltGr on German keyboards;
 /// AltGr+Space types nothing, so there's no conflict.
 const SHORTCUT_LABEL: &str = "Ctrl+Alt+Space";
+const AUTOSTART_VALUE: &str = "WinZal";
+const AUTOSTART_RUN_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
+const AUTOSTART_APPROVAL_KEY: &str =
+    r"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 /// For main.rs: elevated FPS helper (see fps::run_helper).
 pub fn fps_helper(main_pid: u32) -> ! {
@@ -175,6 +188,7 @@ pub fn run() {
                         return;
                     }
                     if pressed == &h_shortcut {
+                        show_notch(app);
                         let _ = app.emit("notch://shortcut", ());
                     } else if pressed == &h_presentation {
                         let _ = app.emit("notch://presentation-toggle", ());
@@ -200,10 +214,12 @@ pub fn run() {
         .manage(system::SystemState::default())
         .manage(display::DisplayState::default())
         .manage(display::NotifyState::default())
+        .manage(display::ShowGuard::default())
         .manage(discord::DiscordState::default())
         .manage(vault::VaultState::default())
         .invoke_handler(tauri::generate_handler![
             hit_test::set_hit_rect,
+            hit_test::set_recent_hit,
             hit_test::set_pinned,
             hit_test::set_silent,
             media::media_get,
@@ -224,7 +240,6 @@ pub fn run() {
             clipboard::clipboard_paste_files,
             keyboard_focus,
             set_notch_height,
-            set_notch_width,
             set_capture_hidden,
             screen_luminance,
             notch_prompt_mode,
@@ -241,10 +256,14 @@ pub fn run() {
             ask_history::ask_history_delete,
     ask_history::ask_history_clear,
             secrets::secret_set,
-            secrets::secret_delete,
             secrets::secret_has,
             system::system_stats,
-            files::file_probe,
+            taskview::task_view,
+            profile::account_profile,
+            apps::apps_list,
+            apps::app_open,
+            recent::recent_apps,
+            recent::recent_focus,
             files::file_text,
             files::reveal_file,
             files::open_path,
@@ -367,6 +386,7 @@ pub fn run() {
             let _ = app.global_shortcut().register(capture);
             let _ = app.global_shortcut().register(power);
             enable_autostart_once(app.handle());
+            repair_autostart(app.handle());
             build_tray(app)?;
             Ok(())
         })
@@ -384,8 +404,15 @@ struct FocusState(Mutex<isize>);
 #[tauri::command]
 fn set_notch_height(height: f64, window: WebviewWindow) -> Result<(), String> {
     let height = height.clamp(120.0, 700.0);
+    // display::place gives the window the full monitor width so the top-left
+    // switcher can sit at the real screen edge. Keep that width here.
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let width = window
+        .outer_size()
+        .map(|size| size.width as f64 / scale)
+        .unwrap_or(1260.0);
     window
-        .set_size(tauri::LogicalSize::new(1260.0, height))
+        .set_size(tauri::LogicalSize::new(width, height))
         .map_err(|error| error.to_string())
 }
 
@@ -447,32 +474,6 @@ fn screen_luminance(window: WebviewWindow) -> Result<f32, String> {
     Ok(if count > 0.0 { total / count } else { 0.5 })
 }
 
-/// Widen the transparent window for an attached flyout. The notch is centered
-/// inside the window, so the window is re-centered on the monitor after the
-/// resize; otherwise the notch would jump sideways.
-#[tauri::command]
-fn set_notch_width(width: f64, window: WebviewWindow, state: State<'_, display::DisplayState>) -> Result<(), String> {
-    // Never make the transparent window wider than the monitor: the notch is
-    // centered inside it, so an oversized window would push the pill sideways.
-    let max_width = window
-        .current_monitor()
-        .ok()
-        .flatten()
-        .map(|monitor| monitor.size().width as f64 / monitor.scale_factor())
-        .unwrap_or(1400.0)
-        .max(760.0);
-    let width = width.clamp(760.0, max_width.min(1400.0));
-    let scale = window.scale_factor().unwrap_or(1.0);
-    let height = window
-        .outer_size()
-        .map(|size| size.height as f64 / scale)
-        .unwrap_or(560.0);
-    window
-        .set_size(tauri::LogicalSize::new(width, height))
-        .map_err(|error| error.to_string())?;
-    display::place(&window, &state).map_err(|error| error.to_string())
-}
-
 /// Opened via shortcut → take focus (for Esc/typing).
 /// Closed → give focus back to the previous app, otherwise typing goes nowhere.
 #[tauri::command]
@@ -507,8 +508,41 @@ fn autostart_get(app: AppHandle) -> bool {
 
 #[tauri::command]
 fn autostart_set(enabled: bool, app: AppHandle) -> Result<(), String> {
+    set_autostart(&app, enabled)
+}
+
+fn delete_autostart_value(key: &str) {
+    let _ = std::process::Command::new("reg.exe")
+        .args(["delete", key, "/v", AUTOSTART_VALUE, "/f"])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .creation_flags(CREATE_NO_WINDOW)
+        .status();
+}
+
+/// Windows keeps a separate "disabled in Startup Apps" flag next to the
+/// Run entry. Clear it and rewrite the entry so it points at this executable.
+fn set_autostart(app: &AppHandle, enabled: bool) -> Result<(), String> {
+    if enabled {
+        delete_autostart_value(AUTOSTART_RUN_KEY);
+    }
     let manager = app.autolaunch();
-    if enabled { manager.enable() } else { manager.disable() }.map_err(|e| e.to_string())
+    if enabled { manager.enable() } else { manager.disable() }.map_err(|e| e.to_string())?;
+    if enabled {
+        delete_autostart_value(AUTOSTART_APPROVAL_KEY);
+    }
+    if let Some(tray) = app.state::<TrayItems>().0.lock().unwrap().as_ref() {
+        let _ = tray.autostart.set_checked(enabled);
+    }
+    Ok(())
+}
+
+/// Rewrites a stale startup path (for example an old package alias) and clears
+/// Windows' Startup Apps block whenever autostart is meant to be on.
+fn repair_autostart(app: &AppHandle) {
+    if app.autolaunch().is_enabled().unwrap_or(false) {
+        let _ = set_autostart(app, true);
+    }
 }
 
 /// Enables autostart on the very first launch; after that the tray check and settings decide.
@@ -529,10 +563,27 @@ struct Tray {
     focus: CheckMenuItem<tauri::Wry>,
     silent: CheckMenuItem<tauri::Wry>,
     presentation: CheckMenuItem<tauri::Wry>,
+    autostart: CheckMenuItem<tauri::Wry>,
 }
 
 #[derive(Default)]
 struct TrayItems(Mutex<Option<Tray>>);
+
+/// Bring the transparent notch window back even if Windows or another topmost
+/// window hid it. Tray/shortcut are explicit user actions, so this is allowed
+/// to override the normal click-through/topmost state.
+fn show_notch(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("notch") {
+        let _ = window.show();
+        // Tauri can keep a cached "visible" flag after Windows hides the
+        // window externally (Show Desktop, shell transitions). Win32 is truth.
+        if let Ok(hwnd) = window.hwnd() {
+            let _ = unsafe { ShowWindow(hwnd, SW_SHOW) };
+        }
+        let _ = window.set_always_on_top(true);
+        app.state::<hit_test::HitState>().refresh();
+    }
+}
 
 /// English-only tray menu. Open (shortcut right-aligned via tab, like Windows
 /// menus), settings, focus mode, silent, presentation, autostart, quit.
@@ -609,6 +660,7 @@ fn build_tray(app: &App) -> tauri::Result<()> {
         focus: focus.clone(),
         silent: silent.clone(),
         presentation: presentation.clone(),
+        autostart: autostart.clone(),
     });
     let menu = Menu::with_items(
         app,
@@ -636,14 +688,17 @@ fn build_tray(app: &App) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
+                show_notch(tray.app_handle());
                 let _ = tray.app_handle().emit("notch://open", None::<&str>);
             }
         })
         .on_menu_event(move |app, event| match event.id().as_ref() {
             "open" => {
+                show_notch(app);
                 let _ = app.emit("notch://open", None::<&str>);
             }
             "settings" => {
+                show_notch(app);
                 let _ = app.emit("notch://open", Some("settings"));
             }
             "quit" => app.exit(0),
@@ -663,8 +718,7 @@ fn build_tray(app: &App) -> tauri::Result<()> {
             "autostart" => {
                 // The check item toggles itself on click; read the new state.
                 let on = autostart_item.is_checked().unwrap_or(false);
-                let manager = app.autolaunch();
-                let _ = if on { manager.enable() } else { manager.disable() };
+                let _ = set_autostart(app, on);
             }
             _ => {}
         })

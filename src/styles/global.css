@@ -274,6 +274,10 @@ body {
 }
 .lab-base { display: inline-block; color: #616a7d; transition: color .26s, text-shadow .26s; }
 .lab-w.dim .lab-base { color: #434b5c; }
+.lab-w.revealed .lab-base {
+  color: color-mix(in srgb, var(--accent) 62%, #e8efff);
+  text-shadow: 0 0 9px color-mix(in srgb, var(--accent) 28%, transparent);
+}
 .lab-w.focus .lab-base {
   color: color-mix(in srgb, var(--accent) 74%, #fff);
   text-shadow: 0 0 16px color-mix(in srgb, var(--accent) 65%, transparent);

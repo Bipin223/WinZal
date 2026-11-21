@@ -18,9 +18,6 @@ use serde::Serialize;
 use tauri::State;
 use windows::core::{Interface, BOOL, HSTRING, PCWSTR, PWSTR};
 use windows::Win32::Foundation::{CloseHandle, HWND, LPARAM, TRUE};
-use windows::Win32::Graphics::Gdi::{
-    CreateCompatibleDC, DeleteDC, DeleteObject, GetDIBits, GetObjectW, BITMAP, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
-};
 use windows::Win32::Media::Audio::{
     eConsole, eRender, AudioSessionStateExpired, IAudioSessionControl2, IAudioSessionManager2, IMMDeviceEnumerator, ISimpleAudioVolume,
     MMDeviceEnumerator,
@@ -35,8 +32,8 @@ use windows::Win32::UI::Shell::{
     ApplicationActivationManager, IApplicationActivationManager, SHGetFileInfoW, ACTIVATEOPTIONS, SHFILEINFOW, SHGFI_ICON, SHGFI_LARGEICON,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    DestroyIcon, EnumWindows, GetForegroundWindow, GetIconInfo, GetWindow, GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId,
-    IsIconic, IsWindowVisible, SetForegroundWindow, ShowWindow, GW_OWNER, ICONINFO, SW_RESTORE,
+    DestroyIcon, EnumWindows, GetForegroundWindow, GetWindow, GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId,
+    IsIconic, IsWindowVisible, SetForegroundWindow, ShowWindow, GW_OWNER, SW_RESTORE,
 };
 
 use crate::media::MediaState;
@@ -95,7 +92,7 @@ fn sessions() -> windows::core::Result<Vec<Entry>> {
     }
 }
 
-fn process_path(pid: u32) -> Option<String> {
+pub(crate) fn process_path(pid: u32) -> Option<String> {
     unsafe {
         let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()?;
         let mut buf = [0u16; 1024];
@@ -196,7 +193,7 @@ pub async fn mixer_set(id: String, level: Option<f32>, muted: Option<bool>) -> R
 }
 
 /// "Google Chrome" from the exe's version info, otherwise the file name ("Spotify").
-fn display_name(path: &str) -> String {
+pub(crate) fn display_name(path: &str) -> String {
     description(path).filter(|d| !d.trim().is_empty()).unwrap_or_else(|| {
         let stem = file_name(path);
         let stem = stem.strip_suffix(".exe").unwrap_or(&stem);
@@ -231,7 +228,7 @@ fn description(path: &str) -> Option<String> {
 }
 
 /// The exe's 32 px icon as a PNG data URL.
-fn icon_png(path: &str) -> Option<String> {
+pub(crate) fn icon_png(path: &str) -> Option<String> {
     unsafe {
         let mut info = SHFILEINFOW::default();
         let ok = SHGetFileInfoW(
@@ -244,59 +241,11 @@ fn icon_png(path: &str) -> Option<String> {
         if ok == 0 || info.hIcon.is_invalid() {
             return None;
         }
-        let png = icon_to_png(info.hIcon);
+        let png = crate::winicons::hicon_to_png(info.hIcon);
         let _ = DestroyIcon(info.hIcon);
         let png = png?;
         Some(format!("data:image/png;base64,{}", base64::engine::general_purpose::STANDARD.encode(png)))
     }
-}
-
-unsafe fn icon_to_png(icon: windows::Win32::UI::WindowsAndMessaging::HICON) -> Option<Vec<u8>> {
-    let mut ii = ICONINFO::default();
-    GetIconInfo(icon, &mut ii).ok()?;
-    let result = (|| {
-        let mut bm = BITMAP::default();
-        if GetObjectW(ii.hbmColor.into(), std::mem::size_of::<BITMAP>() as i32, Some((&mut bm as *mut BITMAP).cast())) == 0 {
-            return None;
-        }
-        let (w, h) = (bm.bmWidth, bm.bmHeight);
-        let mut bmi = BITMAPINFO::default();
-        bmi.bmiHeader = BITMAPINFOHEADER {
-            biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
-            biWidth: w,
-            biHeight: -h, // top-down
-            biPlanes: 1,
-            biBitCount: 32,
-            biCompression: BI_RGB.0,
-            ..Default::default()
-        };
-        let mut px = vec![0u8; (w * h * 4) as usize];
-        let dc = CreateCompatibleDC(None);
-        let lines = GetDIBits(dc, ii.hbmColor, 0, h as u32, Some(px.as_mut_ptr().cast()), &mut bmi, DIB_RGB_COLORS);
-        let _ = DeleteDC(dc);
-        if lines == 0 {
-            return None;
-        }
-        // BGRA → RGBA; old icons without alpha are fully opaque.
-        let no_alpha = px.chunks(4).all(|p| p[3] == 0);
-        for p in px.chunks_mut(4) {
-            p.swap(0, 2);
-            if no_alpha {
-                p[3] = 255;
-            }
-        }
-        let img = image::RgbaImage::from_raw(w as u32, h as u32, px)?;
-        let mut png = Vec::new();
-        img.write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png).ok()?;
-        Some(png)
-    })();
-    if !ii.hbmColor.is_invalid() {
-        let _ = DeleteObject(ii.hbmColor.into());
-    }
-    if !ii.hbmMask.is_invalid() {
-        let _ = DeleteObject(ii.hbmMask.into());
-    }
-    result
 }
 
 // ── Open the playing app ─────────────────────────────────────────────────────
@@ -380,7 +329,7 @@ unsafe extern "system" fn collect(hwnd: HWND, lparam: LPARAM) -> BOOL {
     TRUE
 }
 
-fn bring_to_front(hwnd: HWND) -> bool {
+pub(crate) fn bring_to_front(hwnd: HWND) -> bool {
     unsafe {
         if IsIconic(hwnd).as_bool() {
             let _ = ShowWindow(hwnd, SW_RESTORE);

@@ -596,6 +596,7 @@ pub async fn vault_hello_supported() -> bool {
 /// while it is open, otherwise the notch covers the prompt and swallows the
 /// PIN keystrokes.
 fn hide_for_hello(app: &AppHandle) {
+    app.state::<crate::display::ShowGuard>().hold(true);
     if let Some(window) = app.get_webview_window("notch") {
         let _ = window.hide();
     }
@@ -606,6 +607,7 @@ fn restore_after_hello(app: &AppHandle) {
         let _ = window.show();
         let _ = window.set_always_on_top(true);
     }
+    app.state::<crate::display::ShowGuard>().hold(false);
 }
 
 /// Shows the Windows Hello prompt; on success the vault is unlocked with the key.

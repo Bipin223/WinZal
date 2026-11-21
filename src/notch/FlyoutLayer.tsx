@@ -20,6 +20,7 @@ import { Switch } from "../ui/controls";
 import { SelectedDot } from "../ui/SelectedDot";
 import { closeFlyout, flyout, type FlyoutKind } from "./flyout";
 import {
+  bluetooth,
   connectBluetooth,
   connectWifi,
   scanBluetooth,
@@ -186,7 +187,16 @@ function WifiFlyout() {
 
 function BluetoothFlyout() {
   const { bt, busy, devices, loading, connecting, error } = useBluetoothAmbient();
-  useEffect(() => scanBluetooth(), []);
+  useEffect(() => {
+    scanBluetooth();
+    // Right after the radio turns on, WinRT can return an empty snapshot for
+    // a moment even though Windows already has paired devices.
+    const retry = window.setTimeout(() => {
+      const state = bluetooth.get();
+      if (!state.loading && (!state.devices || state.devices.length === 0)) scanBluetooth();
+    }, 1400);
+    return () => window.clearTimeout(retry);
+  }, []);
   const enabled = !!bt?.on;
   return (
     <div className="flex max-h-[336px] flex-col">

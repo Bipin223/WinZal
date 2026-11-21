@@ -2,13 +2,14 @@ import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Eye, EyeSlash, Lightning, MusicNoteSimple, Timer } from "@phosphor-icons/react";
 import { DiscordLogo } from "../../ui/brands";
-import { content, springs } from "../../design/motion";
+import { artwork as artworkSwap, content, springs } from "../../design/motion";
 import { HeaderActions, HeaderButton } from "../../notch/header";
 import { navigate } from "../../notch/nav";
 import { togglePresentation, usePresenting } from "../privacy/store";
-import { useNowPlaying } from "../../platform/media";
+import { useNowPlaying, type NowPlaying } from "../../platform/media";
 import { useDiscordCall } from "../discord/store";
 import { Equalizer } from "../now-playing/Equalizer";
+import { useSmoothArtwork } from "../now-playing/artwork";
 import { ARTWORK_LAYOUT_ID } from "../now-playing/NowPlayingView";
 import { formatClock, timer, useRemaining } from "../timer/store";
 import { describe, useForecast } from "../weather/store";
@@ -21,6 +22,8 @@ import { useSecond } from "../../lib/useSecond";
 import { PowerActions, QuickControls, SystemRow } from "./Controls";
 import { BatteryMeter } from "../../ui/BatteryMeter";
 import { IdleRecordIcon } from "../../ui/glyphs";
+import { ProfileAvatar } from "../profile/Avatar";
+import { useProfile } from "../profile/store";
 import { useBatteryStatus } from "./battery";
 import { systemControls } from "../../platform/services";
 
@@ -105,9 +108,12 @@ function BatteryIndicator() {
 
 function Header() {
   const now = useMinute();
+  const s = settings.use();
+  const p = s.profile;
+  const profile = useProfile(p);
   const forecast = useForecast();
-  const appearance = settings.use().appearance;
-  const place = settings.use().weather;
+  const appearance = s.appearance;
+  const place = s.weather;
   const weather = forecast && forecast !== "error" ? describe(forecast.current.code, forecast.current.day) : null;
   const { period } = formatTimeParts(now);
   const date = new Intl.DateTimeFormat(locale(), { weekday: "long", day: "numeric", month: "long" }).format(now);
@@ -117,18 +123,35 @@ function Header() {
 
   return (
     <div className="relative flex items-end justify-between">
-      <div>
-        <div className={`flex ${stacked ? "items-center" : "items-baseline"} gap-1 leading-none tracking-[-0.03em] text-label`}>
-          <CompactClock
-            style={appearance.clockStyle}
-            now={now}
-            size={stacked ? 26 : 34}
-            height={stacked ? 58 : 40}
-            weight={appearance.clockOpenWeight}
-            seconds={liveSeconds}
-            showSeconds={withSeconds}
-          />
-          {period && appearance.clockShowPeriod && <span className="text-title tracking-normal text-label-3">{period}</span>}
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className={`flex ${stacked ? "items-center" : "items-baseline"} gap-1 leading-none tracking-[-0.03em] text-label`}>
+            <CompactClock
+              style={appearance.clockStyle}
+              now={now}
+              size={stacked ? 26 : 34}
+              height={stacked ? 58 : 40}
+              weight={appearance.clockOpenWeight}
+              seconds={liveSeconds}
+              showSeconds={withSeconds}
+            />
+            {period && appearance.clockShowPeriod && <span className="text-title tracking-normal text-label-3">{period}</span>}
+          </div>
+          {p?.show !== false && (p?.showPhoto !== false || p?.showName !== false) && (
+            <>
+              <span aria-hidden className="h-6 w-px shrink-0 bg-separator" />
+              <span className="flex min-w-0 items-center gap-1.5">
+                {p?.showPhoto !== false && (
+                  <ProfileAvatar photo={profile.photo} name={profile.name} size={30} />
+                )}
+                {p?.showName !== false && (
+                  <span className="whitespace-nowrap text-[13px] font-semibold tracking-[-0.015em] text-label">
+                    {profile.name}
+                  </span>
+                )}
+              </span>
+            </>
+          )}
         </div>
         <div className="mt-1 text-footnote text-label-3">{date}</div>
       </div>
@@ -197,19 +220,7 @@ function Activity() {
     item = {
       key: "media",
       tab: "media",
-      icon: np.artwork ? (
-        // Same layoutId as the cover in Now Playing, so a click flies it there.
-        <motion.img
-          layoutId={ARTWORK_LAYOUT_ID}
-          transition={springs.morph}
-          src={np.artwork}
-          alt=""
-          draggable={false}
-          className="size-7 rounded-[6px] object-cover"
-        />
-      ) : (
-        <MusicNoteSimple size={18} weight="fill" className="text-label-2" />
-      ),
+      icon: <ActivityArtwork np={np} />,
       title: np.title,
       detail: np.artist,
       trailing: <Equalizer playing={np.isPlaying} />,
@@ -229,10 +240,14 @@ function Activity() {
             exit={{ opacity: 0, filter: "blur(4px)", transition: content.exit }}
           >
             <span className="flex size-7 shrink-0 items-center justify-center">{item.icon}</span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-footnote font-medium text-label">{item.title}</span>
-              <span className="block truncate text-caption text-label-3">{item.detail}</span>
-            </span>
+            {item.key === "media" && np ? (
+              <MediaText np={np} />
+            ) : (
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-footnote font-medium text-label">{item.title}</span>
+                <span className="block truncate text-caption text-label-3">{item.detail}</span>
+              </span>
+            )}
             {item.trailing && <span className="shrink-0 pr-1">{item.trailing}</span>}
           </motion.button>
         ) : (
@@ -254,5 +269,62 @@ function Activity() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+/** The media cover; the outer box keeps the shared fly-to-Now-Playing layout. */
+function ActivityArtwork({ np }: { np: NowPlaying }) {
+  const artwork = useSmoothArtwork(np.artwork);
+  return (
+    <motion.span
+      layoutId={ARTWORK_LAYOUT_ID}
+      transition={springs.morph}
+      className="relative block size-7 shrink-0 overflow-hidden rounded-[6px]"
+    >
+      <AnimatePresence initial={false}>
+        {artwork ? (
+          <motion.img
+            key={artwork}
+            src={artwork}
+            alt=""
+            draggable={false}
+            className="absolute inset-0 size-full object-cover"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: artworkSwap.enter }}
+            exit={{ opacity: 0, transition: artworkSwap.exit }}
+          />
+        ) : (
+          <motion.span
+            key="note"
+            className="grid size-full place-items-center text-label-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: artworkSwap.enter }}
+            exit={{ opacity: 0, transition: artworkSwap.exit }}
+          >
+            <MusicNoteSimple size={18} weight="fill" />
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </motion.span>
+  );
+}
+
+/** Crossfades title/artist when the player moves to the next track. */
+function MediaText({ np }: { np: NowPlaying }) {
+  return (
+    <span className="relative min-w-0 flex-1">
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={`${np.appId}\u0000${np.title}\u0000${np.artist}`}
+          className="block min-w-0"
+          initial={{ opacity: 0, transform: "translateY(4px)" }}
+          animate={{ opacity: 1, transform: "translateY(0px)", transition: content.enter }}
+          exit={{ opacity: 0, transform: "translateY(-4px)", transition: content.exit }}
+        >
+          <span className="block truncate text-footnote font-medium text-label">{np.title}</span>
+          <span className="block truncate text-caption text-label-3">{np.artist}</span>
+        </motion.span>
+      </AnimatePresence>
+    </span>
   );
 }

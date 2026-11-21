@@ -8,7 +8,13 @@ type Animation = Settings["appearance"]["lyricsAnimation"];
  * pill uses Motion; these previews use keyframes so they stay cheap and pause
  * when the settings page closes.
  */
-export function LyricAnimationPreview({ animation }: { animation: Animation }) {
+export function LyricAnimationPreview({
+  animation,
+  keepRevealed = false,
+}: {
+  animation: Animation;
+  keepRevealed?: boolean;
+}) {
   const sample = "When you light the candle";
   if (animation === "word") {
     return (
@@ -31,7 +37,13 @@ export function LyricAnimationPreview({ animation }: { animation: Animation }) {
   }
   return (
     <div className="flex h-full items-center justify-center overflow-hidden px-1 text-[9px] font-semibold whitespace-nowrap text-white">
-      <LyricEffect animation={animation} text="light the candle" index={0} preview />
+      <LyricEffect
+        animation={animation}
+        text="light the candle"
+        index={0}
+        preview
+        keepRevealed={keepRevealed}
+      />
     </div>
   );
 }

@@ -37,6 +37,10 @@ export function createNativeMedia(): MediaSource {
   let artHoldUntil = 0;
   let artHoldTimer: number | undefined;
   const ART_HOLD_MS = 1500;
+  // Track changes can briefly report no session. Keep the old track for a moment
+  // instead of flashing the empty state, then show it if the player really stopped.
+  let nullHoldTimer: number | undefined;
+  const NULL_HOLD_MS = 2000;
 
   let lastRaw: NativeNowPlaying | null = null;
 
@@ -45,10 +49,20 @@ export function createNativeMedia(): MediaSource {
     if (np && state && performance.now() < seekGuardUntil && np.title === state.title) {
       np = { ...np, position: livePositionOf(state) };
     }
-    if (!np) {
-      state = null;
-      return notify();
+    if (!np || !np.title.trim()) {
+      // The current session is still there: wait through the gap between tracks.
+      if (!state) return;
+      if (nullHoldTimer === undefined) {
+        nullHoldTimer = window.setTimeout(() => {
+          nullHoldTimer = undefined;
+          state = null;
+          notify();
+        }, NULL_HOLD_MS);
+      }
+      return;
     }
+    window.clearTimeout(nullHoldTimer);
+    nullHoldTimer = undefined;
     if (!np.artwork && state?.artwork) {
       if (np.title !== state.title) {
         artHoldUntil = performance.now() + ART_HOLD_MS;
@@ -61,7 +75,7 @@ export function createNativeMedia(): MediaSource {
     }
     // Keep the accent of the previous cover until the new one is computed, no flash.
     const sameArtwork = state?.artwork === np.artwork;
-    state = { ...np, accent: sameArtwork && state ? state.accent : "#ffffff", updatedAt: performance.now() };
+    state = { ...np, accent: state?.accent ?? "#ffffff", updatedAt: performance.now() };
     notify();
     if (!sameArtwork) {
       void accentFrom(np.artwork).then((accent) => {

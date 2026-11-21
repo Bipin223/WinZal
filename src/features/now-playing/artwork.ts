@@ -11,6 +11,9 @@ const EMPTY_AFTER_MS = 800;
 export function useSmoothArtwork(src: string | null): string | null {
   const [shown, setShown] = useState(src);
   useEffect(() => {
+    // The first render already has `src`; don't decode the same cover again on
+    // every tab mount. Only a real change needs the swap.
+    if (src === shown) return;
     let alive = true;
     if (!src) {
       const id = window.setTimeout(() => alive && setShown(null), EMPTY_AFTER_MS);
@@ -28,6 +31,6 @@ export function useSmoothArtwork(src: string | null): string | null {
     return () => {
       alive = false;
     };
-  }, [src]);
+  }, [src, shown]);
   return shown;
 }

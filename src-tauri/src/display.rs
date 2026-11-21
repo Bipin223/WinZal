@@ -17,14 +17,14 @@ use std::thread;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, State, WebviewWindow};
+use tauri::{AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, State, WebviewWindow};
 use windows::core::{BOOL, PWSTR};
 use windows::Win32::Foundation::{CloseHandle, HWND, LPARAM, RECT};
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST};
 use windows::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION};
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GetClassNameW, GetDesktopWindow, GetForegroundWindow, GetShellWindow, GetWindow, GetWindowRect, GetWindowTextLengthW, GetWindowTextW,
-    GetWindowThreadProcessId, IsWindowVisible, IsZoomed, GW_OWNER,
+    GetWindowThreadProcessId, IsWindowVisible, IsZoomed, ShowWindow, GW_OWNER, SW_SHOW,
 };
 
 use crate::hit_test::HitState;
@@ -38,6 +38,21 @@ pub struct DisplayState(Mutex<Config>);
 /// fullscreen hiding would normally hide it (movie/video fullscreen).
 #[derive(Default)]
 pub struct NotifyState(AtomicBool);
+
+/// The vault hides the notch while the Windows Hello prompt is open. The
+/// display self-heal must not pop it back over that secure prompt.
+#[derive(Default)]
+pub struct ShowGuard(AtomicBool);
+
+impl ShowGuard {
+    pub fn hold(&self, on: bool) {
+        self.0.store(on, Ordering::Relaxed);
+    }
+
+    pub fn held(&self) -> bool {
+        self.0.load(Ordering::Relaxed)
+    }
+}
 
 #[tauri::command]
 pub fn notification_visible(active: bool, state: State<'_, NotifyState>, window: tauri::WebviewWindow) {
@@ -130,6 +145,19 @@ pub fn display_apply(config: Config, window: WebviewWindow, state: State<'_, Dis
     }
 }
 
+/// Match the transparent window to the monitor width, in logical px.
+fn fit_monitor_width(window: &WebviewWindow, monitor: &tauri::Monitor) -> tauri::Result<()> {
+    let scale = monitor.scale_factor();
+    let target = (monitor.size().width as f64 / scale).max(760.0);
+    let outer = window.outer_size()?;
+    let current = outer.width as f64 / scale;
+    if (current - target).abs() > 1.0 {
+        let height = outer.height as f64 / scale;
+        window.set_size(LogicalSize::new(target, height))?;
+    }
+    Ok(())
+}
+
 /// Centered and flush at the top of the chosen monitor (primary otherwise).
 pub fn place(window: &WebviewWindow, state: &DisplayState) -> tauri::Result<()> {
     let (wanted, offset) = {
@@ -141,6 +169,13 @@ pub fn place(window: &WebviewWindow, state: &DisplayState) -> tauri::Result<()> 
         .and_then(|name| monitors.into_iter().find(|m| m.name() == Some(&name)))
         .or(window.primary_monitor()?);
     let Some(monitor) = monitor else { return Ok(()) };
+
+    // The top-left switcher lives at the real left edge of the screen, so the
+    // transparent window spans the monitor width. The notch stays centered;
+    // its drag offset is applied to the shape in CSS instead of moving the
+    // window. Height changes preserve this width (set_notch_height).
+    fit_monitor_width(window, &monitor)?;
+
     // Set twice: when moving to a monitor with different scaling, the window size
     // only updates after the first move.
     for _ in 0..2 {
@@ -206,12 +241,24 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
                     app.state::<HitState>().refresh();
                 }
             }
+            if !hidden && !app.state::<ShowGuard>().held() {
+                // If Windows externally hid the window (Show Desktop / session
+                // transition), put it back. Do not reorder an already visible
+                // window: recording overlays and the shell may legitimately be
+                // above the notch.
+                if !unsafe { IsWindowVisible(own).as_bool() } {
+                    let _ = window.show();
+                    let _ = unsafe { ShowWindow(own, SW_SHOW) };
+                    let _ = window.set_always_on_top(true);
+                    app.state::<HitState>().refresh();
+                }
+            }
             // A notification must stay above fullscreen media, not just the
             // currently focused window. Reapply while it is visible.
             if notify && !hidden {
                 let _ = window.set_always_on_top(true);
             }
-            // New foreground window: reapply "on top" in case it covered us.
+            // New foreground window: reapply the normal topmost style.
             if !hidden && foreground != last_foreground {
                 let _ = window.set_always_on_top(true);
             }

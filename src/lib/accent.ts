@@ -5,19 +5,30 @@
  */
 const FALLBACK = "#ffffff";
 /**
- * Covers are data URLs, so an unbounded map would keep every track's base64
- * string alive for the whole session. A small LRU is enough for the few covers
- * on screen and lets the rest be collected.
+ * Covers are data URLs. Keeping them as keys would hold every recent album's
+ * full base64 string for the session; a compact sampled hash keeps the same LRU
+ * without retaining the image itself.
  */
 const CACHE_LIMIT = 24;
 const cache = new Map<string, string>();
 
+/** Small, fast FNV-1a over ~64 evenly spaced samples of the data URL. */
+function coverKey(src: string): string {
+  let hash = 0x811c9dc5;
+  const step = Math.max(1, Math.floor(src.length / 64));
+  for (let i = 0; i < src.length; i += step) {
+    hash = Math.imul(hash ^ src.charCodeAt(i), 0x01000193);
+  }
+  return `${src.length}:${hash >>> 0}`;
+}
+
 export async function accentFrom(src: string | null): Promise<string> {
   if (!src) return FALLBACK;
-  const hit = cache.get(src);
+  const key = coverKey(src);
+  const hit = cache.get(key);
   if (hit) {
-    cache.delete(src);
-    cache.set(src, hit);
+    cache.delete(key);
+    cache.set(key, hit);
     return hit;
   }
 
@@ -54,7 +65,7 @@ export async function accentFrom(src: string | null): Promise<string> {
     const oldest = cache.keys().next().value;
     if (oldest !== undefined) cache.delete(oldest);
   }
-  cache.set(src, color);
+  cache.set(key, color);
   return color;
 }
 

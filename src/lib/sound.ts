@@ -126,11 +126,6 @@ export function playAlarm(sound: AlarmSound, volume: number, duration: AlarmDura
   return stop;
 }
 
-/** Is an alarm playing right now? */
-export function alarmRinging(): boolean {
-  return stopCurrent !== null;
-}
-
 /**
  * Short iPhone-like charging chime: two soft rising bell notes. Synthesised,
  * so there is no extra audio file or memory cost. Volume follows the alarm

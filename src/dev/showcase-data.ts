@@ -30,36 +30,6 @@ export const showcaseTracks = [
 /** Where the first track starts (seconds). */
 export const showcaseStartPosition = 72;
 
-// ---------- Trading 212 ----------
-
-/*
- * A plausible depot. Values in EUR; US stocks converted at 1.17 USD/EUR.
- *   VWCE  72 × €138.40            avg €112.35
- *   NVDA  38 × $183.20            avg $121.50
- *   MSFT   9 × $512.30            avg $428.00
- *   AAPL  16 × $246.80            avg $229.40
- *   ASML   4 × €712.60            avg €748.10
- * Positions €26,081.10 + cash €612.45 = €26,693.55. Today +€312.40 (+1.18 %).
- */
-const usd = (v: number) => Math.round((v / 1.17) * 100) / 100;
-const position = (ticker: string, name: string, quantity: number, averagePrice: number, currentPrice: number, priceCurrency: "EUR" | "USD") => {
-  const conv = priceCurrency === "USD" ? usd : (v: number) => Math.round(v * 100) / 100;
-  const value = conv(quantity * currentPrice);
-  const cost = conv(quantity * averagePrice);
-  return { ticker, name, quantity, averagePrice, currentPrice, priceCurrency, value, cost, pnl: Math.round((value - cost) * 100) / 100 };
-};
-
-export const showcasePositions = [
-  position("VWCE", "Vanguard FTSE All-World (Acc)", 72, 112.35, 138.4, "EUR"),
-  position("NVDA", "NVIDIA", 38, 121.5, 183.2, "USD"),
-  position("MSFT", "Microsoft", 9, 428.0, 512.3, "USD"),
-  position("AAPL", "Apple", 16, 229.4, 246.8, "USD"),
-  position("ASML", "ASML Holding", 4, 748.1, 712.6, "EUR"),
-];
-export const showcaseCash = 612.45;
-export const showcaseRealized = 418.2;
-export const showcaseDayChange = 312.4;
-
 // ---------- Discord ----------
 
 export const showcaseCall = {

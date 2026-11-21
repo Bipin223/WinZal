@@ -38,10 +38,3 @@ export const GpuIcon = make("GpuIcon", () => (
   </>
 ));
 
-/** Portfolio: a calm price line going up. */
-export const DepotIcon = make("DepotIcon", () => (
-  <>
-    <path d="M32 184l56-56 40 32 96-88" />
-    <path d="M168 72h56v56" />
-  </>
-));

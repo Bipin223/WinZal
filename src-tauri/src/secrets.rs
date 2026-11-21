@@ -52,7 +52,6 @@ pub fn secret_set(name: String, value: String) -> Result<(), String> {
     unsafe { CredWriteW(&cred, 0) }.map_err(|e| e.message())
 }
 
-#[tauri::command]
 pub fn secret_delete(name: String) -> Result<(), String> {
     let target = target(&name)?;
     // Not existing isn't an error.

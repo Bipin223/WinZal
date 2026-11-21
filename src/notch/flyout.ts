@@ -11,7 +11,7 @@ export const flyout = createStore<{ kind: FlyoutKind | null; side: "left" | "rig
   side: "right",
 });
 
-export function openFlyout(kind: FlyoutKind) {
+function openFlyout(kind: FlyoutKind) {
   flyout.set({ kind, side: kind === "wifi" ? "left" : "right" });
 }
 

@@ -99,6 +99,7 @@ export function LiveActivity({ np }: { np: NowPlaying }) {
             end={end}
             wordTimes={words}
             np={np}
+            keepRevealed={appearance.lyricsKeepRevealed}
           />
         ) : (
           <AnimatePresence mode="popLayout" initial={false}>
@@ -190,6 +191,7 @@ type LyricLineProps = {
   end: number;
   wordTimes?: LyricWordTime[] | null;
   np: NowPlaying;
+  keepRevealed?: boolean;
 };
 
 /**
@@ -247,6 +249,7 @@ function LyricLine({
   end,
   wordTimes = null,
   np,
+  keepRevealed = false,
 }: LyricLineProps) {
   const inline = layout === "inline";
   const apple = animation === "apple";
@@ -297,7 +300,16 @@ function LyricLine({
             ) : apple ? (
               current
             ) : (
-              <LyricEffect animation={animation} text={current} index={index} start={start} end={end} wordTimes={wordTimes} np={np} />
+              <LyricEffect
+                animation={animation}
+                text={current}
+                index={index}
+                start={start}
+                end={end}
+                wordTimes={wordTimes}
+                np={np}
+                keepRevealed={keepRevealed}
+              />
             )}
           </LyricText>
         </div>

@@ -63,6 +63,7 @@ const DEFAULTS: Appearance = {
   lyricsVisualizerStyle: "bars",
   lyricsGlowStyle: "wave",
   lyricsAnimation: "word",
+  lyricsKeepRevealed: false,
   gpuAcceleration: false,
   gpuPreference: "auto",
 };

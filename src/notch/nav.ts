@@ -6,7 +6,7 @@ const LAST_TAB_KEY = "notch:last-tab";
 function initialTab(): string {
   try {
     const saved = localStorage.getItem(LAST_TAB_KEY);
-    if (saved && saved !== "settings") return saved;
+    if (saved && saved !== "settings" && saved !== "recent") return saved;
   } catch {
     // Broken storage → first launch behaviour.
   }

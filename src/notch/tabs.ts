@@ -18,6 +18,8 @@ import {
 import { ChatBubbleIcon } from "../ui/ChatBubbleIcon";
 import { DiscordLogo } from "../ui/brands";
 import { OverviewView } from "../features/overview/OverviewView";
+import { AppsView } from "../features/apps/AppsView";
+import { AppsIcon } from "../features/apps/AppsIcon";
 import { NowPlayingView } from "../features/now-playing/NowPlayingView";
 import { TimerView } from "../features/timer/TimerView";
 import { TodosView } from "../features/todos/TodosView";
@@ -53,6 +55,7 @@ export interface NotchTab {
 
 export const tabs: NotchTab[] = [
   { id: "overview", label: "Overview", icon: SquaresFour, size: { w: 520, h: 296 }, View: OverviewView },
+  { id: "apps", label: "Apps", icon: AppsIcon as unknown as Icon, size: { w: 520, h: 380 }, View: AppsView },
   { id: "media", label: "Now Playing", icon: MusicNotesSimple, size: { w: 520, h: 232 }, View: NowPlayingView },
   { id: "timer", label: "Timer", icon: Timer, size: { w: 520, h: 192 }, View: TimerView },
   { id: "todos", label: "To-Dos", icon: CheckCircle, size: { w: 520, h: 276 }, View: TodosView },

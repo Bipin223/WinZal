@@ -82,9 +82,6 @@ const easeOut = [0.23, 1, 0.32, 1] as const;
 /** Quick fade for overlays ("Copied", status changes). */
 export const fade = { duration: 0.16 * slow, ease: easeOut } satisfies Transition;
 
-/** Crossfade for large areas (covers, charts), a bit calmer. */
-export const crossfade = { duration: 0.4 * slow, ease: "easeInOut" } satisfies Transition;
-
 /**
  * Cover swap: the new image fades in on top, the old one leaves a beat later, so
  * there is never a gap or a hard cut (same calm pace as the accent color).

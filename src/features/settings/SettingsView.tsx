@@ -29,6 +29,7 @@ import { alarmSounds, playAlarm, stopAlarm, type AlarmDuration } from "../../lib
 import { nav } from "../../notch/nav";
 import { requestSize } from "../../notch/size";
 import { tabs } from "../../notch/tabs";
+import { holdOpen } from "../../notch/useNotchState";
 import { autostart, display, fetchFps, fpsHelperReady, requestToastAccess, secrets, toastAccess, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName, type ToastAccess } from "../../platform/services";
 import { settings, updateAsk, updateSettings, type AskProvider, type Settings, type TypeRole, DEFAULT_TYPOGRAPHY } from "../../settings/store";
 import { TYPE_ROLES, typeValues } from "../appearance/typography";
@@ -41,6 +42,8 @@ import { discordState, reconnectDiscord } from "../discord/store";
 import { fps } from "../system/gaming";
 import { FpsStat, GamingBars, GamingStat } from "../system/LiveGaming";
 import { PlaceSearch } from "../weather/WeatherView";
+import { ProfileAvatar } from "../profile/Avatar";
+import { useAccount } from "../profile/store";
 import { AppearanceView } from "../appearance/AppearanceView";
 import { MusicSettings } from "./MusicSettings";
 import { AboutView } from "./AboutView";
@@ -454,6 +457,219 @@ function Ask() {
   );
 }
 
+/** Center-crops a picked image to a 320 px JPEG data URL; small enough for settings. */
+async function squarePhoto(file: File): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.decoding = "async";
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("image"));
+      img.src = url;
+    });
+    const side = 320;
+    const canvas = document.createElement("canvas");
+    canvas.width = side;
+    canvas.height = side;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("canvas");
+    const edge = Math.min(img.naturalWidth, img.naturalHeight);
+    ctx.drawImage(
+      img,
+      (img.naturalWidth - edge) / 2,
+      (img.naturalHeight - edge) / 2,
+      edge,
+      edge,
+      0,
+      0,
+      side,
+      side,
+    );
+    return canvas.toDataURL("image/jpeg", 0.86);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function ProfileSettings() {
+  const s = settings.use();
+  const account = useAccount();
+  const pickerRef = useRef<HTMLInputElement | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const pickingRef = useRef(false);
+  const p = s.profile;
+  const name = p?.name ?? "";
+  const customPhoto = p?.photo ?? "";
+  const shownName = name.trim() || account.name || t("You");
+
+  // The native file dialog takes focus. Hold the notch open until the picker
+  // returns, otherwise Settings unmounts before the change event is delivered.
+  const releasePicker = () => {
+    if (!pickingRef.current) return;
+    pickingRef.current = false;
+    setPicking(false);
+    holdOpen(false);
+    const input = pickerRef.current;
+    pickerRef.current = null;
+    input?.remove();
+  };
+
+  const choose = () => {
+    if (busy || pickingRef.current) return;
+    pickingRef.current = true;
+    setPicking(true);
+    holdOpen(true);
+    // Create the file input only while needed. Keeping a native file input
+    // mounted in every Settings visit retains WebView file-chooser state.
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/png,image/jpeg,image/webp,image/bmp";
+    input.style.position = "fixed";
+    input.style.left = "-9999px";
+    input.style.width = "1px";
+    input.style.height = "1px";
+    input.style.opacity = "0";
+    input.onchange = () => {
+      const picked = input.files?.[0];
+      input.value = "";
+      if (picked) void pick(picked).finally(releasePicker);
+      else releasePicker();
+    };
+    input.addEventListener("cancel", releasePicker);
+    pickerRef.current = input;
+    document.body.appendChild(input);
+    input.click();
+  };
+
+  useEffect(() => {
+    if (!picking) return;
+    let focusTimer: number | undefined;
+    const onFocus = () => {
+      // Focus returns before the change event on some WebView2 builds.
+      window.clearTimeout(focusTimer);
+      focusTimer = window.setTimeout(releasePicker, 1500);
+    };
+    window.addEventListener("focus", onFocus);
+    const safety = window.setTimeout(releasePicker, 60_000);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.clearTimeout(focusTimer);
+      window.clearTimeout(safety);
+    };
+    // releasePicker only reads refs and stable setters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picking]);
+
+  useEffect(
+    () => () => {
+      if (pickingRef.current) {
+        pickingRef.current = false;
+        holdOpen(false);
+        pickerRef.current?.remove();
+        pickerRef.current = null;
+      }
+    },
+    [],
+  );
+
+  async function pick(picked: File) {
+    if (/\.(heic|heif)$/i.test(picked.name)) {
+      setError(t("HEIC isn't supported here. Choose JPG or PNG."));
+      return;
+    }
+    if (!picked.type.startsWith("image/")) {
+      setError(t("Choose an image file."));
+      return;
+    }
+    if (picked.size > 12 * 1024 * 1024) {
+      setError(t("Choose an image under 12 MB."));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const photo = await squarePhoto(picked);
+      updateSettings((cur) => ({ profile: { ...cur.profile, photo } }));
+    } catch {
+      setError(t("Could not read that image. Choose JPG or PNG."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Group title={t("Profile")} id="settings-profile">
+      <Row
+        label={t("Photo")}
+        status={
+          customPhoto
+            ? t("Custom photo")
+            : account.photo
+              ? t("Windows account photo")
+              : t("No photo yet")
+        }
+        error={error}
+      >
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={choose}
+            disabled={busy || picking}
+            className="pressable rounded-full disabled:opacity-45"
+            aria-label={t("Choose photo")}
+            title={t("Choose photo")}
+          >
+            <ProfileAvatar photo={customPhoto || account.photo} name={shownName} size={30} />
+          </button>
+          <Button onClick={choose} disabled={busy || picking}>
+            {picking ? t("Choosing …") : busy ? t("Reading …") : t("Choose photo")}
+          </Button>
+          {customPhoto && (
+            <Button onClick={() => updateSettings((cur) => ({ profile: { ...cur.profile, photo: "" } }))}>
+              {t("Remove")}
+            </Button>
+          )}
+        </div>
+      </Row>
+      <Row
+        label={t("Name")}
+        status={!name.trim() && account.name ? t("Windows name: {name}", { name: account.name }) : undefined}
+      >
+        <TextField
+          value={name}
+          onChange={(value) => updateSettings((cur) => ({ profile: { ...cur.profile, name: value } }))}
+          placeholder={account.name || t("Your name")}
+          width="w-44"
+        />
+      </Row>
+      <Row label={t("Show in Overview")}>
+        <Switch
+          label={t("Show in Overview")}
+          checked={p?.show !== false}
+          onChange={(show) => updateSettings((cur) => ({ profile: { ...cur.profile, show } }))}
+        />
+      </Row>
+      <Row label={t("Show photo")}>
+        <Switch
+          label={t("Show photo")}
+          checked={p?.showPhoto !== false}
+          onChange={(showPhoto) => updateSettings((cur) => ({ profile: { ...cur.profile, showPhoto } }))}
+        />
+      </Row>
+      <Row label={t("Show name")}>
+        <Switch
+          label={t("Show name")}
+          checked={p?.showName !== false}
+          onChange={(showName) => updateSettings((cur) => ({ profile: { ...cur.profile, showName } }))}
+        />
+      </Row>
+    </Group>
+  );
+}
+
 function General() {
   const s = settings.use();
   const [auto, setAuto] = useState<boolean | null>(null);
@@ -463,6 +679,7 @@ function General() {
 
   return (
     <>
+      <ProfileSettings />
       <Group title={t("Opening")}>
         <Row label={t("Open")}>
           <Segmented

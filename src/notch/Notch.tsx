@@ -3,6 +3,7 @@ import { AnimatePresence, animate, motion, useMotionValue, type Transition } fro
 import { Drop, GearSix, Ghost, Lightning, MoonStars, PushPin } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
 import { useNowPlaying } from "../platform/media";
+import { systemControls } from "../platform/services";
 import { uiFontFamily } from "../ui/font";
 import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onSilentExit, onTrayOpen, screenLuminance, setHitRect, setMemoryLow, setNotchHeight, setSilent } from "../platform/native";
 import { PrivacyDots } from "../features/privacy/PrivacyDots";
@@ -15,10 +16,12 @@ import { LiveSlot, useLiveActivity } from "./live";
 import { GamingSatellite } from "./GamingSatellite";
 import { TimerSatellite } from "./TimerSatellite";
 import { ActivitySwitch } from "./ActivitySwitch";
+import { RecentSatellite } from "./RecentSatellite";
+import { recentHub } from "./recentHub";
 import { callView, useDiscordCall } from "../features/discord/store";
 import { FlyoutLayer } from "./FlyoutLayer";
 import { closeFlyout, flyout } from "./flyout";
-import { notchOpenRequest } from "./openRequest";
+import { notchCloseRequest, notchOpenRequest } from "./openRequest";
 import { chargingPulse, lowBatteryPulse, useChargingWatch } from "./useChargingWatch";
 import { NotificationLayer } from "../notifications/NotificationLayer";
 import { notifications } from "../notifications/store";
@@ -56,6 +59,8 @@ function fillWithAlpha(hex: string, alpha: number): string {
 const RESUME_MS = 60_000;
 /** Closed this long → lower WebView2's memory target. */
 const MEMORY_LOW_AFTER_MS = 60_000;
+/** Long idle: wake once in a while only to let the renderer release pages again. */
+const MEMORY_LOW_REPEAT_MS = 5 * 60_000;
 /** Compact the transparent window while closed; the open panel needs the full height. */
 const CLOSED_WINDOW_HEIGHT = 120;
 const OPEN_WINDOW_HEIGHT = 560;
@@ -83,6 +88,7 @@ export function Notch() {
   const [measuredClockWidth, setMeasuredClockWidth] = useState(0);
   const [callTitleWidth, setCallTitleWidth] = useState(0);
   const clockRow = useRef<HTMLDivElement>(null);
+  const recent = recentHub.use();
   const { tools: toolSettings, display: displaySettings, appearance, gaming } = settings.use();
   const [backdropLum, setBackdropLum] = useState(0.5);
   const liquidDynamic = appearance.material === "liquid" && appearance.liquidDynamic;
@@ -279,6 +285,9 @@ export function Notch() {
       }
     : baseShape;
   const tightHit = lineView;
+  // A separate top-left switcher: it stays put while the notch opens, peeks or
+  // shows an alert. Only ghost/line mode (where the whole UI steps back) hides it.
+  const recentVisible = !silent && !lineView;
   const finalShape = floating
     ? {
         ...sizedShape,
@@ -369,7 +378,7 @@ export function Notch() {
       // must never close them or the notch behind them.
       if (
         target instanceof Element &&
-        target.closest("[data-flyout-hit], [data-notification-hit]")
+        target.closest("[data-flyout-hit], [data-notification-hit], [data-recent-hub]")
       ) {
         return;
       }
@@ -405,8 +414,8 @@ export function Notch() {
     if (status !== "open" && flyout.get().kind !== null) closeFlyout();
   }, [status]);
 
-  useNativeBridge(hitRef, handleEnter, onPointerLeave, hideForNote);
   const drag = useDragToMove(status);
+  useNativeBridge(hitRef, handleEnter, onPointerLeave, hideForNote, drag.offset);
 
 
   // Three quick clicks toggle Windows Do Not Disturb.
@@ -420,6 +429,7 @@ export function Notch() {
   useEffect(() => onShortcut(() => toggle() === "open" && keyboardFocus(true)), [toggle]);
   // A downward drag on a notification asks the notch to open.
   useEffect(() => notchOpenRequest.subscribe(() => open()), [open]);
+  useEffect(() => notchCloseRequest.subscribe(dismiss), [dismiss]);
   useEffect(
     () =>
       onTrayOpen((tab) => {
@@ -435,18 +445,22 @@ export function Notch() {
     if (status === "closed") keyboardFocus(false);
   }, [status]);
 
-  // A 760×560 transparent always-on-top window is far more compositor work
-  // than the closed pill. Keep only the top 120 px while closed, and expand
-  // before the open panel animates in.
+  // A 1260×560 transparent always-on-top window is far more compositor work
+  // than the closed pill. Keep only the top 120 px while closed, expand for the
+  // open panel, and grow just enough for the Recent hover list.
   useEffect(() => {
     if (!isNative) return;
     if (status !== "closed") {
       setNotchHeight(OPEN_WINDOW_HEIGHT);
       return;
     }
+    if (recent.active) {
+      setNotchHeight(Math.max(CLOSED_WINDOW_HEIGHT, recent.height));
+      return;
+    }
     const id = window.setTimeout(() => setNotchHeight(CLOSED_WINDOW_HEIGHT), 450);
     return () => window.clearTimeout(id);
-  }, [status]);
+  }, [status, recent.active, recent.height]);
 
   // After a minute closed, let WebView2 lower its memory target; the first
   // hover/peek restores normal before the notch opens, so paging stays hidden.
@@ -457,9 +471,16 @@ export function Notch() {
       setMemoryLow(false);
       return;
     }
-    const id = window.setTimeout(() => setMemoryLow(true), MEMORY_LOW_AFTER_MS);
+    let repeat: number | undefined;
+    const id = window.setTimeout(() => {
+      setMemoryLow(true);
+      // A long-running closed notch should return to the low floor even after
+      // small background touches; doing this while closed keeps it invisible.
+      repeat = window.setInterval(() => setMemoryLow(true), MEMORY_LOW_REPEAT_MS);
+    }, MEMORY_LOW_AFTER_MS);
     return () => {
       window.clearTimeout(id);
+      if (repeat !== undefined) window.clearInterval(repeat);
       setMemoryLow(false);
     };
   }, [status, gamingLive]);
@@ -487,7 +508,6 @@ export function Notch() {
         ["--accent" as string]: appearance.accent === "auto" ? np?.accent : appearance.accent,
         // Battery alerts are their own glass capsule: no notch body behind them.
         ["--color-notch" as string]: alertView ? "transparent" : fillWithAlpha(surface, notchAlpha),
-        transform: isNative ? undefined : `translateX(${drag.offset}px)`,
       }}
     >
       {/* Hit zone: bigger than the visible shape (Fitts) and flush with the top edge. */}
@@ -497,11 +517,25 @@ export function Notch() {
         // The line is meant to stay out of the way: only a hair of extra hit zone, so
         // the cursor has to be on it (the normal notch gets the generous Fitts margin).
         className={`${hideForNote ? "pointer-events-none" : "pointer-events-auto"} ${tightHit ? "px-1 pb-1" : "px-4 pb-3"}`}
-        style={{ minHeight: sticky.minHeight, paddingTop: topPad, cursor: drag.dragging ? "grabbing" : undefined }}
+        style={{
+          minHeight: sticky.minHeight,
+          paddingTop: topPad,
+          cursor: drag.dragging ? "grabbing" : undefined,
+          transform: `translateX(${drag.offset}px)`,
+        }}
         onPointerMove={sticky.onPointerMove}
         onPointerDown={drag.onPointerDown}
         // In Tauri, hover comes from the Rust poll (useNativeBridge), not the DOM.
-        onPointerEnter={isNative ? undefined : handleEnter}
+        // The detached Recent mark is its own hover surface; entering it must
+        // not also open the notch in the browser preview.
+        onPointerEnter={
+          isNative
+            ? undefined
+            : (event) => {
+                if (event.target instanceof Element && event.target.closest("[data-recent-hub]")) return;
+                handleEnter();
+              }
+        }
         onPointerLeave={isNative ? undefined : onPointerLeave}
         onClick={onClick}
       >
@@ -644,6 +678,16 @@ export function Notch() {
         <FlyoutLayer />
         </motion.div>
       </div>
+      <AnimatePresence>
+        {recentVisible && (
+          <RecentSatellite
+            key="recent-satellite"
+            floating={floating}
+            liquid={appearance.material === "liquid"}
+            onTaskView={() => void systemControls.taskView()}
+          />
+        )}
+      </AnimatePresence>
       <NotificationLayer />
     </div>
   );
@@ -1022,7 +1066,12 @@ function useNativeBridge(
   onEnter: () => void,
   onLeave: () => void,
   collapse = false,
+  revision = 0,
 ) {
+  // Hooked up by the effect below; lets the drag offset re-report the moved
+  // hit zone without rebuilding the observers on every pointer frame.
+  const scheduleRef = useRef<() => void>(() => {});
+
   useEffect(() => {
     const el = hitRef.current;
     if (!isNative || !el) return;
@@ -1079,6 +1128,7 @@ function useNativeBridge(
         report();
       });
     };
+    scheduleRef.current = schedule;
     const ro = new ResizeObserver(schedule);
     ro.observe(el);
     const refreshCards = () => {
@@ -1158,8 +1208,15 @@ function useNativeBridge(
       el.removeEventListener("focusin", onFocusIn);
       el.removeEventListener("focusout", onFocusOut);
       if (typing) holdOpen(false);
+      scheduleRef.current = () => {};
     };
   }, [hitRef, onEnter, onLeave, collapse]);
+
+  // The shape can move (drag, saved offset) without changing size. Re-report
+  // its screen rect after each move so click-through follows it.
+  useEffect(() => {
+    scheduleRef.current();
+  }, [revision]);
 }
 
 function isInteractive(el: EventTarget | null): boolean {

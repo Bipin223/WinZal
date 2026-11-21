@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { display } from "../platform/services";
 import { settings, updateSettings } from "../settings/store";
 import { holdOpen, type NotchStatus } from "./useNotchState";
@@ -33,7 +33,17 @@ export function useDragToMove(status: NotchStatus) {
   const moved = useRef(false);
   const lagRef = useRef(0);
   const lagTimer = useRef<number | undefined>(undefined);
-  const offset = live ?? saved;
+  // The window is full monitor width, so drag the shape itself. Keep the old
+  // travel range (a 1260 pill inside the window) so it cannot hit an edge.
+  const [viewport, setViewport] = useState(() => window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setViewport(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const limit = Math.max(0, (viewport - 1260) / 2);
+  const clamp = (value: number) => Math.max(-limit, Math.min(limit, value));
+  const offset = clamp(live ?? saved);
 
   const stopLag = () => {
     clearTimeout(lagTimer.current);
@@ -51,7 +61,6 @@ export function useDragToMove(status: NotchStatus) {
     const { pointerId: id, screenX: x } = e;
     const from = offset;
     let current = from;
-    let frame = 0;
     let lastX = x;
     moved.current = false;
     stopLag();
@@ -67,7 +76,7 @@ export function useDragToMove(status: NotchStatus) {
         holdOpen(true);
       }
 
-      // Soft follow: the window moves 1:1, the shape lags a touch and stretches.
+      // Soft follow: the shape moves 1:1, the inner body lags a touch and stretches.
       const nextLag = Math.max(-10, Math.min(10, -delta * 0.55 + lagRef.current * 0.3));
       lagRef.current = nextLag;
       setLag(nextLag);
@@ -77,10 +86,9 @@ export function useDragToMove(status: NotchStatus) {
         setLag(0);
       }, 90);
 
-      current = Math.abs(from + dx) < SNAP ? 0 : Math.round(from + dx);
+      const next = clamp(Math.round(from + dx));
+      current = Math.abs(next) < SNAP ? 0 : next;
       setLive(current);
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => applyDisplay(current));
     };
     const onUp = (ev: PointerEvent) => {
       if (ev.pointerId !== id) return;

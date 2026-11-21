@@ -77,6 +77,7 @@ export function LyricEffect({
   wordTimes = null,
   np = null,
   preview = false,
+  keepRevealed = false,
 }: {
   animation: LabAnimation;
   text: string;
@@ -86,10 +87,12 @@ export function LyricEffect({
   wordTimes?: LyricWordTime[] | null;
   np?: NowPlaying | null;
   preview?: boolean;
+  /** Keep the words that have already been sung visible. */
+  keepRevealed?: boolean;
 }) {
   if (animation === "glitch") return <GlitchText text={text} />;
   if (animation === "spot") return <SpotlightText text={text} start={start} end={end} wordTimes={wordTimes} np={np} preview={preview} />;
-  if (animation === "spark") return <SparkText text={text} start={start} end={end} wordTimes={wordTimes} np={np} preview={preview} />;
+  if (animation === "spark") return <SparkText text={text} start={start} end={end} wordTimes={wordTimes} np={np} preview={preview} keepRevealed={keepRevealed} />;
   if (animation === "orbit") return <OrbitText text={text} start={start} end={end} wordTimes={wordTimes} np={np} preview={preview} />;
   if (animation === "ambient") return <AmbientText text={text} start={start} end={end} wordTimes={wordTimes} np={np} preview={preview} />;
   return (
@@ -255,6 +258,7 @@ function SparkText({
   wordTimes,
   np,
   preview,
+  keepRevealed,
 }: {
   text: string;
   start: number;
@@ -262,6 +266,7 @@ function SparkText({
   wordTimes?: LyricWordTime[] | null;
   np: NowPlaying | null;
   preview: boolean;
+  keepRevealed: boolean;
 }) {
   const words = text.split(/\s+/).filter(Boolean);
   const refs = useRef<(HTMLSpanElement | null)[]>([]);
@@ -286,7 +291,9 @@ function SparkText({
     words.forEach((_, i) => {
       const el = refs.current[i];
       if (!el) return;
-      el.classList.toggle("dim", i !== active);
+      const sung = keepRevealed && i < active;
+      el.classList.toggle("dim", keepRevealed ? i > active : i !== active);
+      el.classList.toggle("revealed", sung);
       el.classList.toggle("focus", i === active);
     });
     if (np && !np.isPlaying) {

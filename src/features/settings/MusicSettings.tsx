@@ -265,7 +265,10 @@ export function MusicSettings() {
                   >
                     <div className="h-8 overflow-hidden rounded-[7px] bg-black">
                       {hoverAnim === animation.value ? (
-                        <LyricAnimationPreview animation={animation.value} />
+                        <LyricAnimationPreview
+                          animation={animation.value}
+                          keepRevealed={a.lyricsKeepRevealed}
+                        />
                       ) : (
                         <div className="flex h-full items-center justify-center px-1">
                           <span className="truncate text-[9px] font-semibold whitespace-nowrap text-white/80">When you light the candle</span>
@@ -280,6 +283,15 @@ export function MusicSettings() {
                 ))}
               </div>
             </div>
+            {a.lyricsAnimation === "spark" && (
+              <Row label={t("Keep sung words visible")}>
+                <Switch
+                  label={t("Keep sung words visible")}
+                  checked={a.lyricsKeepRevealed}
+                  onChange={(lyricsKeepRevealed) => set({ lyricsKeepRevealed })}
+                />
+              </Row>
+            )}
           </>
         )}
       </Group>
