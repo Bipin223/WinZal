@@ -1,5 +1,35 @@
 [
   {
+    "version": "1.7.14",
+    "date": "2026-11-21",
+    "items": [
+      {
+        "en": "New Recording tool: capture the screen with OBS, choose the display and quality, and show a recording overlay above the notch; Ctrl+Win+S starts and stops"
+      },
+      {
+        "en": "Top-left task switcher: an overlapping-windows button opens a soft icon-only grid of open windows on hover and Windows Task View on click"
+      },
+      {
+        "en": "Recent tool removed from the dock; the task switcher is now the single place for open windows"
+      },
+      {
+        "en": "Apps page with real app icons, search, pinning and drag-to-reorder; a profile card with your Windows avatar"
+      },
+      {
+        "en": "Spark lyrics: Keep sung words visible keeps already-sung words lit in the album accent instead of dimming them again"
+      },
+      {
+        "en": "Bluetooth flyout retries its first scan so paired devices appear as soon as the radio wakes up"
+      },
+      {
+        "en": "Recording overlays stay above the notch again; removed aggressive topmost forcing that blocked recording controls"
+      },
+      {
+        "en": "Less memory and dead code: smaller accent cache, idle trims and removed unused helpers, commands and the old lyric lab"
+      }
+    ]
+  },
+  {
     "version": "1.7.13",
     "date": "2026-10-30",
     "items": [
