@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.7.16",
+    "date": "2026-11-23",
+    "items": [
+      {
+        "en": "Screen capture in Recording: a camera button saves the full desktop to Pictures\\Notch and copies it to the clipboard, with the notch excluded from its own shot"
+      },
+      {
+        "en": "Notification cards now follow the notch material, including Liquid Glass with a tinted scrim and theme-aware text"
+      }
+    ]
+  },
+  {
     "version": "1.7.15",
     "date": "2026-11-23",
     "items": [
