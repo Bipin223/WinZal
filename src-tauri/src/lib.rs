@@ -119,37 +119,6 @@ fn set_rendering(mode: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Persist the render mode; the frontend relaunches the app afterwards.
-#[tauri::command]
-fn set_webview_render_mode(mode: String) -> Result<(), String> {
-    let value = match mode.as_str() {
-        "gpu" => "gpu",
-        "cpu" => "cpu",
-        other => return Err(format!("Unknown render mode: {other}")),
-    };
-    let path = render_mode_path().ok_or("LOCALAPPDATA is not available")?;
-    if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
-    }
-    std::fs::write(path, value).map_err(|e| e.to_string())
-}
-
-/// Persist which GPU the WebView should prefer; applies after a restart.
-#[tauri::command]
-fn set_gpu_preference(mode: String) -> Result<(), String> {
-    let value = match mode.as_str() {
-        "auto" => "auto",
-        "igpu" => "igpu",
-        "dgpu" => "dgpu",
-        other => return Err(format!("Unknown GPU preference: {other}")),
-    };
-    let path = gpu_preference_path().ok_or("LOCALAPPDATA is not available")?;
-    if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
-    }
-    std::fs::write(path, value).map_err(|e| e.to_string())
-}
-
 pub fn run() {
     // The NSIS build has no package identity. Without an explicit AUMID the
     // Windows notification listener can report "unavailable", so installed
@@ -250,8 +219,6 @@ pub fn run() {
             set_capture_hidden,
             screen_luminance,
             notch_prompt_mode,
-            set_webview_render_mode,
-            set_gpu_preference,
             set_rendering,
             audio::audio_levels,
             ai::ai_chat,
