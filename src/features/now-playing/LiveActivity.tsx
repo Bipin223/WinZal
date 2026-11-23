@@ -271,7 +271,9 @@ function LyricLine({
   const nextSize = Math.max(8, size - 3);
   return (
       <div className="relative z-10 flex min-w-0 max-w-full flex-col items-center justify-center">
-        <div className="w-full py-[2px]" style={{ overflowX: "clip", overflowY: "visible" }}>
+        {/* Only the pill bay clips the line. Clipping at the text's own layout
+            width used to cut the scaled focus word even when the bay had room. */}
+        <div className="w-full py-[2px]">
           <LyricText
             className="text-label"
             resetKey={`${index}-${animation}-${inline}-${size}-${weight}`}

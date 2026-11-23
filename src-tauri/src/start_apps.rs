@@ -1,9 +1,7 @@
 //! Lightweight Start-menu names + AppIDs. `apps.rs` also uses this for its list.
 
-use std::collections::HashMap;
 use std::os::windows::process::CommandExt;
 use std::process::{Command, Stdio};
-use std::sync::OnceLock;
 
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
@@ -41,23 +39,3 @@ pub fn list() -> Vec<(String, String)> {
         .collect()
 }
 
-static NAME_MAP: OnceLock<HashMap<String, String>> = OnceLock::new();
-
-/// Normalized display name -> Start AppID, loaded once per app session.
-pub fn name_map() -> &'static HashMap<String, String> {
-    NAME_MAP.get_or_init(|| {
-        let mut map = HashMap::new();
-        for (name, id) in list() {
-            map.entry(key(&name)).or_insert(id);
-        }
-        map
-    })
-}
-
-/// Letters and digits only, lowercase: "Discord" and "Discord " compare.
-pub fn key(name: &str) -> String {
-    name.chars()
-        .filter(|c| c.is_alphanumeric())
-        .flat_map(|c| c.to_lowercase())
-        .collect()
-}

@@ -21,7 +21,6 @@ mod mixer;
 mod obs;
 mod privacy;
 mod profile;
-mod recent;
 pub mod secrets;
 mod start_apps;
 mod system;
@@ -170,9 +169,16 @@ pub fn run() {
     let presentation = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyP);
     let silent = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyS);
     let capture = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyH);
+    let key_taskview = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::Tab);
     let power = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT | Modifiers::SHIFT), Code::KeyM);
-    let (h_shortcut, h_presentation, h_silent, h_capture, h_power) =
-        (shortcut.clone(), presentation.clone(), silent.clone(), capture.clone(), power.clone());
+    let (h_shortcut, h_presentation, h_silent, h_capture, h_taskview, h_power) = (
+        shortcut.clone(),
+        presentation.clone(),
+        silent.clone(),
+        capture.clone(),
+        key_taskview.clone(),
+        power.clone(),
+    );
 
     tauri::Builder::default()
         // A second launch doesn't open a second notch.
@@ -196,6 +202,8 @@ pub fn run() {
                         let _ = app.emit("notch://silent-toggle", ());
                     } else if pressed == &h_capture {
                         let _ = app.emit("notch://capture-toggle", ());
+                    } else if pressed == &h_taskview {
+                        let _ = taskview::task_view();
                     } else if pressed == &h_power {
                         let _ = app.emit("notch://power-cycle", ());
                     }
@@ -219,7 +227,6 @@ pub fn run() {
         .manage(vault::VaultState::default())
         .invoke_handler(tauri::generate_handler![
             hit_test::set_hit_rect,
-            hit_test::set_recent_hit,
             hit_test::set_pinned,
             hit_test::set_silent,
             media::media_get,
@@ -258,12 +265,9 @@ pub fn run() {
             secrets::secret_set,
             secrets::secret_has,
             system::system_stats,
-            taskview::task_view,
             profile::account_profile,
             apps::apps_list,
             apps::app_open,
-            recent::recent_apps,
-            recent::recent_focus,
             files::file_text,
             files::reveal_file,
             files::open_path,
@@ -297,6 +301,10 @@ pub fn run() {
             tray_presentation,
             controls::focus_get,
             controls::focus_set,
+            controls::notification_sound_get,
+            controls::notification_sound_set,
+            controls::windows_banners_get,
+            controls::windows_banners_set,
             controls::brightness_get,
             controls::brightness_set,
             obs::obs_status,
@@ -372,6 +380,7 @@ pub fn run() {
             drop::install(&window);
             hit_test::spawn(app.handle().clone(), window.clone());
             display::spawn(app.handle().clone(), window);
+            taskview::spawn_hot_corner(app.handle().clone());
             // Power mode is manual only: WinZal never re-applies a mode on
             // startup and never changes it on battery. The laptop/Windows owns
             // that restore.
@@ -384,6 +393,7 @@ pub fn run() {
             let _ = app.global_shortcut().register(presentation);
             let _ = app.global_shortcut().register(silent);
             let _ = app.global_shortcut().register(capture);
+            let _ = app.global_shortcut().register(key_taskview);
             let _ = app.global_shortcut().register(power);
             enable_autostart_once(app.handle());
             repair_autostart(app.handle());

@@ -50,7 +50,7 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
   const appearance = settings.use().appearance;
   const npRef = useRef(np);
   npRef.current = np;
-  const track = np ? `${np.title}\u0001${np.artist}\u0001${Math.round(np.duration)}` : "";
+  const track = np ? `${np.title}\u0001${np.artist}\u0001${np.album ?? ""}\u0001${Math.round(np.duration)}` : "";
   const offsetKey = np ? lyricTrackKey(np.title, np.artist) : "";
   // Global correction plus the saved correction for this exact track. A track
   // that runs late can be fixed without shifting everything else.
@@ -89,7 +89,7 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
     setStatus("loading");
     let retry: number | undefined;
     const load = (attempt: number) => {
-      void fetchLyrics(np.title, np.artist, np.duration)
+      void fetchLyrics(np.title, np.artist, np.album ?? "", np.duration)
         .then((lyrics) => {
           if (!alive) return;
           const next = parseLyrics(lyrics);

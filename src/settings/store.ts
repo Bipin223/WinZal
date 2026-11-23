@@ -85,6 +85,8 @@ export interface Settings {
   privacyDots: boolean;
   /** Windows toasts + island notification cards. Off stops the native listener. */
   notifications: boolean;
+  /** Hide Windows' own toast banner; notifications stay in the center for WinZal. */
+  hideWindowsBanners: boolean;
   /** Overview profile: a local override for the Windows name/photo and its display. */
   profile: { name: string; photo: string; show: boolean; showPhoto: boolean; showName: boolean };
   /** Apps tool: Start-menu IDs pinned to the launchpad. */
@@ -227,6 +229,9 @@ const defaults: Settings = {
   openMode: "hover",
   hoverDelay: "normal",
   notifications: true,
+  // Native banners stay hidden by default; WinZal's Dynamic Island card is the
+  // only visible notification surface, while Action Center keeps the history.
+  hideWindowsBanners: true,
   profile: { name: "", photo: "", show: true, showPhoto: true, showName: true },
   apps: { pinned: [] },
   tools: TOOL_IDS.map((id) => ({ id, enabled: !DEFAULT_OFF.has(id) })),
@@ -354,6 +359,7 @@ settings.set((s) => {
   return {
     ...defaults,
     ...s,
+    hideWindowsBanners: s.hideWindowsBanners !== false,
     profile: {
       name: s.profile?.name ?? "",
       photo: s.profile?.photo ?? "",

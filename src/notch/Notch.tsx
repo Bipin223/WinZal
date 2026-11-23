@@ -3,7 +3,6 @@ import { AnimatePresence, animate, motion, useMotionValue, type Transition } fro
 import { Drop, GearSix, Ghost, Lightning, MoonStars, PushPin } from "@phosphor-icons/react";
 import { content, springs } from "../design/motion";
 import { useNowPlaying } from "../platform/media";
-import { systemControls } from "../platform/services";
 import { uiFontFamily } from "../ui/font";
 import { isNative, keyboardFocus, onNativeBlur, onNativeHover, onShortcut, onSilentExit, onTrayOpen, screenLuminance, setHitRect, setMemoryLow, setNotchHeight, setSilent } from "../platform/native";
 import { PrivacyDots } from "../features/privacy/PrivacyDots";
@@ -16,8 +15,6 @@ import { LiveSlot, useLiveActivity } from "./live";
 import { GamingSatellite } from "./GamingSatellite";
 import { TimerSatellite } from "./TimerSatellite";
 import { ActivitySwitch } from "./ActivitySwitch";
-import { RecentSatellite } from "./RecentSatellite";
-import { recentHub } from "./recentHub";
 import { callView, useDiscordCall } from "../features/discord/store";
 import { FlyoutLayer } from "./FlyoutLayer";
 import { closeFlyout, flyout } from "./flyout";
@@ -88,7 +85,6 @@ export function Notch() {
   const [measuredClockWidth, setMeasuredClockWidth] = useState(0);
   const [callTitleWidth, setCallTitleWidth] = useState(0);
   const clockRow = useRef<HTMLDivElement>(null);
-  const recent = recentHub.use();
   const { tools: toolSettings, display: displaySettings, appearance, gaming } = settings.use();
   const [backdropLum, setBackdropLum] = useState(0.5);
   const liquidDynamic = appearance.material === "liquid" && appearance.liquidDynamic;
@@ -203,7 +199,10 @@ export function Notch() {
     if (status === "open" && prevStatus.current !== "open") {
       const resumed = Date.now() - closedAt.current < RESUME_MS;
       if (trayTab.current) navigate(trayTab.current);
-      else if (!resumed && live.id && visible.some((t) => t.id === live.id)) navigate(live.id);
+      // Gaming's live id is "system" (Hardware). Unlike music/timer/call,
+      // opening while gaming should stay on the tab the user was last using
+      // instead of jumping to Hardware.
+      else if (!resumed && live.id && live.id !== "system" && visible.some((t) => t.id === live.id)) navigate(live.id);
       trayTab.current = null;
     }
     if (status !== "open" && prevStatus.current === "open") closedAt.current = Date.now();
@@ -287,7 +286,6 @@ export function Notch() {
   const tightHit = lineView;
   // A separate top-left switcher: it stays put while the notch opens, peeks or
   // shows an alert. Only ghost/line mode (where the whole UI steps back) hides it.
-  const recentVisible = !silent && !lineView;
   const finalShape = floating
     ? {
         ...sizedShape,
@@ -378,7 +376,7 @@ export function Notch() {
       // must never close them or the notch behind them.
       if (
         target instanceof Element &&
-        target.closest("[data-flyout-hit], [data-notification-hit], [data-recent-hub]")
+        target.closest("[data-flyout-hit], [data-notification-hit]")
       ) {
         return;
       }
@@ -446,21 +444,17 @@ export function Notch() {
   }, [status]);
 
   // A 1260×560 transparent always-on-top window is far more compositor work
-  // than the closed pill. Keep only the top 120 px while closed, expand for the
-  // open panel, and grow just enough for the Recent hover list.
+  // than the closed pill. Keep only the top 120 px while closed and expand for
+  // the open panel.
   useEffect(() => {
     if (!isNative) return;
     if (status !== "closed") {
       setNotchHeight(OPEN_WINDOW_HEIGHT);
       return;
     }
-    if (recent.active) {
-      setNotchHeight(Math.max(CLOSED_WINDOW_HEIGHT, recent.height));
-      return;
-    }
     const id = window.setTimeout(() => setNotchHeight(CLOSED_WINDOW_HEIGHT), 450);
     return () => window.clearTimeout(id);
-  }, [status, recent.active, recent.height]);
+  }, [status]);
 
   // After a minute closed, let WebView2 lower its memory target; the first
   // hover/peek restores normal before the notch opens, so paging stays hidden.
@@ -526,16 +520,7 @@ export function Notch() {
         onPointerMove={sticky.onPointerMove}
         onPointerDown={drag.onPointerDown}
         // In Tauri, hover comes from the Rust poll (useNativeBridge), not the DOM.
-        // The detached Recent mark is its own hover surface; entering it must
-        // not also open the notch in the browser preview.
-        onPointerEnter={
-          isNative
-            ? undefined
-            : (event) => {
-                if (event.target instanceof Element && event.target.closest("[data-recent-hub]")) return;
-                handleEnter();
-              }
-        }
+        onPointerEnter={isNative ? undefined : handleEnter}
         onPointerLeave={isNative ? undefined : onPointerLeave}
         onClick={onClick}
       >
@@ -678,16 +663,6 @@ export function Notch() {
         <FlyoutLayer />
         </motion.div>
       </div>
-      <AnimatePresence>
-        {recentVisible && (
-          <RecentSatellite
-            key="recent-satellite"
-            floating={floating}
-            liquid={appearance.material === "liquid"}
-            onTaskView={() => void systemControls.taskView()}
-          />
-        )}
-      </AnimatePresence>
       <NotificationLayer />
     </div>
   );

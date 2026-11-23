@@ -36,6 +36,8 @@ use windows::Storage::Streams::DataReader;
 pub struct NowPlaying {
     title: String,
     artist: String,
+    /// Album title, used as part of the Boidu lyrics cache key.
+    album: String,
     /// Cover as a data URL, `None` if the app provides none.
     artwork: Option<String>,
     is_playing: bool,
@@ -341,9 +343,10 @@ fn read(session: &Session, artwork: &mut Artwork) -> windows::core::Result<NowPl
     let props = session.TryGetMediaPropertiesAsync()?.join()?;
     let title = props.Title()?.to_string();
     let artist = props.Artist()?.to_string();
+    let album = props.AlbumTitle().map(|v| v.to_string()).unwrap_or_default();
     let app_id = session.SourceAppUserModelId()?.to_string();
 
-    let key = format!("{app_id}\u{1}{title}\u{1}{artist}");
+    let key = format!("{app_id}\u{1}{title}\u{1}{artist}\u{1}{album}");
     if artwork.key != key {
         artwork.key = key;
         artwork.since = Instant::now();
@@ -378,7 +381,7 @@ fn read(session: &Session, artwork: &mut Artwork) -> windows::core::Result<NowPl
         position = position.clamp(0.0, duration);
     }
 
-    Ok(NowPlaying { title, artist, artwork: artwork.data.clone(), is_playing, position, duration, can_seek, app_id })
+    Ok(NowPlaying { title, artist, album, artwork: artwork.data.clone(), is_playing, position, duration, can_seek, app_id })
 }
 
 fn load_thumbnail(
@@ -460,7 +463,7 @@ fn changed(last: &Option<NowPlaying>, current: &Option<NowPlaying>, last_sent_at
     match (last, current) {
         (None, None) => false,
         (Some(a), Some(b)) => {
-            if a.title != b.title || a.artist != b.artist || a.is_playing != b.is_playing
+            if a.title != b.title || a.artist != b.artist || a.album != b.album || a.is_playing != b.is_playing
                 || a.artwork != b.artwork || a.duration != b.duration || a.app_id != b.app_id
                 || a.can_seek != b.can_seek
             {

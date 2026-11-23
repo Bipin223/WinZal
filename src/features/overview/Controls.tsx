@@ -1,7 +1,9 @@
-﻿import { useEffect, useRef, useState } from "react";
+﻿import { Fragment, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowClockwise,
+  Bell,
+  BellSlash,
   Lock,
   Moon,
   MoonStars,
@@ -732,12 +734,36 @@ const POWER_ACTIONS: { id: PowerAction; label: string; icon: Icon; weight: IconW
   { id: "shutdown", label: "Shut down", icon: Power, weight: "bold" },
 ];
 
-/** Minimal, icon-only power actions for the header's centre. */
+/** Minimal, icon-only power actions plus the notification-sound toggle. */
 export function PowerActions() {
   const [confirm, setConfirm] = useState<PowerAction | null>(null);
+  const [sounds, setSounds] = useState<boolean | null>(null);
   const timer = useRef<number | undefined>(undefined);
 
   useEffect(() => () => clearTimeout(timer.current), []);
+  useEffect(() => {
+    let alive = true;
+    void systemControls
+      .notificationSound()
+      .then((on) => {
+        if (alive) setSounds(on);
+      })
+      .catch(() => {
+        if (alive) setSounds(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const toggleSounds = () => {
+    const next = !(sounds ?? true);
+    setSounds(next);
+    void systemControls
+      .setNotificationSound(next)
+      .then((actual) => setSounds(actual))
+      .catch(() => setSounds(!next));
+  };
 
   const run = (id: PowerAction) => {
     if (id === "lock" || id === "sleep") {
@@ -757,42 +783,60 @@ export function PowerActions() {
 
   return (
     <div className="flex shrink-0 items-center gap-1.5">
-      {POWER_ACTIONS.map(({ id, label, icon: Icon, weight }) => {
-        const armed = confirm === id;
-        return (
-          <motion.button
-            key={id}
-            type="button"
-            onClick={() => run(id)}
-            whileHover={{ scale: 1.08, y: -0.5 }}
-            whileTap={{ scale: 0.88 }}
-            transition={springs.peek}
-            className={`relative flex size-6 items-center justify-center rounded-full ${
-              armed ? "text-red" : "text-label-2 hover:text-label"
-            }`}
-            title={armed ? t("Sure?") : t(label)}
-            aria-label={t(label)}
-          >
-            <Icon size={14} weight={weight} />
-            {armed && (
-              <motion.span
-                className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-red/45"
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
+      <div className="flex items-center rounded-full border border-white/10 bg-fill-2 p-0.5 shadow-[0_5px_14px_rgba(0,0,0,0.24)] backdrop-blur-md">
+        {POWER_ACTIONS.map(({ id, label, icon: Icon, weight }, index) => {
+          const armed = confirm === id;
+          return (
+            <Fragment key={id}>
+              {index > 0 && <span aria-hidden className="mx-0.5 h-3 w-px shrink-0 bg-separator" />}
+              <motion.button
+                type="button"
+                onClick={() => run(id)}
+                whileTap={{ scale: 0.9 }}
                 transition={springs.peek}
-              />
-            )}
-            {armed && (
-              <motion.span
-                className="absolute inset-x-1.5 bottom-0 h-0.5 origin-left rounded-full bg-red"
-                initial={{ scaleX: 1 }}
-                animate={{ scaleX: 0 }}
-                transition={{ duration: 3, ease: "linear" }}
-              />
-            )}
-          </motion.button>
-        );
-      })}
+                className={`relative flex size-6 items-center justify-center rounded-full transition-colors duration-150 ${
+                  armed ? "text-red" : "text-label-2"
+                }`}
+                title={armed ? t("Sure?") : t(label)}
+                aria-label={t(label)}
+              >
+                <Icon size={12} weight={weight} />
+                {armed && (
+                  <motion.span
+                    className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-red/45"
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={springs.peek}
+                  />
+                )}
+                {armed && (
+                  <motion.span
+                    className="absolute inset-x-1 bottom-0 h-0.5 origin-left rounded-full bg-red"
+                    initial={{ scaleX: 1 }}
+                    animate={{ scaleX: 0 }}
+                    transition={{ duration: 3, ease: "linear" }}
+                  />
+                )}
+              </motion.button>
+            </Fragment>
+          );
+        })}
+      </div>
+      <motion.button
+        type="button"
+        onClick={toggleSounds}
+        whileTap={{ scale: 0.9 }}
+        transition={springs.peek}
+        className={`relative flex size-7 items-center justify-center rounded-full transition-colors duration-150 ${
+          sounds === false ? "bg-fill-3 text-label" : "text-label-2"
+        }`}
+        title={sounds === false ? t("Unmute notification sounds") : t("Mute notification sounds")}
+        aria-label={sounds === false ? t("Unmute notification sounds") : t("Mute notification sounds")}
+        aria-pressed={sounds === false}
+      >
+        {sounds === false ? <BellSlash size={14} weight="fill" /> : <Bell size={14} weight="bold" />}
+        {sounds === false && <span className="pointer-events-none absolute right-1.5 bottom-1.5 size-[4px] rounded-full bg-red shadow-[0_0_5px_rgba(255,69,58,0.7)]" />}
+      </motion.button>
     </div>
   );
 }

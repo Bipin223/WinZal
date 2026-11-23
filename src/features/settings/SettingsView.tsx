@@ -30,7 +30,7 @@ import { nav } from "../../notch/nav";
 import { requestSize } from "../../notch/size";
 import { tabs } from "../../notch/tabs";
 import { holdOpen } from "../../notch/useNotchState";
-import { autostart, display, fetchFps, fpsHelperReady, requestToastAccess, secrets, toastAccess, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName, type ToastAccess } from "../../platform/services";
+import { autostart, display, fetchFps, fpsHelperReady, requestToastAccess, secrets, systemControls, toastAccess, unlockFps, type ChangelogEntry, type MonitorInfo, type SecretName, type ToastAccess } from "../../platform/services";
 import { settings, updateAsk, updateSettings, type AskProvider, type Settings, type TypeRole, DEFAULT_TYPOGRAPHY } from "../../settings/store";
 import { TYPE_ROLES, typeValues } from "../appearance/typography";
 import { ChatBubbleIcon } from "../../ui/ChatBubbleIcon";
@@ -1442,6 +1442,7 @@ function FpsUnlockRow() {
 /** Live demo for the two notification surfaces. */
 function NotificationsDemo() {
   const on = settings.use().notifications;
+  const hideBanners = settings.use().hideWindowsBanners;
   return (
     <Group title={t("Notifications")} id="settings-notifications">
       <Row label={t("Notifications")}>
@@ -1459,6 +1460,19 @@ function NotificationsDemo() {
         </div>
       </Row>
       <WindowsToastsRow enabled={on} />
+      <Row label={t("Windows banners")}>
+        <Switch
+          label={t("Hide Windows banners")}
+          checked={hideBanners}
+          onChange={(hidden) => {
+            updateSettings({ hideWindowsBanners: hidden });
+            void systemControls
+              .setWindowsBanners(hidden)
+              .then((actual) => updateSettings({ hideWindowsBanners: actual }))
+              .catch(() => updateSettings({ hideWindowsBanners: !hidden }));
+          }}
+        />
+      </Row>
     </Group>
   );
 }

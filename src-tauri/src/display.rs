@@ -14,7 +14,7 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, State, WebviewWindow};
@@ -23,8 +23,9 @@ use windows::Win32::Foundation::{CloseHandle, HWND, LPARAM, RECT};
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST};
 use windows::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION};
 use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, GetClassNameW, GetDesktopWindow, GetForegroundWindow, GetShellWindow, GetWindow, GetWindowRect, GetWindowTextLengthW, GetWindowTextW,
-    GetWindowThreadProcessId, IsWindowVisible, IsZoomed, ShowWindow, GW_OWNER, SW_SHOW,
+    EnumWindows, GetClassNameW, GetDesktopWindow, GetForegroundWindow, GetShellWindow, GetWindow, GetWindowLongPtrW, GetWindowRect, GetWindowTextLengthW,
+    GetWindowTextW, GetWindowThreadProcessId, IsIconic, IsWindowVisible, IsZoomed, SetWindowPos, ShowWindow, GWL_EXSTYLE, GW_OWNER,
+    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SW_SHOW, WS_EX_TOPMOST,
 };
 
 use crate::hit_test::HitState;
@@ -197,6 +198,8 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
         let mut last_app = String::new();
         let mut last_title = String::new();
         let mut last_gaming = false;
+        let mut overlay: Option<HWND> = None;
+        let mut overlay_at = Instant::now() - Duration::from_secs(10);
         loop {
             thread::sleep(POLL);
             let state = app.state::<DisplayState>();
@@ -218,6 +221,7 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
                 last_fullscreen = fullscreen;
                 let _ = app.emit("notch://fullscreen", fullscreen);
             }
+            let shell_foreground = app_id.eq_ignore_ascii_case("explorer.exe");
             if app_id != last_app || title != last_title || fullscreen_changed || gaming != last_gaming {
                 last_app = app_id.clone();
                 last_title = title.clone();
@@ -236,11 +240,28 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
                     let _ = window.hide();
                 } else {
                     let _ = window.show();
-                    let _ = window.set_always_on_top(true);
+                    if overlay.is_none() {
+                        let _ = window.set_always_on_top(true);
+                    }
                     // Let the click-through state be set again after show() (the poll caches the old one).
                     app.state::<HitState>().refresh();
                 }
             }
+
+            // Recording overlays (Snipping Tool, Game Bar, OBS, ...) stay above
+            // the notch. Check often enough to catch the toolbar appearing, but
+            // not every 400 ms: EnumWindows walks every visible top-level window.
+            if !hidden && overlay_at.elapsed() >= Duration::from_millis(800) {
+                overlay = recording_overlay(own);
+                overlay_at = Instant::now();
+                // Explorer owns Task View, the taskbar and the desktop. Reasserting
+                // topmost here makes Task View animate underneath the notch and
+                // fight the shell; leave it alone while the shell is foreground.
+                if overlay.is_none() && !shell_foreground {
+                    let _ = window.set_always_on_top(true);
+                }
+            }
+
             if !hidden && !app.state::<ShowGuard>().held() {
                 // If Windows externally hid the window (Show Desktop / session
                 // transition), put it back. Do not reorder an already visible
@@ -249,18 +270,29 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
                 if !unsafe { IsWindowVisible(own).as_bool() } {
                     let _ = window.show();
                     let _ = unsafe { ShowWindow(own, SW_SHOW) };
-                    let _ = window.set_always_on_top(true);
+                    if overlay.is_none() {
+                        let _ = window.set_always_on_top(true);
+                    }
                     app.state::<HitState>().refresh();
                 }
             }
             // A notification must stay above fullscreen media, not just the
             // currently focused window. Reapply while it is visible.
-            if notify && !hidden {
+            if notify && !hidden && overlay.is_none() {
                 let _ = window.set_always_on_top(true);
             }
-            // New foreground window: reapply the normal topmost style.
-            if !hidden && foreground != last_foreground {
+            // New foreground window: reapply the normal topmost style. Skip the
+            // shell so Task View keeps the top spot while it is open.
+            if !hidden && foreground != last_foreground && overlay.is_none() && !shell_foreground {
                 let _ = window.set_always_on_top(true);
+            }
+            // Topmost, but directly below the recording overlay when one exists.
+            if !hidden {
+                if let Some(target) = overlay {
+                    let _ = unsafe {
+                        SetWindowPos(own, Some(target), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE)
+                    };
+                }
             }
             last_foreground = foreground;
         }
@@ -316,6 +348,57 @@ fn window_title(hwnd: HWND) -> String {
     let mut buf = vec![0u16; len as usize + 1];
     let n = unsafe { GetWindowTextW(hwnd, &mut buf) };
     String::from_utf16_lossy(&buf[..n.max(0) as usize])
+}
+
+/// Topmost overlays owned by recorders. The notch stays above normal windows
+/// but is inserted below these, so recording controls are never covered.
+fn is_recording_overlay_process(name: &str) -> bool {
+    matches!(
+        name,
+        "snippingtool.exe"
+            | "screensketch.exe"
+            | "gamebar.exe"
+            | "gamebarftserver.exe"
+            | "xboxgamebar.exe"
+            | "xboxgamebarwidgets.exe"
+            | "obs64.exe"
+            | "obs32.exe"
+            | "obs.exe"
+            | "streamlabs obs.exe"
+            | "slobs.exe"
+            | "sharex.exe"
+            | "medal.exe"
+            | "outplayed.exe"
+    )
+}
+
+struct OverlaySearch {
+    own: HWND,
+    found: Option<HWND>,
+}
+
+unsafe extern "system" fn find_overlay(hwnd: HWND, lparam: LPARAM) -> BOOL {
+    let search = &mut *(lparam.0 as *mut OverlaySearch);
+    if hwnd == search.own || !IsWindowVisible(hwnd).as_bool() || IsIconic(hwnd).as_bool() {
+        return true.into();
+    }
+    if !is_recording_overlay_process(&foreground_app(hwnd)) {
+        return true.into();
+    }
+    let style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+    if style & WS_EX_TOPMOST.0 as isize == 0 {
+        return true.into();
+    }
+    // EnumWindows goes top to bottom. Keep the last match so the notch sits
+    // below every topmost recorder overlay, not just the highest one.
+    search.found = Some(hwnd);
+    true.into()
+}
+
+fn recording_overlay(own: HWND) -> Option<HWND> {
+    let mut search = OverlaySearch { own, found: None };
+    let _ = unsafe { EnumWindows(Some(find_overlay), LPARAM(&mut search as *mut _ as isize)) };
+    search.found
 }
 
 /// Visible top-level windows, one row per exe, for the "games & apps" picker.

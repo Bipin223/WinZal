@@ -31,6 +31,18 @@ function wordFractions(words: string[], start: number, end: number, times?: Lyri
   return { froms: wordOffsets(words), exact: false };
 }
 
+/**
+ * Boidu supplies mora/word spans that concatenate back to the line. LRCLIB
+ * word timings work too; they simply match the whitespace words. If the
+ * timings do not describe this exact text (translation, mismatched edit), keep
+ * the old whitespace + character-weight fallback.
+ */
+function timedSegments(text: string, times?: LyricWordTime[] | null): LyricWordTime[] | null {
+  if (!times || times.length < 2) return null;
+  const compact = (value: string) => value.replace(/\s+/g, "");
+  return compact(times.map((word) => word.text).join("")) === compact(text) ? times : null;
+}
+
 /** Reveal words one by one on the real line clock, not on a fixed stagger. */
 function useWordReveal(
   words: string[],
@@ -126,7 +138,8 @@ function WordProgress({
   np: NowPlaying | null;
   preview: boolean;
 }) {
-  const words = text.split(/\s+/).filter(Boolean);
+  const segments = timedSegments(text, wordTimes);
+  const words = segments ? segments.map((word) => word.text) : text.split(/\s+/).filter(Boolean);
   const refs = useRef<(HTMLSpanElement | null)[]>([]);
   const timing = useRef({ start, end });
   timing.current = { start, end };
@@ -138,7 +151,7 @@ function WordProgress({
       : np
         ? livePosition(np) - timing.current.start
         : 0;
-    const { froms, exact } = wordFractions(words, timing.current.start, timing.current.end, wordTimes);
+    const { froms, exact } = wordFractions(words, timing.current.start, timing.current.end, segments ?? wordTimes);
     const progress = Math.min(1, Math.max(0, elapsed / (duration * (exact ? 1 : 0.92))));
     let active = -1;
     froms.forEach((from, i) => {
@@ -171,7 +184,7 @@ function WordProgress({
           {(animation === "fill" || animation === "liquid") && (
             <span className={`lab-fill ${animation === "fill" ? "lab-fill-right" : "lab-fill-up"}`}>{word}</span>
           )}
-          {i < words.length - 1 ? "\u00A0" : ""}
+          {!segments && i < words.length - 1 ? "\u00A0" : ""}
         </span>
       ))}
     </span>
@@ -194,7 +207,8 @@ function SpotlightText({
   np: NowPlaying | null;
   preview: boolean;
 }) {
-  const words = text.split(/\s+/).filter(Boolean);
+  const segments = timedSegments(text, wordTimes);
+  const words = segments ? segments.map((word) => word.text) : text.split(/\s+/).filter(Boolean);
   const refs = useRef<(HTMLSpanElement | null)[]>([]);
   const spot = useRef<HTMLElement>(null);
   const timing = useRef({ start, end });
@@ -207,7 +221,7 @@ function SpotlightText({
       : np
         ? livePosition(np) - timing.current.start
         : 0;
-    const { froms, exact } = wordFractions(words, timing.current.start, timing.current.end, wordTimes);
+    const { froms, exact } = wordFractions(words, timing.current.start, timing.current.end, segments ?? wordTimes);
     const progress = Math.min(1, Math.max(0, elapsed / (duration * (exact ? 1 : 0.92))));
     let active = -1;
     froms.forEach((from, i) => {
@@ -237,7 +251,7 @@ function SpotlightText({
       {words.map((word, i) => (
         <span key={i} ref={(el) => { refs.current[i] = el; }} className="lab-w">
           <span className="lab-base">{word}</span>
-          {i < words.length - 1 ? "\u00A0" : ""}
+          {!segments && i < words.length - 1 ? "\u00A0" : ""}
         </span>
       ))}
       <i
@@ -268,7 +282,8 @@ function SparkText({
   preview: boolean;
   keepRevealed: boolean;
 }) {
-  const words = text.split(/\s+/).filter(Boolean);
+  const segments = timedSegments(text, wordTimes);
+  const words = segments ? segments.map((word) => word.text) : text.split(/\s+/).filter(Boolean);
   const refs = useRef<(HTMLSpanElement | null)[]>([]);
   const layer = useRef<HTMLSpanElement>(null);
   const lastActive = useRef(-1);
@@ -326,7 +341,7 @@ function SparkText({
       {words.map((word, i) => (
         <span key={i} ref={(el) => { refs.current[i] = el; }} className="lab-w">
           <span className="lab-base">{word}</span>
-          {i < words.length - 1 ? "\u00A0" : ""}
+          {!segments && i < words.length - 1 ? "\u00A0" : ""}
         </span>
       ))}
       <span ref={layer} className="lab-sparks" aria-hidden />

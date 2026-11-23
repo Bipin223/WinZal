@@ -55,6 +55,18 @@ const syncToastWatch = () => {
 syncToastWatch();
 settings.subscribe(syncToastWatch);
 
+// Windows banners off, Action Center notifications on: the native toast stays
+// silent while WinZal's own Dynamic Island card still receives it.
+let bannersHidden: boolean | null = null;
+const syncWindowsBanners = () => {
+  const hidden = settings.get().hideWindowsBanners;
+  if (hidden === bannersHidden) return;
+  bannersHidden = hidden;
+  void systemControls.setWindowsBanners(hidden).catch(() => {});
+};
+syncWindowsBanners();
+settings.subscribe(syncWindowsBanners);
+
 // Ctrl+Alt+M works over fullscreen games, where the Power tile cannot be clicked.
 void listen("notch://power-cycle", async () => {
   try {

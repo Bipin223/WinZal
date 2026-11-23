@@ -4,13 +4,22 @@
 //! - Focus: Windows Do Not Disturb through the undocumented `QuietHoursSettings`
 //!   COM class (`UserSelectedProfile`), the same value the taskbar DND button writes.
 
+use std::collections::HashMap;
 use std::ffi::c_void;
+use std::fs;
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
+use winreg::enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE};
+use winreg::RegKey;
 
 use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
 use windows::Win32::Media::Audio::{eConsole, eRender, IMMDeviceEnumerator, MMDeviceEnumerator};
 use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_ALL, COINIT_MULTITHREADED};
+
+const NOTIFICATION_SETTINGS: &str = r"Software\Microsoft\Windows\CurrentVersion\Notifications\Settings";
+const NOTIFICATION_SOUND: &str = "NOC_GLOBAL_SETTING_ALLOW_NOTIFICATION_SOUND";
+const SHOW_BANNER: &str = "ShowBanner";
 
 #[derive(Serialize)]
 pub struct Volume {
@@ -281,4 +290,106 @@ pub async fn focus_set(active: bool) -> Result<Focus, String> {
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+/// Global Windows notification sounds (Settings > System > Notifications).
+/// The value is absent until the user changes it; absent means sounds on.
+#[tauri::command]
+pub fn notification_sound_get() -> Result<bool, String> {
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let Ok(key) = hkcu.open_subkey_with_flags(NOTIFICATION_SETTINGS, KEY_READ) else {
+        return Ok(true);
+    };
+    match key.get_value::<u32, _>(NOTIFICATION_SOUND) {
+        Ok(value) => Ok(value != 0),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(true),
+        Err(error) => Err(error.to_string()),
+    }
+}
+
+#[tauri::command]
+pub fn notification_sound_set(enabled: bool) -> Result<bool, String> {
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let (key, _) = hkcu.create_subkey(NOTIFICATION_SETTINGS).map_err(|e| e.to_string())?;
+    key.set_value(NOTIFICATION_SOUND, &(if enabled { 1u32 } else { 0u32 }))
+        .map_err(|e| e.to_string())?;
+    Ok(enabled)
+}
+
+fn banner_backup_path() -> Option<PathBuf> {
+    let local = std::env::var_os("LOCALAPPDATA")?;
+    Some(PathBuf::from(local).join("WinZal").join("notification-banners.json"))
+}
+
+fn load_banner_backup() -> HashMap<String, Option<u32>> {
+    banner_backup_path()
+        .and_then(|path| fs::read_to_string(path).ok())
+        .and_then(|text| serde_json::from_str(&text).ok())
+        .unwrap_or_default()
+}
+
+fn save_banner_backup(backup: &HashMap<String, Option<u32>>) -> Result<(), String> {
+    let Some(path) = banner_backup_path() else { return Ok(()) };
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let text = serde_json::to_string(backup).map_err(|e| e.to_string())?;
+    fs::write(path, text).map_err(|e| e.to_string())
+}
+
+/// Hide only the Windows banner; the toast still lands in the notification
+/// center, so the Dynamic Island listener can read it. The original per-app
+/// ShowBanner values are backed up before the first change.
+fn set_banners_hidden(hidden: bool) -> Result<bool, String> {
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let settings = hkcu
+        .open_subkey_with_flags(NOTIFICATION_SETTINGS, KEY_READ | KEY_WRITE)
+        .map_err(|e| e.to_string())?;
+
+    if hidden {
+        let mut backup = load_banner_backup();
+        for name in settings.enum_keys().flatten() {
+            let Ok(app) = settings.open_subkey_with_flags(&name, KEY_READ | KEY_WRITE) else {
+                continue;
+            };
+            if !backup.contains_key(&name) {
+                backup.insert(name.clone(), app.get_value::<u32, _>(SHOW_BANNER).ok());
+            }
+            let _ = app.set_value(SHOW_BANNER, &0u32);
+        }
+        save_banner_backup(&backup)?;
+        Ok(true)
+    } else {
+        let backup = load_banner_backup();
+        if backup.is_empty() {
+            return Ok(false);
+        }
+        for (name, original) in &backup {
+            let Ok(app) = settings.open_subkey_with_flags(name, KEY_WRITE) else {
+                continue;
+            };
+            match original {
+                Some(value) => {
+                    let _ = app.set_value(SHOW_BANNER, value);
+                }
+                None => {
+                    let _ = app.delete_value(SHOW_BANNER);
+                }
+            }
+        }
+        if let Some(path) = banner_backup_path() {
+            let _ = fs::remove_file(path);
+        }
+        Ok(false)
+    }
+}
+
+#[tauri::command]
+pub fn windows_banners_get() -> bool {
+    banner_backup_path().is_some_and(|path| path.exists())
+}
+
+#[tauri::command]
+pub fn windows_banners_set(hidden: bool) -> Result<bool, String> {
+    set_banners_hidden(hidden)
 }

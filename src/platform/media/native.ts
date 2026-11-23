@@ -7,6 +7,7 @@ import type { MediaSource, NowPlaying } from "./types";
 interface NativeNowPlaying {
   title: string;
   artist: string;
+  album: string;
   artwork: string | null;
   isPlaying: boolean;
   position: number;

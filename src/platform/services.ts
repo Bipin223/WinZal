@@ -306,16 +306,27 @@ export interface LyricWordLine {
   words: LyricWordTime[];
 }
 
+export interface LyricCredit {
+  provider: string;
+  name: string;
+  url: string;
+  songUrl: string;
+}
+
 export interface Lyrics {
   synced: string | null;
   plain: string | null;
   instrumental?: boolean;
   wordLines?: LyricWordLine[];
+  /** Which provider produced the result: "lrclib", "boidu" or "unison". */
+  source?: string;
+  /** Required attribution when the winner is Unison. */
+  credit?: LyricCredit;
 }
 
-/** LRCLIB lookup through Rust (no CORS, in-memory cache). */
-export function fetchLyrics(title: string, artist: string, duration: number): Promise<Lyrics> {
-  if (isNative) return invoke<Lyrics>("lyrics_get", { title, artist, duration }).catch(() => ({ synced: null, plain: null, instrumental: false }));
+/** LRCLIB + Boidu lookup through Rust (no CORS, bounded in-memory cache). */
+export function fetchLyrics(title: string, artist: string, album: string, duration: number): Promise<Lyrics> {
+  if (isNative) return invoke<Lyrics>("lyrics_get", { title, artist, album, duration }).catch(() => ({ synced: null, plain: null, instrumental: false }));
   return Promise.resolve({ synced: null, plain: null, instrumental: false });
 }
 
@@ -571,6 +582,8 @@ export interface GlimState {
 
 const mockVolume: VolumeState = { level: 0.42, muted: false };
 const mockFocus: FocusState = { active: false, kind: "focus" };
+let mockNotificationSound = true;
+let mockWindowsBanners = false;
 const mockBrightness: BrightnessState = { level: 70, supported: true };
 const mockNetwork: NetworkState = { connected: true, wifi: true, name: "Home", enabled: true };
 const mockBluetooth: BluetoothState = { available: true, on: false };
@@ -728,6 +741,20 @@ export const systemControls = {
     mockFocus.active = active;
     return Promise.resolve({ ...mockFocus });
   },
+  notificationSound: (): Promise<boolean> =>
+    isNative ? invoke<boolean>("notification_sound_get").catch(() => true) : Promise.resolve(mockNotificationSound),
+  setNotificationSound: (enabled: boolean): Promise<boolean> => {
+    if (isNative) return invoke<boolean>("notification_sound_set", { enabled });
+    mockNotificationSound = enabled;
+    return Promise.resolve(enabled);
+  },
+  windowsBanners: (): Promise<boolean> =>
+    isNative ? invoke<boolean>("windows_banners_get").catch(() => false) : Promise.resolve(mockWindowsBanners),
+  setWindowsBanners: (hidden: boolean): Promise<boolean> => {
+    if (isNative) return invoke<boolean>("windows_banners_set", { hidden });
+    mockWindowsBanners = hidden;
+    return Promise.resolve(hidden);
+  },
   brightness: (): Promise<BrightnessState> => (isNative ? invoke<BrightnessState>("brightness_get") : Promise.resolve({ ...mockBrightness })),
   setBrightness: (level: number): Promise<BrightnessState> => {
     if (isNative) return invoke<BrightnessState>("brightness_set", { level });
@@ -786,6 +813,4 @@ export const systemControls = {
   power: (action: "lock" | "sleep" | "screen-off" | "restart" | "shutdown"): Promise<void> =>
     isNative ? invoke("power_action", { action }) : Promise.resolve(),
   openUri: (uri: string): Promise<void> => (isNative ? invoke("open_uri", { uri }) : Promise.resolve()),
-  /** Windows' own Task View: live window thumbnails and virtual desktops. */
-  taskView: (): Promise<void> => (isNative ? invoke("task_view") : Promise.resolve()),
 };

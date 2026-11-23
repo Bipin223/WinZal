@@ -13,6 +13,7 @@ import { MIXER_ROW, MixerList, MixerToggle, useMixer } from "./Mixer";
 import { Equalizer } from "./Equalizer";
 import { LyricEqualizer } from "./LyricVisualizer";
 import { settings, lyricTrackKey, setLyricTrackOffset } from "../../settings/store";
+import { fetchLyrics, systemControls, type LyricCredit } from "../../platform/services";
 import { t } from "../../i18n";
 
 const SYNC_ROW = 34;
@@ -27,6 +28,7 @@ const SYNC_ROW = 34;
 export function NowPlayingView() {
   const np = useNowPlaying();
   const appearance = settings.use().appearance;
+  const credit = useLyricCredit(np);
   const mix = useMixer();
   const [mixerOpen, setMixerOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
@@ -37,12 +39,14 @@ export function NowPlayingView() {
   // The fixed header only holds the output picker; the list itself can scroll
   // if it exceeds the available height.
   const rows = Math.max(1, (mix.system ? 1 : 0) + mix.apps.length);
+  const creditExtra = credit ? 14 : 0;
   useEffect(() => {
-    if ((!mixerOpen && !syncOpen) || !np) return requestSize("media", null);
+    if ((!mixerOpen && !syncOpen && !credit) || !np) return requestSize("media", null);
     const base = findTab("media")!.size;
-    const extra = mixerOpen ? rows * MIXER_ROW + 58 : SYNC_ROW + 14;
+    const extra =
+      (mixerOpen ? rows * MIXER_ROW + 58 : syncOpen ? SYNC_ROW + 14 : 0) + creditExtra;
     requestSize("media", { w: base.w, h: base.h + extra });
-  }, [mixerOpen, syncOpen, rows, !!np]);
+  }, [mixerOpen, syncOpen, rows, !!np, creditExtra, credit]);
   useEffect(() => () => requestSize("media", null), []);
 
   if (!np) return <Empty />;
@@ -136,9 +140,56 @@ export function NowPlayingView() {
             {mixerOpen && <MixerList key="mixer" data={mix} />}
           </AnimatePresence>
         </>
+        {credit && (
+          <div className="mt-auto flex min-w-0 items-center gap-1 pt-1 text-[8px] leading-none text-label-4">
+            <span className="shrink-0">{t("Lyrics from")}</span>
+            <button
+              type="button"
+              onClick={() => void systemControls.openUri(credit.songUrl)}
+              className="pressable truncate underline decoration-current/30 underline-offset-2 hover:text-label-2"
+            >
+              Unison
+            </button>
+            {credit.name && (
+              <>
+                <span className="shrink-0">· {t("submitted by")}</span>
+                <button
+                  type="button"
+                  onClick={() => void systemControls.openUri(credit.url)}
+                  className="pressable min-w-0 truncate underline decoration-current/30 underline-offset-2 hover:text-label-2"
+                >
+                  {credit.name}
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
+}
+
+/** Credit only exists for Unison; the fetch is served from Rust's lyric cache. */
+function useLyricCredit(np: NowPlaying | null): LyricCredit | null {
+  const [credit, setCredit] = useState<LyricCredit | null>(null);
+  const key = np
+    ? `${np.title}\u0001${np.artist}\u0001${np.album ?? ""}\u0001${Math.round(np.duration)}`
+    : "";
+  useEffect(() => {
+    if (!np || !key) {
+      setCredit(null);
+      return;
+    }
+    let alive = true;
+    void fetchLyrics(np.title, np.artist, np.album ?? "", np.duration).then((lyrics) => {
+      if (alive) setCredit(lyrics.credit ?? null);
+    });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return credit;
 }
 
 /** One row under the controls: nudge the current track's lyric timing. */

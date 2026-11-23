@@ -1,6 +1,8 @@
 export interface NowPlaying {
   title: string;
   artist: string;
+  /** Album title, when the player exposes it (used for lyrics lookup). */
+  album?: string;
   /** Cover image URL (in the app: data URL from the GSMTC thumbnail). */
   artwork: string | null;
   /** Accent color from the cover, drives the equalizer & progress bar. */
