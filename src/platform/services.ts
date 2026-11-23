@@ -728,6 +728,21 @@ export const obs = {
       : Promise.resolve(() => {}),
 };
 
+export interface CaptureResult {
+  path: string;
+  width: number;
+  height: number;
+  copied: boolean;
+}
+
+/** Native full-desktop screenshot, saved under Pictures\Notch and copied. */
+export const screenCapture = {
+  take: (): Promise<CaptureResult> =>
+    isNative
+      ? invoke<CaptureResult>("screen_capture")
+      : Promise.resolve({ path: "Pictures\\Notch\\Screenshot.png", width: 1536, height: 864, copied: true }),
+};
+
 export const systemControls = {
   volume: (): Promise<VolumeState> => (isNative ? invoke<VolumeState>("volume_get") : Promise.resolve({ ...mockVolume })),
   setVolume: (patch: { level?: number; muted?: boolean }): Promise<VolumeState> => {

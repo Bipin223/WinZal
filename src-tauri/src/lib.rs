@@ -4,6 +4,7 @@ mod apps;
 mod ask_history;
 mod audio;
 mod audio_out;
+mod capture;
 mod clipboard;
 mod controls;
 mod convert;
@@ -214,6 +215,7 @@ pub fn run() {
             clipboard::clipboard_clear,
             clipboard::clipboard_preview,
             clipboard::clipboard_paste_files,
+            capture::screen_capture,
             keyboard_focus,
             set_notch_height,
             set_capture_hidden,

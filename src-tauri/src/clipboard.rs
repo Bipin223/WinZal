@@ -268,13 +268,13 @@ pub async fn clipboard_paste_files() -> Result<Vec<String>, String> {
     .map_err(|e| e.to_string())?
 }
 
-fn pictures_dir() -> PathBuf {
+pub(crate) fn pictures_dir() -> PathBuf {
     let home = std::env::var_os("USERPROFILE").map(PathBuf::from).unwrap_or_else(std::env::temp_dir);
     home.join("Pictures")
 }
 
 /// "2026-10-04 22-41-03" in local time (for file names).
-fn local_stamp() -> String {
+pub(crate) fn local_stamp() -> String {
     use windows::Win32::System::SystemInformation::GetLocalTime;
     let t = unsafe { GetLocalTime() };
     format!("{:04}-{:02}-{:02} {:02}-{:02}-{:02}", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond)

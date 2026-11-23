@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { Check, Microphone, Pause, Play, VideoCamera } from "@phosphor-icons/react";
-import { obs, type ObsStatus } from "../../platform/services";
+import { Camera, Check, Microphone, Pause, Play, VideoCamera } from "@phosphor-icons/react";
+import { obs, screenCapture, type ObsStatus } from "../../platform/services";
 import { navigate } from "../../notch/nav";
 import { t } from "../../i18n";
 
@@ -45,6 +45,7 @@ const BAR_TEXTURE = Array.from({ length: BAR_COUNT }, (_, i) => {
 export function RecordingView() {
   const [status, setStatus] = useState<ObsStatus | null>(null);
   const [busy, setBusy] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [now, setNow] = useState(0);
@@ -162,6 +163,26 @@ export function RecordingView() {
     });
   const openObs = () => run(() => obs.show());
 
+  const captureScreen = async () => {
+    if (capturing) return;
+    setCapturing(true);
+    setError(null);
+    setNote(t("Capturing screen..."));
+    try {
+      const shot = await screenCapture.take();
+      setNote(
+        shot.copied
+          ? t("Screenshot saved to Pictures\\Notch and copied")
+          : t("Screenshot saved to Pictures\\Notch"),
+      );
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setCapturing(false);
+      window.setTimeout(() => setNote(null), 4000);
+    }
+  };
+
   const setup = status && !connected ? status : null;
   const setupTitle = setup
     ? !setup.running
@@ -277,6 +298,19 @@ export function RecordingView() {
         )}
 
         <div className="mt-0.5 flex items-center justify-center gap-3">
+          <button
+            type="button"
+            aria-label={t("Capture screen")}
+            title={t("Capture screen")}
+            disabled={capturing}
+            onClick={() => void captureScreen()}
+            className={`pressable flex size-7 items-center justify-center rounded-full bg-fill-1 text-label-2 disabled:opacity-35 ${
+              capturing ? "animate-pulse" : ""
+            }`}
+          >
+            <Camera size={14} weight="bold" />
+          </button>
+
           <button
             type="button"
             aria-label={t("OBS audio")}

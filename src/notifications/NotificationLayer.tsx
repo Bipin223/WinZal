@@ -5,6 +5,7 @@ import { setNotificationVisible } from "../platform/native";
 import { openNotificationApp } from "../platform/services";
 import { DiscordLogo } from "../ui/brands";
 import winzalIcon from "../assets/winzal-icon.png";
+import { settings } from "../settings/store";
 import { dismissNotification, notifications, type AppNotification } from "./store";
 import { requestNotchOpen } from "../notch/openRequest";
 
@@ -19,7 +20,7 @@ function NotificationIcon({ item, size }: { item: AppNotification; size: number 
       <img
         src={winzalIcon}
         alt=""
-        className="shrink-0 rounded-full border border-white/10 object-cover"
+        className="shrink-0 rounded-full border border-separator object-cover"
         style={{ width: size, height: size }}
       />
     );
@@ -27,7 +28,7 @@ function NotificationIcon({ item, size }: { item: AppNotification; size: number 
   if (item.brand === "discord") {
     return (
       <span
-        className="grid shrink-0 place-items-center rounded-full border border-white/10 bg-white/10 text-white/90"
+        className="grid shrink-0 place-items-center rounded-full border border-separator bg-fill-1 text-label"
         style={{ width: size, height: size }}
       >
         <DiscordLogo size={Math.round(size * 0.54)} />
@@ -37,7 +38,7 @@ function NotificationIcon({ item, size }: { item: AppNotification; size: number 
   const initial = Array.from(item.app.trim())[0]?.toLocaleUpperCase() ?? "?";
   return (
     <span
-      className="grid shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.07] font-semibold text-white/80"
+      className="grid shrink-0 place-items-center rounded-full border border-separator bg-fill-1 font-semibold text-label-2"
       style={{ width: size, height: size, fontSize: Math.round(size * 0.4) }}
       aria-hidden
     >
@@ -61,6 +62,7 @@ export function NotificationLayer() {
 }
 
 function IslandNotification({ item }: { item: AppNotification }) {
+  const material = settings.use().appearance.material;
   const dragged = useRef(false);
   const measure = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(300);
@@ -96,8 +98,15 @@ function IslandNotification({ item }: { item: AppNotification }) {
       </div>
       <motion.div
         data-notification-hit
-        className="pointer-events-auto relative flex items-center overflow-hidden rounded-full border border-white/15 shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_12px_30px_-14px_rgb(0_0_0/0.55)]"
-        style={{ background: "linear-gradient(180deg, rgba(40, 40, 44, 0.58), rgba(12, 12, 14, 0.72))", minHeight }}
+        data-material={material}
+        className={`pointer-events-auto relative flex items-center overflow-hidden rounded-full ${
+          material === "liquid"
+            ? "liquid-glass"
+            : material === "glass"
+              ? "border border-separator bg-notch shadow-[0_12px_30px_-14px_rgb(0_0_0/0.55)] backdrop-blur-2xl"
+              : "border border-separator bg-elevated shadow-[0_12px_30px_-14px_rgb(0_0_0/0.55)]"
+        }`}
+        style={{ minHeight }}
         initial={{ width: 124, height: 24, borderRadius: 15, opacity: 0 }}
         animate={{ width, height: minHeight, borderRadius: 999, opacity: 1 }}
         exit={{ width: 124, height: 24, borderRadius: 15, opacity: 0, transition: springs.close }}
@@ -140,6 +149,9 @@ function IslandNotification({ item }: { item: AppNotification }) {
           }
         }}
       >
+        {material === "liquid" && (
+          <span aria-hidden className="notification-glass-scrim pointer-events-none absolute inset-0" />
+        )}
         <span aria-hidden className="pointer-events-none absolute inset-x-10 top-0 h-px bg-white/30" />
         <motion.div
           className="relative flex w-full items-center gap-[13px] px-[10px] py-[2px]"
@@ -156,12 +168,12 @@ function IslandNotification({ item }: { item: AppNotification }) {
           </motion.div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="min-w-0 truncate text-[8px] font-semibold tracking-[0.14em] text-white/45 uppercase">{item.app}</span>
-              <span className="ml-auto shrink-0 text-[8.5px] text-white/35">now</span>
+              <span className="min-w-0 truncate text-[8px] font-semibold tracking-[0.14em] text-label-3 uppercase">{item.app}</span>
+              <span className="ml-auto shrink-0 text-[8.5px] text-label-3">now</span>
             </div>
-            <div className="mt-px truncate text-[15.5px] leading-[19px] font-semibold text-white">{item.title}</div>
+            <div className="mt-px truncate text-[15.5px] leading-[19px] font-semibold text-label">{item.title}</div>
             {item.body && (
-              <div className="line-clamp-2 text-[12.5px] leading-[15px] text-white/60">{item.body}</div>
+              <div className="line-clamp-2 text-[12.5px] leading-[15px] text-label-2">{item.body}</div>
             )}
           </div>
         </motion.div>
