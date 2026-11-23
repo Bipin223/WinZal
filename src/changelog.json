@@ -1,5 +1,35 @@
 [
   {
+    "version": "1.7.15",
+    "date": "2026-11-23",
+    "items": [
+      {
+        "en": "Windows Task View from the top-left corner: swipe diagonally or hold briefly, or press Ctrl+Alt+Tab; the notch no longer fights the shell for topmost while Task View is open"
+      },
+      {
+        "en": "Hide Windows banners is now on by default, so only the Dynamic Island card appears while Action Center keeps the notification history; restore native banners in Settings → Notifications"
+      },
+      {
+        "en": "More lyric sources: Boidu timed lyrics, Unison richsync with submission credit, and LRCLIB fallback, plus album-aware matching and a bounded 24-track cache"
+      },
+      {
+        "en": "Header power controls are a compact capsule with a separate, larger bell, and the power buttons no longer animate on hover"
+      },
+      {
+        "en": "Notifications keep their Windows toast sound toggle, so the bell can silence system notification sounds without muting media"
+      },
+      {
+        "en": "Recording overlays stay above the notch, and the notch sits below recorder controls instead of forcing itself on top"
+      },
+      {
+        "en": "Removed the leftover top-left recent-window satellite and unused commands; cursor polling backs off when the pointer is away"
+      },
+      {
+        "en": "CPU rendering remains the default for new installs; GPU (iGPU or dGPU) stays opt-in under Settings → Performance"
+      }
+    ]
+  },
+  {
     "version": "1.7.14",
     "date": "2026-11-21",
     "items": [
