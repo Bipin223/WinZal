@@ -24,8 +24,8 @@ use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, MonitorFromWindow, MONITORI
 use windows::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION};
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GetClassNameW, GetDesktopWindow, GetForegroundWindow, GetShellWindow, GetWindow, GetWindowLongPtrW, GetWindowRect, GetWindowTextLengthW,
-    GetWindowTextW, GetWindowThreadProcessId, IsIconic, IsWindowVisible, IsZoomed, SetWindowPos, ShowWindow, GWL_EXSTYLE, GW_OWNER,
-    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SW_SHOW, WS_EX_TOPMOST,
+    GetWindowTextW, GetWindowThreadProcessId, IsIconic, IsWindow, IsWindowVisible, IsZoomed, SetWindowPos, ShowWindow, GWL_EXSTYLE, GW_OWNER,
+    HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SW_SHOW, WS_EX_TOPMOST,
 };
 
 use crate::hit_test::HitState;
@@ -62,6 +62,9 @@ pub fn notification_visible(active: bool, state: State<'_, NotifyState>, window:
         // Wake the WebView immediately even if a fullscreen app hid the notch.
         let _ = window.show();
         let _ = window.set_always_on_top(true);
+        if let Ok(hwnd) = window.hwnd() {
+            raise_topmost(hwnd);
+        }
     }
 }
 
@@ -232,6 +235,17 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
                 );
             }
             let notify = app.state::<NotifyState>().0.load(Ordering::Relaxed);
+            // Vault dialogs and the area-capture overlay own the screen while
+            // they hold this guard. Do not hide, show or reorder the notch
+            // underneath them.
+            if app.state::<ShowGuard>().held() {
+                // Do not reorder against an overlay that may have closed while
+                // the guard was held; a stale HWND must not be used as an
+                // insert-after target.
+                overlay = None;
+                last_foreground = foreground;
+                continue;
+            }
             let hide = !notify && ((gaming && gaming_hide) || (fullscreen && hide_fullscreen && !gaming));
 
             if hide != hidden {
@@ -241,16 +255,16 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
                 } else {
                     let _ = window.show();
                     if overlay.is_none() {
-                        let _ = window.set_always_on_top(true);
+                        raise_topmost(own);
                     }
                     // Let the click-through state be set again after show() (the poll caches the old one).
                     app.state::<HitState>().refresh();
                 }
             }
 
-            // Recording overlays (Snipping Tool, Game Bar, OBS, ...) stay above
-            // the notch. Check often enough to catch the toolbar appearing, but
-            // not every 400 ms: EnumWindows walks every visible top-level window.
+            // Windows' snipping overlay (Win+Shift+S) stays above the notch.
+            // Every other window stays below it; raise to the top of the
+            // topmost band when the overlay is gone.
             if !hidden && overlay_at.elapsed() >= Duration::from_millis(800) {
                 overlay = recording_overlay(own);
                 overlay_at = Instant::now();
@@ -258,7 +272,7 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
                 // topmost here makes Task View animate underneath the notch and
                 // fight the shell; leave it alone while the shell is foreground.
                 if overlay.is_none() && !shell_foreground {
-                    let _ = window.set_always_on_top(true);
+                    raise_topmost(own);
                 }
             }
 
@@ -271,7 +285,7 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
                     let _ = window.show();
                     let _ = unsafe { ShowWindow(own, SW_SHOW) };
                     if overlay.is_none() {
-                        let _ = window.set_always_on_top(true);
+                        raise_topmost(own);
                     }
                     app.state::<HitState>().refresh();
                 }
@@ -279,19 +293,24 @@ pub fn spawn(app: AppHandle, window: WebviewWindow) {
             // A notification must stay above fullscreen media, not just the
             // currently focused window. Reapply while it is visible.
             if notify && !hidden && overlay.is_none() {
-                let _ = window.set_always_on_top(true);
+                raise_topmost(own);
             }
             // New foreground window: reapply the normal topmost style. Skip the
             // shell so Task View keeps the top spot while it is open.
             if !hidden && foreground != last_foreground && overlay.is_none() && !shell_foreground {
-                let _ = window.set_always_on_top(true);
+                raise_topmost(own);
             }
-            // Topmost, but directly below the recording overlay when one exists.
+            // Topmost, but directly below the Windows snipping overlay when it
+            // exists.
             if !hidden {
                 if let Some(target) = overlay {
-                    let _ = unsafe {
-                        SetWindowPos(own, Some(target), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE)
-                    };
+                    if unsafe { IsWindow(Some(target)).as_bool() } {
+                        let _ = unsafe {
+                            SetWindowPos(own, Some(target), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE)
+                        };
+                    } else {
+                        overlay = None;
+                    }
                 }
             }
             last_foreground = foreground;
@@ -350,26 +369,31 @@ fn window_title(hwnd: HWND) -> String {
     String::from_utf16_lossy(&buf[..n.max(0) as usize])
 }
 
-/// Topmost overlays owned by recorders. The notch stays above normal windows
-/// but is inserted below these, so recording controls are never covered.
+/// Raise the notch to the top of the topmost band. `set_always_on_top` keeps
+/// the WS_EX_TOPMOST style but does not reorder an already-topmost window, so
+/// other topmost apps could still sit above it.
+fn raise_topmost(own: HWND) {
+    if !unsafe { IsWindow(Some(own)).as_bool() } {
+        return;
+    }
+    let _ = unsafe {
+        SetWindowPos(
+            own,
+            Some(HWND_TOPMOST),
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+        )
+    };
+}
+
+/// Topmost overlays owned by Windows' snipping UI (Win+Shift+S). The notch
+/// stays above every other window but is inserted below this one so the
+/// selection surface and its controls are never covered.
 fn is_recording_overlay_process(name: &str) -> bool {
-    matches!(
-        name,
-        "snippingtool.exe"
-            | "screensketch.exe"
-            | "gamebar.exe"
-            | "gamebarftserver.exe"
-            | "xboxgamebar.exe"
-            | "xboxgamebarwidgets.exe"
-            | "obs64.exe"
-            | "obs32.exe"
-            | "obs.exe"
-            | "streamlabs obs.exe"
-            | "slobs.exe"
-            | "sharex.exe"
-            | "medal.exe"
-            | "outplayed.exe"
-    )
+    matches!(name, "snippingtool.exe" | "screensketch.exe" | "screenclippinghost.exe")
 }
 
 struct OverlaySearch {
@@ -383,6 +407,15 @@ unsafe extern "system" fn find_overlay(hwnd: HWND, lparam: LPARAM) -> BOOL {
         return true.into();
     }
     if !is_recording_overlay_process(&foreground_app(hwnd)) {
+        return true.into();
+    }
+    // Only the full-screen Win+Shift+S selection surface belongs above the
+    // notch. Snipping Tool's recording toolbar is also topmost, but putting the
+    // notch below it hides the island behind the toolbar until it auto-hides.
+    if !covers_monitor(hwnd, search.own) {
+        return true.into();
+    }
+    if !window_title(hwnd).to_lowercase().contains("snipping tool overlay") {
         return true.into();
     }
     let style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);

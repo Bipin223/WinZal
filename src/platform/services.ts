@@ -741,6 +741,11 @@ export const screenCapture = {
     isNative
       ? invoke<CaptureResult>("screen_capture")
       : Promise.resolve({ path: "Pictures\\Notch\\Screenshot.png", width: 1536, height: 864, copied: true }),
+  /** Windows' own region selector, saved as a PNG and left on the clipboard. */
+  takeArea: (): Promise<CaptureResult> =>
+    isNative
+      ? invoke<CaptureResult>("screen_capture_region")
+      : Promise.resolve({ path: "Pictures\\Notch\\Region.png", width: 800, height: 600, copied: true }),
 };
 
 export const systemControls = {

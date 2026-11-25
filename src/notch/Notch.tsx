@@ -549,7 +549,7 @@ export function Notch() {
           scrimLight={surfaceLight}
         >
           <LiveRightInset.Provider value={rightInset}>
-            <LiveSlot id={status === "open" ? null : pillLive} recording={showRecording} extra={lyricsExtra} callExtra={callTitleExtra} widthExtra={lyricsPill ? 0 : appearance.islandWidth} height={lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight} systemWidth={systemWidth} restWidth={displayShape.w} />
+            <LiveSlot id={pillLive} open={status === "open"} recording={showRecording} extra={lyricsExtra} callExtra={callTitleExtra} widthExtra={lyricsPill ? 0 : appearance.islandWidth} height={lyricsPill ? appearance.lyricsPillHeight : appearance.islandHeight} systemWidth={systemWidth} restWidth={displayShape.w} />
           </LiveRightInset.Provider>
           {!alertView && clockWeather && !idleLine && status !== "open" && <ClosedClock rowRef={clockRow} visible={!pillLive} shiftX={recordingShift} />}
           <AnimatePresence>

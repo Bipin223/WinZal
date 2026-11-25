@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { livePosition, type NowPlaying } from "../../platform/media";
-import { fetchLyrics, type Lyrics, type LyricWordTime } from "../../platform/services";
+import { fetchLyrics, type Lyrics, type LyricCredit, type LyricWordTime } from "../../platform/services";
 import { lyricTrackKey, settings } from "../../settings/store";
 
 interface Line {
@@ -36,7 +36,23 @@ const LYRIC_LEAD = 0.05;
 /** Parse once per track, even when the pill closes and reopens. */
 const parsed = new Map<string, Line[]>();
 const meta = new Map<string, { instrumental: boolean; hasLyrics: boolean }>();
+const credits = new Map<string, LyricCredit | null>();
 const PARSED_MAX = 30;
+const CREDIT_MAX = 48;
+
+/** Share the Unison credit with the open view so it never refetches the whole song. */
+export function rememberCredit(key: string, credit: LyricCredit | null | undefined) {
+  if (credits.size >= CREDIT_MAX) {
+    const oldest = credits.keys().next().value;
+    if (oldest) credits.delete(oldest);
+  }
+  credits.set(key, credit ?? null);
+}
+
+/** undefined = not known yet; null = known to have no credit. */
+export function cachedCredit(key: string): LyricCredit | null | undefined {
+  return credits.get(key);
+}
 
 /**
  * Current + next synced lyric line for the closed music pill. Fetches once per
@@ -106,6 +122,7 @@ export function useLyrics(np: NowPlaying | null, enabled: boolean): LyricsDispla
           }
           parsed.set(track, next);
           meta.set(track, { instrumental: !!lyrics.instrumental, hasLyrics: next.length > 0 });
+          rememberCredit(track, lyrics.credit);
           setLines(next);
           setStatus(next.length ? "lyrics" : lyrics.instrumental ? "instrumental" : "music");
         })

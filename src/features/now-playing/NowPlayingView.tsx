@@ -14,6 +14,7 @@ import { Equalizer } from "./Equalizer";
 import { LyricEqualizer } from "./LyricVisualizer";
 import { settings, lyricTrackKey, setLyricTrackOffset } from "../../settings/store";
 import { fetchLyrics, systemControls, type LyricCredit } from "../../platform/services";
+import { cachedCredit, rememberCredit } from "./lyrics";
 import { t } from "../../i18n";
 
 const SYNC_ROW = 34;
@@ -180,12 +181,32 @@ function useLyricCredit(np: NowPlaying | null): LyricCredit | null {
       setCredit(null);
       return;
     }
+    const known = cachedCredit(key);
+    if (known !== undefined) {
+      setCredit(known);
+      return;
+    }
+    setCredit(null);
     let alive = true;
-    void fetchLyrics(np.title, np.artist, np.album ?? "", np.duration).then((lyrics) => {
-      if (alive) setCredit(lyrics.credit ?? null);
-    });
+    let timer: number | undefined;
+    // The lyric pill has already fetched (or is fetching) the song. Give that
+    // fetch a beat to land, then only ask Rust if the credit is still unknown.
+    // This keeps the full-lyrics IPC off the notch's open animation.
+    timer = window.setTimeout(() => {
+      const cached = cachedCredit(key);
+      if (cached !== undefined) {
+        if (alive) setCredit(cached);
+        return;
+      }
+      void fetchLyrics(np.title, np.artist, np.album ?? "", np.duration).then((lyrics) => {
+        if (!alive) return;
+        rememberCredit(key, lyrics.credit);
+        setCredit(lyrics.credit ?? null);
+      });
+    }, 520);
     return () => {
       alive = false;
+      window.clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);

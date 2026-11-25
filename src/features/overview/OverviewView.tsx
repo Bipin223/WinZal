@@ -109,6 +109,7 @@ function BatteryIndicator() {
 function Header() {
   const now = useMinute();
   const s = settings.use();
+  const presenting = usePresenting();
   const p = s.profile;
   const profile = useProfile(p);
   const forecast = useForecast();
@@ -141,13 +142,22 @@ function Header() {
             <>
               <span aria-hidden className="h-6 w-px shrink-0 bg-separator" />
               <span className="flex min-w-0 items-center gap-1.5">
-                {p?.showPhoto !== false && (
-                  <ProfileAvatar photo={profile.photo} name={profile.name} size={30} />
-                )}
-                {p?.showName !== false && (
-                  <span className="whitespace-nowrap text-[13px] font-semibold tracking-[-0.015em] text-label">
-                    {profile.name}
-                  </span>
+                {presenting ? (
+                  <>
+                    {p?.showPhoto !== false && <span className="size-[30px] shrink-0 rounded-full bg-fill-2" />}
+                    {p?.showName !== false && <span className="inline-block h-2 w-16 shrink-0 rounded-full bg-fill-2" />}
+                  </>
+                ) : (
+                  <>
+                    {p?.showPhoto !== false && (
+                      <ProfileAvatar photo={profile.photo} name={profile.name} size={30} />
+                    )}
+                    {p?.showName !== false && (
+                      <span className="whitespace-nowrap text-[13px] font-semibold tracking-[-0.015em] text-label">
+                        {profile.name}
+                      </span>
+                    )}
+                  </>
                 )}
               </span>
             </>
@@ -183,7 +193,13 @@ function Header() {
           )}
         </AnimatePresence>
         <div className="mt-1 max-w-[220px] truncate text-footnote text-label-3">
-          {place ? `${place.name}${weather ? ` · ${weather.text}` : ""}` : t("Detecting location …")}
+          {presenting ? (
+            <span className="inline-block h-2 w-24 align-middle rounded-full bg-fill-2" aria-label={t("Hidden")} />
+          ) : place ? (
+            `${place.name}${weather ? ` · ${weather.text}` : ""}`
+          ) : (
+            t("Detecting location …")
+          )}
         </div>
       </button>
     </div>

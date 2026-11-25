@@ -44,7 +44,7 @@ export function useLiveActivity(): { id: string | null } {
  * sides (LiveEdge) follow the shape's edges by transform as it opens, closes or peeks.
  * Pinned to the edges by layout instead, they crept in pixel steps (issue #3).
  */
-export function LiveSlot({ id, recording = false, extra = 0, callExtra = 0, widthExtra = 0, height, systemWidth, restWidth }: { id: string | null; recording?: boolean; extra?: number; callExtra?: number; widthExtra?: number; height?: number; systemWidth?: number; restWidth?: number }) {
+export function LiveSlot({ id, open = false, recording = false, extra = 0, callExtra = 0, widthExtra = 0, height, systemWidth, restWidth }: { id: string | null; open?: boolean; recording?: boolean; extra?: number; callExtra?: number; widthExtra?: number; height?: number; systemWidth?: number; restWidth?: number }) {
   const np = useNowPlaying();
   const call = useDiscordCall();
   // Keep the last size while an activity fades out (id is null when the notch opens).
@@ -78,7 +78,7 @@ export function LiveSlot({ id, recording = false, extra = 0, callExtra = 0, widt
         initial={false}
         animate={{ width: targetWidth, marginLeft: -targetWidth / 2 }}
         transition={widthTransition}
-        style={{ height: height ?? box.h }}
+        style={{ height: height ?? box.h, display: open ? "none" : undefined }}
       >
         <AnimatePresence initial={false}>
           {id === "system" && <LiveGaming key="system" />}

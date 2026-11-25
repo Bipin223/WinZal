@@ -160,7 +160,7 @@ function FadeBox({ children, fade = true }: { children: ReactNode; fade?: boolea
       resize.disconnect();
       mutation.disconnect();
     };
-  });
+  }, []);
   return (
     <div
       ref={box}

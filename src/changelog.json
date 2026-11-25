@@ -1,5 +1,29 @@
 [
   {
+    "version": "2.0.0",
+    "date": "2026-11-25",
+    "items": [
+      {
+        "en": "Presentation mode now also hides your profile name and photo, weather location, clipboard previews and the Vault, so nothing personal shows while you share your screen"
+      },
+      {
+        "en": "Area capture in Recording: choose any region with Windows Snipping Tool; the shot is saved to Pictures\\Screenshots, copied to the clipboard, and the notch stays out of it"
+      },
+      {
+        "en": "Task View from the top-left corner is stable: one Win+Tab, no first-click flash or delay when a game or overlay is in front; Ctrl+Alt+Tab still works"
+      },
+      {
+        "en": "Apps opens much faster: metadata and icons are cached separately and pinned apps load first"
+      },
+      {
+        "en": "The notch stays visible while Snipping Tool's recording toolbar is on screen; only the full-screen snipping overlay sits above it"
+      },
+      {
+        "en": "Smoother lyrics and now-playing: the live pill stays mounted through the notch morph, credits are cached and observer work is reduced"
+      }
+    ]
+  },
+  {
     "version": "1.7.16",
     "date": "2026-11-23",
     "items": [

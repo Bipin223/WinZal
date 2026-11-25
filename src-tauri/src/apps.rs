@@ -30,6 +30,13 @@ pub struct AppEntry {
     icon: Option<String>,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppIcon {
+    id: String,
+    icon: Option<String>,
+}
+
 #[tauri::command]
 pub async fn apps_list() -> Result<Vec<AppEntry>, String> {
     tauri::async_runtime::spawn_blocking(list_sync)
@@ -44,34 +51,55 @@ fn list_sync() -> Result<Vec<AppEntry>, String> {
         if non_app(&id) || !seen.insert(id.clone()) {
             continue;
         }
-        entries.push((name, id));
+        entries.push(AppEntry { id, name, icon: None });
     }
     if entries.is_empty() {
         return Err("Could not read the Start menu".into());
     }
+    entries.sort_by_key(|app| app.name.to_lowercase());
+    Ok(entries)
+}
 
-    // Shell icon extraction is the slow part. Four short-lived workers keep the
-    // first Apps open quick without leaving any background work behind.
-    let chunk = entries.len().div_ceil(4).max(1);
-    let apps = Mutex::new(Vec::with_capacity(entries.len()));
+/// Extract a small set of icons after the metadata is already on screen. The
+/// Apps tool asks for pinned ids first, so the first row never waits for every
+/// Start-menu icon.
+#[tauri::command]
+pub async fn app_icons(ids: Vec<String>) -> Result<Vec<AppIcon>, String> {
+    tauri::async_runtime::spawn_blocking(move || icons_sync(ids))
+        .await
+        .map_err(|e| e.to_string())
+}
+
+fn icons_sync(ids: Vec<String>) -> Vec<AppIcon> {
+    let mut seen = HashSet::new();
+    let ids: Vec<String> = ids
+        .into_iter()
+        .filter(|id| !id.is_empty() && seen.insert(id.clone()))
+        .collect();
+    if ids.is_empty() {
+        return Vec::new();
+    }
+
+    let chunk = ids.len().div_ceil(4).max(1);
+    let icons = Mutex::new(Vec::with_capacity(ids.len()));
     std::thread::scope(|scope| {
-        for part in entries.chunks(chunk) {
-            let apps = &apps;
+        for part in ids.chunks(chunk) {
+            let icons = &icons;
             scope.spawn(move || {
                 unsafe {
                     let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
                 }
                 let mut local = Vec::with_capacity(part.len());
-                for (name, id) in part {
-                    local.push(AppEntry { id: id.clone(), name: name.clone(), icon: shell_icon(id) });
+                for id in part {
+                    if let Some(icon) = shell_icon(id) {
+                        local.push(AppIcon { id: id.clone(), icon: Some(icon) });
+                    }
                 }
-                apps.lock().unwrap().extend(local);
+                icons.lock().unwrap().extend(local);
             });
         }
     });
-    let mut apps = apps.into_inner().unwrap();
-    apps.sort_by_key(|app| app.name.to_lowercase());
-    Ok(apps)
+    icons.into_inner().unwrap()
 }
 
 /// Documentation/web links in the Start menu are not apps.

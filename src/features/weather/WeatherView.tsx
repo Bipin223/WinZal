@@ -4,6 +4,7 @@ import { CircleNotch, Drop, MagnifyingGlass, MapPin, NavigationArrow, Wind } fro
 import { content, fade, spin } from "../../design/motion";
 import { settings } from "../../settings/store";
 import { Skeleton } from "../../ui/controls";
+import { usePresenting } from "../privacy/store";
 import { formatTemp, formatWind } from "../../lib/format";
 import { locale, t } from "../../i18n";
 import { choosePlace, describe, detectPlace, loadForecast, searchPlaces, type Forecast, type Place } from "./store";
@@ -20,6 +21,7 @@ const weekday = () => new Intl.DateTimeFormat(locale(), { weekday: "short" });
 
 export function WeatherView() {
   const place = settings.use().weather;
+  const presenting = usePresenting();
   const [data, setData] = useState<Forecast | null>(null);
   const [error, setError] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -60,7 +62,7 @@ export function WeatherView() {
           </motion.div>
         ) : (
           <motion.div key="data" className="flex h-full flex-col justify-between" initial={{ opacity: 0, filter: "blur(4px)" }} animate={{ opacity: 1, filter: "blur(0px)", transition: content.enter }}>
-            <Current data={data} name={place.name} auto={!!place.auto} onChangePlace={() => setSearching(true)} />
+            <Current data={data} name={place.name} auto={!!place.auto} redact={presenting} onChangePlace={() => setSearching(true)} />
             <div className="grid grid-cols-7 gap-1">
               {data.daily.map((d, i) => {
                 const { icon: I, text } = describe(d.code);
@@ -81,7 +83,7 @@ export function WeatherView() {
   );
 }
 
-function Current({ data, name, auto, onChangePlace }: { data: Forecast; name: string; auto: boolean; onChangePlace: () => void }) {
+function Current({ data, name, auto, redact, onChangePlace }: { data: Forecast; name: string; auto: boolean; redact: boolean; onChangePlace: () => void }) {
   const { icon: I, text } = describe(data.current.code, data.current.day);
   const today = data.daily[0];
   return (
@@ -89,9 +91,16 @@ function Current({ data, name, auto, onChangePlace }: { data: Forecast; name: st
       <I size={38} weight="fill" className="text-label" />
       <span className="tabular text-[34px] leading-none font-semibold tracking-[-0.03em]">{formatTemp(data.current.temp)}</span>
       <div className="min-w-0">
-        <button onClick={onChangePlace} className="flex items-center gap-1 text-footnote font-medium text-label hover:text-label-2" title={t("Change location")}>
-          {auto ? <NavigationArrow size={11} weight="fill" /> : <MapPin size={11} weight="fill" />} {name}
-        </button>
+        {redact ? (
+          <span className="flex items-center gap-1 py-0.5" aria-label={t("Hidden")}>
+            <MapPin size={11} weight="fill" className="text-label-3" />
+            <span className="inline-block h-2 w-20 rounded-full bg-fill-2" />
+          </span>
+        ) : (
+          <button onClick={onChangePlace} className="flex items-center gap-1 text-footnote font-medium text-label hover:text-label-2" title={t("Change location")}>
+            {auto ? <NavigationArrow size={11} weight="fill" /> : <MapPin size={11} weight="fill" />} {name}
+          </button>
+        )}
         <div className="text-caption text-label-3">{text}</div>
       </div>
       <div className="ml-auto flex flex-col items-end gap-0.5 text-caption text-label-3">

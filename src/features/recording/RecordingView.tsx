@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { Camera, Check, Microphone, Pause, Play, VideoCamera } from "@phosphor-icons/react";
+import { Camera, Check, Microphone, Pause, Play, Selection, VideoCamera } from "@phosphor-icons/react";
 import { obs, screenCapture, type ObsStatus } from "../../platform/services";
 import { navigate } from "../../notch/nav";
 import { t } from "../../i18n";
@@ -163,20 +163,22 @@ export function RecordingView() {
     });
   const openObs = () => run(() => obs.show());
 
-  const captureScreen = async () => {
+  const captureScreen = async (area = false) => {
     if (capturing) return;
     setCapturing(true);
     setError(null);
-    setNote(t("Capturing screen..."));
+    setNote(area ? t("Select an area on screen...") : t("Capturing screen..."));
     try {
-      const shot = await screenCapture.take();
+      const shot = area ? await screenCapture.takeArea() : await screenCapture.take();
       setNote(
         shot.copied
-          ? t("Screenshot saved to Pictures\\Notch and copied")
-          : t("Screenshot saved to Pictures\\Notch"),
+          ? t("Screenshot saved to Pictures\\Screenshots and copied")
+          : t("Screenshot saved to Pictures\\Screenshots"),
       );
     } catch (e) {
-      setError(String(e));
+      const message = String(e);
+      if (/cancel/i.test(message)) setNote(t("Screen capture cancelled"));
+      else setError(message);
     } finally {
       setCapturing(false);
       window.setTimeout(() => setNote(null), 4000);
@@ -300,15 +302,28 @@ export function RecordingView() {
         <div className="mt-0.5 flex items-center justify-center gap-3">
           <button
             type="button"
-            aria-label={t("Capture screen")}
-            title={t("Capture screen")}
+            aria-label={t("Capture full screen")}
+            title={t("Capture full screen")}
             disabled={capturing}
-            onClick={() => void captureScreen()}
+            onClick={() => void captureScreen(false)}
             className={`pressable flex size-7 items-center justify-center rounded-full bg-fill-1 text-label-2 disabled:opacity-35 ${
               capturing ? "animate-pulse" : ""
             }`}
           >
             <Camera size={14} weight="bold" />
+          </button>
+
+          <button
+            type="button"
+            aria-label={t("Capture area")}
+            title={t("Capture area")}
+            disabled={capturing}
+            onClick={() => void captureScreen(true)}
+            className={`pressable flex size-7 items-center justify-center rounded-full bg-fill-1 text-label-2 disabled:opacity-35 ${
+              capturing ? "animate-pulse" : ""
+            }`}
+          >
+            <Selection size={14} weight="bold" />
           </button>
 
           <button

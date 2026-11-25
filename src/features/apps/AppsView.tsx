@@ -8,7 +8,7 @@ import { settings, updateSettings } from "../../settings/store";
 import { t } from "../../i18n";
 import { Button } from "../../ui/controls";
 import { AppGlyph } from "./AppGlyph";
-import { loadApps, openApp, useApps, type AppEntry } from "./store";
+import { loadAppIcons, loadApps, openApp, useApps, type AppEntry } from "./store";
 
 /**
  * Start-menu style launchpad. The first row is the user's pinned apps; All apps
@@ -44,15 +44,18 @@ export function AppsView() {
   const allMode = mode === "all";
 
   const togglePin = (id: string) => {
+    const current = settings.get().apps?.pinned ?? [];
+    const adding = !current.includes(id);
     updateSettings((cur) => {
       const list = cur.apps?.pinned ?? [];
       return {
         apps: {
           ...cur.apps,
-          pinned: list.includes(id) ? list.filter((pinnedId) => pinnedId !== id) : [...list, id],
+          pinned: adding ? [...list, id] : list.filter((pinnedId) => pinnedId !== id),
         },
       };
     });
+    if (adding) void loadAppIcons([id]);
   };
 
   const open = (app: AppEntry) => {

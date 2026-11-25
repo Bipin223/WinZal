@@ -1,6 +1,6 @@
 [package]
 name = "winzal"
-version = "1.7.16"
+version = "2.0.0"
 edition = "2021"
 license = "GPL-3.0-only"
 authors = ["Bipin Rizal"]

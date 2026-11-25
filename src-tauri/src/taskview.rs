@@ -1,7 +1,8 @@
 //! Opens the native Windows Task View.
 
+use std::process::Command;
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use tauri::{AppHandle, Manager};
 use windows::Win32::Foundation::{POINT, RECT};
@@ -14,9 +15,20 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 };
 use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
 
+/// The shell namespace entry for Task View, used only if Windows rejects the
+/// synthetic keys outright (for example, a higher-integrity foreground window).
+const TASK_VIEW_URI: &str = "shell:::{3080F90E-D7AD-11D9-BD98-0000947B0257}";
+
+fn shell_task_view() -> Result<(), String> {
+    Command::new("explorer.exe")
+        .arg(TASK_VIEW_URI)
+        .spawn()
+        .map(|_| ())
+        .map_err(|_| "Windows did not open Task View".to_string())
+}
+
 /// Win+Tab is the shell's own Task View: live window thumbnails and virtual
-/// desktops, with all Windows behaviour included. Sending it from our top-left
-/// button is more faithful than trying to rebuild the shell overlay.
+/// desktops, with all Windows behaviour included.
 #[tauri::command]
 pub fn task_view() -> Result<(), String> {
     let key = |vk: VIRTUAL_KEY, up: bool| INPUT {
@@ -32,10 +44,12 @@ pub fn task_view() -> Result<(), String> {
     let inputs = [key(VK_LWIN, false), key(VK_TAB, false), key(VK_TAB, true), key(VK_LWIN, true)];
     let sent = unsafe { SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) };
     if sent as usize == inputs.len() {
-        Ok(())
-    } else {
-        Err("Windows did not open Task View".into())
+        // Win+Tab is a toggle. Send it exactly once: probing for the overlay
+        // and then firing the Explorer route while Task View is still opening
+        // sends a second request that closes the view that just appeared.
+        return Ok(());
     }
+    shell_task_view()
 }
 
 /// Fedora-style hot corner, but strict: the pointer must actually travel
@@ -54,12 +68,12 @@ pub fn spawn_hot_corner(app: AppHandle) {
             thread::sleep(Duration::from_millis(100));
         };
         let mut entry: Option<POINT> = None;
-        let mut corner_since: Option<Instant> = None;
+        let mut corner_since: Option<std::time::Instant> = None;
         let mut armed = true;
         // Slow down when the pointer is far away. The monitor rect is cached;
         // a 15 ms Win32 wake-up every frame was unnecessary idle work.
         let mut area: Option<RECT> = None;
-        let mut area_at = Instant::now() - Duration::from_secs(10);
+        let mut area_at = std::time::Instant::now() - Duration::from_secs(10);
         let mut far = true;
 
         loop {
@@ -77,7 +91,7 @@ pub fn spawn_hot_corner(app: AppHandle) {
                 };
                 if unsafe { GetMonitorInfoW(monitor, &mut info) }.as_bool() {
                     area = Some(info.rcMonitor);
-                    area_at = Instant::now();
+                    area_at = std::time::Instant::now();
                 } else if area.is_none() {
                     continue;
                 }
@@ -115,7 +129,7 @@ pub fn spawn_hot_corner(app: AppHandle) {
                 dx < -40 && dy < -40 && (0.5..=2.0).contains(&ratio) && distance >= 60.0;
             // Fallback for a missed swipe: resting in the exact corner also
             // opens Task View after a Fedora-like short dwell.
-            let held = corner_since.get_or_insert_with(Instant::now).elapsed()
+            let held = corner_since.get_or_insert_with(std::time::Instant::now).elapsed()
                 >= Duration::from_millis(140);
 
             if diagonal || held {
